@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>用户管理 - 瑞吉外卖管理端</title>
+  <!-- 引入样式 -->
+
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <style>
+    /* 详情字段两列栅格：本构建未注册 el-descriptions（2.13+ 组件），手写栅格替代 */
+    .usr-detail { display: flex; flex-wrap: wrap; border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; }
+    .usr-detail__item { display: flex; width: 50%; min-width: 0; border-bottom: 1px solid var(--border-default); }
+    .usr-detail__item:nth-child(odd) { border-right: 1px solid var(--border-default); }
+    .usr-detail__item.usr-detail__item--full { width: 100%; border-right: 0; }
+    .usr-detail__label { flex: 0 0 84px; padding: 8px 12px; background: var(--bg-page); color: var(--text-secondary); font-size: var(--font-size-sm); }
+    .usr-detail__value { flex: 1; min-width: 0; padding: 8px 12px; color: var(--text-primary); font-size: var(--font-size-sm); word-break: break-word; }
+    .usr-detail__avatar { width: 80px; height: 80px; border-radius: 50%; }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="user-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">用户管理</h1>
+      
+      
+      <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
+
+      <!-- 修改点：使用 <table-bar> 统一组件 -->
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="actionConfig"
+        @search="handleQuery"
+        @reset="reset"
+        @action="onAction"
+        :show-refresh="true"
+        @refresh="fetchData()">
+        <template slot="search-extra">
+          <el-select v-model="input.name" placeholder="请选择用户姓名" class="el-select--narrow-xs" clearable filterable size="small"
+            :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @visible-change="onFilterDropdownVisible">
+            <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+          </el-select>
+          <el-select v-model="input.phone" placeholder="请选择手机号" class="el-select--narrow-xs" clearable filterable size="small"
+            :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @visible-change="onFilterDropdownVisible">
+            <el-option v-for="p in filterOptions.phones" :key="p" :label="p" :value="p"></el-option>
+          </el-select>
+        </template>
+      </table-bar>
+      <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination，columns 配置化，内置分页 -->
+      <crud-table
+        ref="crudTable"
+        empty-hint="试试调整筛选条件"
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :loading="loading"
+        :selection="true"
+        row-key="id"
+        :show-actions="true"
+        :actions-width="180"
+        :batch-delete="doBatchDelete"
+        @selection-change="onSelectionChange"
+        @batch-deleted="onBatchDeleted"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-sex="{ row }">
+          {{ row.sex === '1' ? '男' : row.sex === '0' ? '女' : '未知' }}
+        </template>
+        <template #col-idNumber="{ row }">
+          <span v-if="row.idNumber">{{ maskIdNumber(row.idNumber) }}</span>
+          <span v-else>-</span>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="row.status == 1 ? 'success' : 'danger'" size="small">
+            {{ row.status == 1 ? '正常' : '禁用' }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button
+            type="text"
+            size="small"
+            class="btn-view"
+            @click="viewDetail(row)"
+          >详情</el-button>
+          <el-button
+            type="text"
+            size="small"
+            :class="row.status == 1 ? 'btn-warning' : 'btn-success'"
+            @click="statusHandle(row)"
+          >{{ row.status == 1 ? '禁用' : '启用' }}</el-button>
+          <el-dropdown trigger="click" @command="(cmd) => cmd === 'delete' && deleteHandle(row.id)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- 修改点：使用 <crud-dialog :show-submit="true" :show-cancel="true"> 统一组件替代手写 el-dialog，默认 footer 提供"取消/确定" -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :title="statusDialog.title"
+      :visible.sync="statusDialog.visible"
+      :submit-loading="submitting"
+      size="sm"
+      @submit="confirmStatus"
+      @close="handleStatusClose"
+    >
+      <span>{{ statusDialog.message }}</span>
+    </crud-dialog>
+
+    <!-- 用户详情弹窗（只读，仅有关闭按钮） -->
+    <crud-dialog :show-submit="false" :show-cancel="true" cancel-text="关闭"
+      title="用户详情"
+      :visible.sync="detailDialog.visible"
+      size="md"
+      @close="detailDialog.visible = false"
+    >
+      <div class="usr-detail">
+        <div class="usr-detail__item">
+          <span class="usr-detail__label">姓名</span>
+          <span class="usr-detail__value">{{ detailDialog.data.name || '-' }}</span>
+        </div>
+        <div class="usr-detail__item">
+          <span class="usr-detail__label">手机号</span>
+          <span class="usr-detail__value">{{ detailDialog.data.phone || '-' }}</span>
+        </div>
+        <div class="usr-detail__item">
+          <span class="usr-detail__label">性别</span>
+          <span class="usr-detail__value">{{ detailDialog.data.sex === '1' ? '男' : detailDialog.data.sex === '0' ? '女' : '未知' }}</span>
+        </div>
+        <div class="usr-detail__item">
+          <span class="usr-detail__label">状态</span>
+          <span class="usr-detail__value">
+            <el-tag :type="detailDialog.data.status == 1 ? 'success' : 'danger'" size="small">
+              {{ detailDialog.data.status == 1 ? '正常' : '禁用' }}
+            </el-tag>
+          </span>
+        </div>
+        <div class="usr-detail__item usr-detail__item--full">
+          <span class="usr-detail__label">身份证号</span>
+          <span class="usr-detail__value">{{ detailDialog.data.idNumber ? maskIdNumber(detailDialog.data.idNumber) : '-' }}</span>
+        </div>
+        <div class="usr-detail__item usr-detail__item--full">
+          <span class="usr-detail__label">头像</span>
+          <span class="usr-detail__value">
+            <el-image v-if="detailDialog.data.avatar" :src="detailDialog.data.avatar" fit="cover" :alt="(detailDialog.data.nickName || detailDialog.data.username || '用户') + ' 的头像'" class="usr-detail__avatar"></el-image>
+            <span v-else>-</span>
+          </span>
+        </div>
+        <div class="usr-detail__item usr-detail__item--full">
+          <span class="usr-detail__label">注册时间</span>
+          <span class="usr-detail__value">{{ detailDialog.data.createTime || '-' }}</span>
+        </div>
+      </div>
+    </crud-dialog>
+  </div>
+
+  <!-- JS依赖 -->
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/user.js?v=20260926"></script>
+  <script src="../../api/export.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script>
+    new Vue({
+      el: '#user-app',
+      // 修改点：引入列表页通用 Mixin，自动提供分页(page/pageSize/counts/loading)与翻页处理
+      mixins: [window.ReggieListMixin],
+      data() {
+        return {
+          submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
+          input: {
+            name: '',
+            phone: '',
+            status: null  // 修改点：初始值改为null，避免空字符串引发参数类型问题
+          },
+          // 修改点：搜索下拉框动态选项（从数据库加载用户姓名和手机号）
+          filterOptions: { names: [], phones: [] },
+          optionsLoading: false,
+          optionsLoadError: false,
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          tableData: [],
+          loading: false,
+          // 数据统计
+          stats: {
+            totalUsers: 0,
+            activeUsers: 0,
+            disabledUsers: 0,
+            newUsersThisMonth: 0
+          },
+          // 修改点：当前激活的筛选器值，对应 <stat-cards> 组件
+          activeFilter: '',
+          // 勾选行 ID（跨翻页保留）；为空时导出按当前筛选
+          selectedIds: [],
+          // 修改点：<table-bar> 统一组件配置
+          tableSearchItems: [
+            { type: 'select', field: 'status', placeholder: '用户状态', options: [
+              { label: '全部', value: '' },
+              { label: '正常', value: '1' },
+              { label: '禁用', value: '0' }
+            ], width: 130 }
+          ],
+          tableActions: [],
+          // 修改点：列表操作区按钮（导出），与 table-bar 的 @action 事件联动
+          actionConfig: [
+            { key: 'exportExcel', text: '导出Excel', type: 'success', icon: 'ri-download-line', disabled: true },
+            { key: 'exportPdf', text: '导出PDF', type: 'danger', icon: 'ri-file-text-line', disabled: true }
+          ],
+          // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
+          columns: [
+            { prop: 'name', label: '姓名', width: 80 },
+            { prop: 'phone', label: '手机号', width: 120, align: 'center' },
+            { prop: 'sex', label: '性别', width: 60, align: 'center', slot: true },
+            { prop: 'idNumber', label: '身份证号', minWidth: 150, slot: true },
+            { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
+            { prop: 'createTime', label: '注册时间', width: 160, align: 'center' }
+          ],
+          // 状态切换对话框
+          statusDialog: {
+            visible: false,
+            title: '',
+            message: '',
+            userId: null,
+            newStatus: null
+          },
+          // 用户详情弹窗
+          detailDialog: {
+            visible: false,
+            data: {}
+          }
+        }
+      },
+      created() {
+        this.loadFilterOptions()
+        this.fetchData()
+        // 修改点：F9 — 全局统计仅初始化加载一次，避免翻页/筛选重复请求
+        this.loadUserStats()
+      },
+      mounted() {
+      },
+      computed: {
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+        statsCards: function() {
+          const self = this;
+          return [
+            { key: '', icon: 'ri-group-line', label: '用户总数', value: self.stats.totalUsers || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: '1', icon: 'ri-checkbox-circle-line', label: '正常用户', value: self.stats.activeUsers || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
+            { key: '0', icon: 'ri-forbid-line', label: '已禁用', value: self.stats.disabledUsers || 0, color: 'warning', clickable: true, active: self.activeFilter === '0' },
+            { key: 'new', icon: 'ri-user-add-line', label: '本月新增', value: self.stats.newUsersThisMonth || 0, color: 'danger' }
+          ]
+        }
+      },
+      methods: {
+        /* ========== 工具方法 ========== */
+        // 身份证号脱敏：保留前6位和后4位
+        maskIdNumber: function(idNumber) {
+          if (!idNumber || idNumber.length < 10) return idNumber
+          return idNumber.substring(0, 6) + '********' + idNumber.substring(idNumber.length - 4)
+        },
+        /* ========== 数据加载 ========== */
+        // 修改点：<stat-cards> 组件统一卡片点击分发
+        // <stat-cards> 点击（使用 payload.activeKey 判断，避免 .sync 导致的 toggle 反转）
+        onCardClick: function(payload) {
+          const s = this.lastSearch || {}
+          if (payload.activeKey !== '' && payload.activeKey != null) {
+            // 有激活卡片：按卡片 key 过滤
+            this.lastSearch = { status: payload.activeKey === '' ? undefined : Number(payload.activeKey) }
+          } else {
+            // 全部（无筛选）
+            this.lastSearch = {}
+          }
+          this.input.name = ''
+          this.input.phone = ''
+          this.clearSelection()
+          this.page = 1
+          this.fetchData()
+        },
+        // 勾选行变化：同步导出按钮禁用态（必须勾选才能导出）
+        onSelectionChange: function(payload) {
+          this.selectedIds = (payload && payload.ids) ? payload.ids : []
+          var noSel = this.selectedIds.length === 0
+          this.actionConfig[0].disabled = noSel
+          this.actionConfig[1].disabled = noSel
+        },
+        // 内建批量删除：后端 /user 仅支持单 id，顺序循环单删
+        doBatchDelete: function(payload) {
+          return window.RgBatchDeleteByOne({ ids: payload.ids, label: '用户', request: userDelete })
+        },
+        // 批量删除成功后刷新列表与统计
+        onBatchDeleted: function() {
+          this.refreshAll()
+        },
+        clearSelection: function() {
+          this.selectedIds = []
+          if (this.$refs.crudTable && this.$refs.crudTable.clearSelection) this.$refs.crudTable.clearSelection()
+        },
+        // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
+        async loadFilterOptions() {
+          this.optionsLoading = true
+          this.optionsLoadError = false
+          try {
+            const res = await userOptions()
+            if (String(res.code) === '1' && res.data) {
+              this.filterOptions.names = res.data.names || []
+              this.filterOptions.phones = res.data.phones || []
+            } else {
+              this.optionsLoadError = true
+              ReggieUI.warning('加载用户选项失败：' + (res.msg || '接口返回异常'))
+            }
+          } catch (err) {
+            // 修改点：NOTLOGIN 错误已在全局拦截器处理（跳转登录页），无需重复提示
+            if (err.message === 'NOTLOGIN') {
+              return
+            }
+            this.optionsLoadError = true
+            ReggieUI.error('加载筛选选项失败，请刷新页面重试')
+          } finally {
+            this.optionsLoading = false
+          }
+        },
+        // 修改点：下拉框打开时若之前加载失败，自动重试
+        onFilterDropdownVisible(visible) {
+            if (visible && this.optionsLoadError) {
+                this.loadFilterOptions()
+            }
+        },
+        // 初始化加载
+        async fetchData() {
+          this.loading = true
+          try {
+            // 修改点：F9 性能 — 列表查询与全局统计分离，此处仅加载分页列表
+            const userRes = await this.getUserPage()
+            if (String(userRes.code) === '1') {
+              this.tableData = userRes.data.records || []
+              this.counts = userRes.data.total
+            } else {
+              ReggieUI.error(userRes.msg || '查询失败')
+            }
+          } catch (err) {
+            ReggieUI.error('请求失败：' + err)
+          } finally {
+            this.loading = false
+          }
+        },
+
+        // 修改点：F9 性能 — 列表 + 全局统计一起刷新，仅用于数据突变（启用/禁用、删除）后
+        async refreshAll() {
+          await Promise.all([this.fetchData(), this.loadUserStats()])
+        },
+
+        // 获取用户分页列表（优先使用 lastSearch，回退到 input）
+        async getUserPage() {
+          try {
+            const s = this.lastSearch || {};
+            const params = {
+              page: this.page,
+              pageSize: this.pageSize,
+              name: s.name || this.input.name || undefined,
+              phone: s.phone || this.input.phone || undefined,
+              status: s.status != null ? (s.status === '' ? undefined : Number(s.status)) : (this.input.status != null ? this.input.status : undefined)
+            }
+            return await userPage(params)
+          } catch (err) {
+            // 修改点：异常不在 getter 内弹错——fetchData 会基于 {code:0} 的返回统一提示一次，
+            // 此处再弹会与 else 分支的双重 toast 叠加，网络失败时用户看到两次相同错误
+            return { code: 0, msg: '请求失败：' + (err.message || err) }
+          }
+        },
+
+        // 加载用户统计数据
+        // 修改点：改为调用后端 /user/stats 聚合接口（count 查询），避免 pageSize:1000 全量拉取与截断风险
+        async loadUserStats() {
+          try {
+            const res = await userStats()
+            if (String(res.code) === '1') {
+              this.stats = res.data
+              return res
+            }
+          } catch (err) {
+            console.warn('加载用户统计数据失败:', err)
+          }
+          return { code: 0 }
+        },
+
+        /* ========== 搜索与筛选 ========== */
+        // 查询（由 <table-bar> @search 触发，searchParams 包含 table-bar 管理的搜索条件）
+        handleQuery(searchParams) {
+          this.activeFilter = ''
+          this.page = 1
+          this.lastSearch = Object.assign({}, searchParams, {
+            name: this.input.name || undefined,
+            phone: this.input.phone || undefined
+          })
+          this.clearSelection()
+          this.fetchData()
+        },
+        // 重置搜索条件，恢复表格初始状态
+        reset() {
+          this.input.name = ''
+          this.input.phone = ''
+          this.input.status = null
+          this.lastSearch = {}
+          this.activeFilter = ''
+          this.page = 1
+          this.clearSelection()
+          this.fetchData()
+        },
+        // filterByStatus 已迁移至 onCardClick
+
+        /* ========== 用户操作（查看详情/启停/删除） ========== */
+        // 查看用户详情
+        viewDetail(row) {
+          this.detailDialog.data = Object.assign({}, row)
+          this.detailDialog.visible = true
+        },
+
+        // 状态切换（禁用/启用）
+        statusHandle(row) {
+          this.statusDialog.userId = row.id
+          this.statusDialog.newStatus = row.status == 1 ? 0 : 1
+          this.statusDialog.title = this.statusDialog.newStatus == 0 ? '禁用用户' : '启用用户'
+          this.statusDialog.message = `确认要${this.statusDialog.title}「${row.name}」吗？`
+          this.statusDialog.visible = true
+        },
+
+        // 确认状态切换
+        async confirmStatus() {
+          if (this.submitting) return // 提交防重
+          this.submitting = true
+          try {
+            const res = await userStatus({
+              id: this.statusDialog.userId,
+              status: this.statusDialog.newStatus
+            })
+            this.submitting = false
+            if (String(res.code) === '1') {
+              ReggieUI.success(res.msg || '操作成功')
+              this.handleStatusClose()
+              this.refreshAll()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          } catch (err) {
+            this.submitting = false
+            ReggieUI.error('请求失败：' + err)
+          }
+        },
+
+        // 关闭状态对话框
+        handleStatusClose() {
+          this.statusDialog.visible = false
+          this.statusDialog.userId = null
+          this.statusDialog.newStatus = null
+        },
+
+        // 删除用户
+        deleteHandle(id) {
+          ReggieUI.confirm('确认删除该用户吗？', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(async () => {
+            try {
+              const res = await userDelete(id)
+              if (String(res.code) === '1') {
+                ReggieUI.success('删除成功')
+                this.refreshAll()
+              } else {
+                ReggieUI.error(res.msg || '删除失败')
+              }
+            } catch (err) {
+              ReggieUI.error('请求失败：' + err)
+            }
+          }).catch((err) => { console.warn('[user] 删除用户操作取消或失败:', err) })
+        },
+
+        // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
+
+        /* ========== 导出功能 ========== */
+        // 列表操作区按钮分发（导出Excel/PDF）
+        onAction: function(payload) {
+          if (payload.key === 'exportExcel') this.exportUsers('excel')
+          else if (payload.key === 'exportPdf') this.exportUsers('pdf')
+        },
+        // 导出C端用户数据（Excel/PDF）：仅导出勾选行（未勾选时导出按钮已禁用）
+        exportUsers: async function(format) {
+          if (this.selectedIds.length === 0) {
+            ReggieUI.warning('请先勾选要导出的用户')
+            return
+          }
+          const params = { ids: this.selectedIds.join(',') }
+          try {
+            const ext = format === 'excel' ? 'xlsx' : 'pdf'
+            const apiCall = format === 'excel' ? exportApi.exportUsersExcel(params) : exportApi.exportUsersPdf(params)
+            await exportApi.downloadFile(apiCall, '用户数据.' + ext)
+            ReggieUI.success('已导出选中的 ' + this.selectedIds.length + ' 个用户')
+          } catch (err) {
+            ReggieUI.error('导出失败：' + (err.message || err))
+          }
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

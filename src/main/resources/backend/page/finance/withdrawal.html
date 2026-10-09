@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>提现管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <!-- ==================== 提现管理 ==================== -->
+  <!-- 功能说明：审核商家提现申请，支持查看/审核/打款/取消操作，统计总申请/待审核/已打款/总金额 -->
+  <style>
+    /* ===== 页面基础 ===== */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: var(--el-bg-subtle);
+    }
+    /* 防抖动（2026-09-20）：滚动统一由 body 承担；若 html 也产生滚动条，append-to-body 的
+       下拉浮层超出视口底部时会撑高 html、闪现第二滚动条挤占宽度，表格随之左右横跳 */
+    html {
+      overflow: hidden;
+    }
+    body {
+      overflow-y: auto;
+    }
+    .container {
+      padding: 24px 32px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    /* 工具栏统一走 table-bar 组件 + page.css 的 .container .tableBar 纯 flex 栏规则；
+       统计区已用 stat-cards 组件、状态列已用 el-tag，旧 stats-row/stats-card/
+       table-card/status-tag 手写样式 DOM 均无引用，一并移除。 */
+    /* ===== 详情弹窗样式 ===== */
+    .withdraw-detail .dt-item { display: flex; padding: 10px 0; border-bottom: 1px solid var(--el-bg-lighter); }
+    .withdraw-detail .dt-label { width: 100px; color: var(--gray-666); font-size: var(--font-size-sm); flex-shrink: 0; }
+    .withdraw-detail .dt-value { flex: 1; font-size: var(--font-size-sm); color: var(--gray-333); }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <main class="container" id="main-content" role="main" aria-labelledby="page-title">
+    <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
+    <h1 class="sr-only" id="page-title">提现管理</h1>
+    <!-- 统计卡片：总申请数/待审核/已打款/总提现金额 -->
+    <stat-cards :cards="statsCards"></stat-cards>
+
+    <!-- 搜索栏：按状态筛选 + 申请提现按钮 -->
+    <table-bar
+      :search-items="searchItems"
+      :actions="actionItems"
+      :show-refresh="true"
+      @search="onSearch"
+      @reset="onReset"
+      @action="onAction"
+      @refresh="fetchData()"
+    ></table-bar>
+
+    <!-- 数据表格：申请编号/申请人/提现金额/方式/收款账户/状态/申请时间/操作 -->
+    <crud-table
+      :data="pagedData"
+      :columns="columns"
+      :loading="loading"
+      :page="page"
+      :page-size="pageSize"
+      :total="filteredData.length"
+      :show-actions="true"
+      :actions-width="200"
+      :actions-fixed="true"
+      @page-change="onPageChange"
+      @size-change="onSizeChange"
+      aria-label="提现申请列表"
+    >
+      <!-- 提现金额列 -->
+      <template #col-amount="{ row }">
+        <strong>¥{{ formatMoney(row.amount) }}</strong>
+      </template>
+      <!-- 提现方式列 -->
+      <template #col-withdrawMethod="{ row }">
+        {{ getWithdrawMethodText(row.withdrawMethod) }}
+      </template>
+      <!-- 状态列 -->
+      <template #col-status="{ row }">
+        <el-tag :type="getStatusTag(row.status)" size="small">
+          {{ getStatusText(row.status) }}
+        </el-tag>
+      </template>
+      <!-- 操作按钮 -->
+      <template #actions="{ row }">
+        <el-button type="text" size="small" @click="handleView(row)">查看</el-button>
+        <el-button v-if="row.status === 0" type="text" size="small" @click="handleReview(row)">审核</el-button>
+        <el-button v-if="row.status === 1" type="text" size="small" class="btn-success" @click="handlePayment(row)">打款</el-button>
+        <el-button v-if="row.status === 0" type="text" size="small" class="btn-warning" @click="handleCancel(row)">取消</el-button>
+      </template>
+    </crud-table>
+
+    <!-- 详情弹窗：只读展示申请编号/申请人/金额/方式/账户/状态/时间/审核备注 -->
+    <crud-dialog :show-cancel="true" title="申请详情" :visible.sync="detailDialogVisible" size="md" :show-submit="false" cancel-text="关 闭">
+      <div v-if="detailRow" class="withdraw-detail">
+        <div class="dt-item"><span class="dt-label">申请编号</span><span class="dt-value">{{ detailRow.applicationNo }}</span></div>
+        <div class="dt-item"><span class="dt-label">申请人</span><span class="dt-value">{{ detailRow.applicantName }}</span></div>
+        <div class="dt-item"><span class="dt-label">提现金额</span><span class="dt-value ds-money--danger">¥{{ formatMoney(detailRow.amount) }}</span></div>
+        <div class="dt-item"><span class="dt-label">提现方式</span><span class="dt-value">{{ getWithdrawMethodText(detailRow.withdrawMethod) }}</span></div>
+        <div class="dt-item"><span class="dt-label">收款账户</span><span class="dt-value">{{ detailRow.receiveAccount }}</span></div>
+        <div class="dt-item"><span class="dt-label">状态</span><span class="dt-value">
+          <el-tag size="small" :type="getStatusTag(detailRow.status)">{{ getStatusText(detailRow.status) }}</el-tag>
+        </span></div>
+        <div class="dt-item"><span class="dt-label">申请时间</span><span class="dt-value">{{ detailRow.createTime }}</span></div>
+        <div v-if="detailRow.reviewRemark" class="dt-item"><span class="dt-label">审核备注</span><span class="dt-value">{{ detailRow.reviewRemark }}</span></div>
+      </div>
+    </crud-dialog>
+
+    <!-- 申请提现弹窗：填写金额/方式/收款账户/收款人/备注 -->
+    <crud-dialog :show-submit="true" :show-cancel="true" title="申请提现" :visible.sync="addDialogVisible" size="md" :submit-loading="submitLoading" @submit="handleAddSubmit">
+      <el-form :model="addForm" :rules="addRules" ref="addForm" label-width="100px">
+        <el-form-item label="提现金额" prop="amount">
+          <el-input-number v-model="addForm.amount" :precision="2" :min="1" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="提现方式" prop="withdrawMethod">
+          <el-radio-group v-model="addForm.withdrawMethod">
+            <el-radio :label="1">银行卡</el-radio>
+            <el-radio :label="2">支付宝</el-radio>
+            <el-radio :label="3">微信</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="收款账户" prop="receiveAccount">
+          <el-input v-model="addForm.receiveAccount" placeholder="请输入收款账户"></el-input>
+        </el-form-item>
+        <el-form-item label="收款人" prop="receiveName">
+          <el-input v-model="addForm.receiveName" placeholder="请输入收款人姓名"></el-input>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="addForm.remark" type="textarea" :rows="2"></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- 审核弹窗：选择通过/拒绝 + 填写审核备注 -->
+    <crud-dialog :show-submit="true" :show-cancel="true" title="审核提现申请" :visible.sync="reviewDialogVisible" size="md" :submit-loading="submitLoading" @submit="handleReviewSubmit">
+      <el-form :model="reviewForm" :rules="reviewRules" ref="reviewFormRef" label-width="100px">
+        <el-form-item label="申请编号">
+          <span>{{ reviewForm.applicationNo }}</span>
+        </el-form-item>
+        <el-form-item label="提现金额">
+          <span>&#165;{{ formatMoney(reviewForm.amount) }}</span>
+        </el-form-item>
+        <el-form-item label="审核结果" prop="status">
+          <el-radio-group v-model="reviewForm.status" @change="onReviewStatusChange">
+            <el-radio :label="1">通过</el-radio>
+            <el-radio :label="3">拒绝</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="审核备注" prop="remark">
+          <el-input v-model="reviewForm.remark" type="textarea" :rows="2"></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- 打款确认弹窗：确认金额 + 填写打款流水号 -->
+    <crud-dialog :show-submit="true" :show-cancel="true" title="确认打款" :visible.sync="paymentDialogVisible" size="md" :submit-loading="submitLoading" @submit="handlePaymentSubmit">
+      <el-form :model="paymentForm" :rules="paymentRules" ref="paymentFormRef" label-width="100px">
+        <el-form-item label="申请编号">
+          <span>{{ paymentForm.applicationNo }}</span>
+        </el-form-item>
+        <el-form-item label="提现金额">
+          <span>¥{{ formatMoney(paymentForm.amount) }}</span>
+        </el-form-item>
+        <el-form-item label="打款流水号" prop="paymentNo">
+          <el-input v-model="paymentForm.paymentNo" placeholder="请输入打款流水号"></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+ </main>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <!-- 修改点：补引 axios —— request.js 首行即使用全局 axios，缺失会抛错导致
+       $axios 永不挂载，本页所有接口请求全部失效 -->
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/common.js?v=20260926"></script>
+  <script src="../../api/finance.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#main-content',
+      data() {
+        return {
+          loading: false,
+          allData: [],
+          page: 1,
+          pageSize: 10,
+          statistics: {},
+          searchParams: {},
+          // 统计卡片配置
+          statsCards: [
+            { key: 'total', icon: 'ri-file-text-line', label: '总申请数', value: 0, color: 'primary' },
+            { key: 'pending', icon: 'ri-time-line', label: '待审核', value: 0, color: 'warning' },
+            { key: 'paid', icon: 'ri-check-line', label: '已打款', value: 0, color: 'success' },
+            { key: 'amount', icon: 'ri-money-cny-circle-line', label: '总提现金额', value: '¥0.00', color: 'primary', unit: '' }
+          ],
+          // 搜索配置
+          searchItems: [
+            { field: 'status', label: '状态', type: 'select', placeholder: '全部状态', options: [
+              { label: '待审核', value: 0 },
+              { label: '审核通过', value: 1 },
+              { label: '已打款', value: 2 },
+              { label: '已拒绝', value: 3 },
+              { label: '已取消', value: 4 }
+            ]}
+          ],
+          // 操作按钮配置
+          actionItems: [
+            { key: 'add', text: '申请提现', type: 'primary', icon: 'ri-add-line' }
+          ],
+          // 表格列配置
+          columns: [
+            { prop: 'applicationNo', label: '申请编号', width: 160, align: 'center' },
+            { prop: 'applicantName', label: '申请人', width: 90, align: 'center' },
+            { prop: 'amount', label: '提现金额', width: 110, align: 'center', type: 'money', slot: true },
+            { prop: 'withdrawMethod', label: '提现方式', width: 90, align: 'center', slot: true },
+            { prop: 'receiveAccount', label: '收款账户', minWidth: 150, align: 'center' },
+            { prop: 'status', label: '状态', width: 80, align: 'center', slot: true },
+            { prop: 'createTime', label: '申请时间', width: 160, align: 'center' }
+          ],
+          submitLoading: false,
+          
+          // Add dialog
+          addDialogVisible: false,
+          addForm: {
+            amount: 100,
+            withdrawMethod: 1,
+            receiveAccount: '',
+            receiveName: '',
+            remark: ''
+          },
+          addRules: {
+            // validator 兜底：el-input-number :min=1 失焦才纠正，防未失焦直接提交 0/负数
+            amount: [
+              { required: true, message: '请输入提现金额', trigger: 'blur' },
+              { validator: function (rule, value, callback) {
+                  if (value == null || Number(value) <= 0) {
+                    callback(new Error('提现金额必须大于 0'))
+                  } else {
+                    callback()
+                  }
+                }, trigger: 'blur' }
+            ],
+            withdrawMethod: [{ required: true, message: '请选择提现方式', trigger: 'change' }],
+            receiveAccount: [{ required: true, message: '请输入收款账户', trigger: 'blur' }],
+            receiveName: [{ required: true, message: '请输入收款人姓名', trigger: 'blur' }]
+          },
+
+          // reviewRules 已移至 computed：审核结果为「拒绝」时备注动态必填
+          paymentRules: {
+            paymentNo: [{ required: true, message: '请输入打款流水号', trigger: 'blur' }]
+          },
+
+          // Detail dialog
+          detailDialogVisible: false,
+          detailRow: null,
+
+          // Review dialog
+          reviewDialogVisible: false,
+          reviewForm: {
+            id: null,
+            applicationNo: '',
+            amount: 0,
+            status: 1,
+            remark: ''
+          },
+          
+          // Payment dialog
+          paymentDialogVisible: false,
+          paymentForm: {
+            id: null,
+            applicationNo: '',
+            amount: 0,
+            paymentNo: ''
+          }
+        }
+      },
+      computed: {
+        // 审核规则动态化：选「拒绝」(status=3) 时备注必填，让商户看到拒绝原因
+        reviewRules() {
+          var rejectRequired = this.reviewForm.status === 3
+          return {
+            status: [{ required: true, message: '请选择审核结果', trigger: 'change' }],
+            remark: rejectRequired
+              ? [{ required: true, message: '请填写拒绝原因', trigger: 'blur' }]
+              : []
+          }
+        },
+        pagedData() {
+          const start = (this.page - 1) * this.pageSize
+          return this.filteredData.slice(start, start + this.pageSize)
+        },
+        filteredData() {
+          let data = this.allData
+          const params = this.searchParams
+          if (params.status !== undefined && params.status !== '') {
+            data = data.filter(function(item) { return item.status === params.status })
+          }
+          return data
+        }
+      },
+      created() {
+        this.fetchData()
+        this.fetchStatistics()
+      },
+      methods: {
+        // ========== 辅助方法 ==========
+        formatMoney(value) {
+          if (!value && value !== 0) return '0.00'
+          return Number(value).toFixed(2)
+        },
+        getWithdrawMethodText(method) {
+          const map = { 1: '银行卡', 2: '支付宝', 3: '微信' }
+          return map[method] || '未知'
+        },
+        getStatusTag(status) {
+          // 修改点：status=1 审核通过 primary 是非法 el-tag type，改为 success（审核通过即成功态）
+          const map = { 0: 'warning', 1: 'success', 2: 'success', 3: 'danger', 4: 'info' }
+          return map[status] || 'info'
+        },
+        getStatusText(status) {
+          const map = { 0: '待审核', 1: '审核通过', 2: '已打款', 3: '已拒绝', 4: '已取消' }
+          return map[status] || '未知'
+        },
+        // ========== 分页/搜索事件 ==========
+        onPageChange(payload) {
+          this.page = payload.page
+        },
+        onSizeChange(payload) {
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
+        },
+        onSearch(params) {
+          this.searchParams = params
+          this.page = 1
+        },
+        onReset() {
+          this.searchParams = {}
+          this.page = 1
+        },
+        onAction(payload) {
+          if (payload.key === 'add') {
+            this.handleAdd()
+          }
+        },
+        // ========== 数据加载 ==========
+        async fetchData() {
+          this.loading = true
+          try {
+            const res = await getWithdrawalList()
+            if (res.code === 1) {
+              this.allData = res.data || []
+            }
+          } catch (err) {
+            ReggieUI.error('加载数据失败')
+          } finally {
+            this.loading = false
+          }
+        },
+        async fetchStatistics() {
+          try {
+            const res = await getWithdrawalStatistics()
+            if (res.code === 1) {
+              this.statistics = res.data || {}
+              this.statsCards[0].value = this.statistics.totalApplications || this.statistics.total || 0
+              this.statsCards[1].value = this.statistics.pendingCount || (this.statistics.statusCount && this.statistics.statusCount[0]) || 0
+              this.statsCards[2].value = this.statistics.paidCount || (this.statistics.statusCount && this.statistics.statusCount[2]) || 0
+              this.statsCards[3].value = '¥' + this.formatMoney(this.statistics.totalWithdrawal || this.statistics.totalAmount || 0)
+            }
+          } catch (err) {
+            ReggieUI.error('加载统计数据失败')
+          }
+        },
+        resetSearch() {
+          this.searchParams = {}
+          this.page = 1
+          this.fetchData()
+        },
+        // ========== 申请提现 ==========
+        handleAdd() {
+          this.addForm = {
+            amount: 100,
+            withdrawMethod: 1,
+            receiveAccount: '',
+            receiveName: '',
+            remark: ''
+          }
+          this.addDialogVisible = true
+          this.$nextTick(() => {
+            this.$refs.addForm && this.$refs.addForm.clearValidate()
+          })
+        },
+        async handleAddSubmit() {
+          const self = this
+          try {
+            await new Promise(function(resolve, reject) {
+              self.$refs.addForm.validate(function(valid) { valid ? resolve() : reject() })
+            })
+          } catch (e) {
+            ReggieUI.warning('请完善表单必填项')
+            return
+          }
+
+          self.submitLoading = true
+          createWithdrawal(self.addForm).then(function(res) {
+            if (res.code === 1) {
+              ReggieUI.success('提交成功')
+              self.addDialogVisible = false
+              self.fetchData()
+              self.fetchStatistics()
+            } else {
+              ReggieUI.error(res.msg || '提交失败')
+            }
+          }).catch(function(err) {
+            ReggieUI.error('提交失败，请稍后重试')
+          }).finally(function() {
+            self.submitLoading = false
+          })
+        },
+        // ========== 查看/审核/打款/取消 ==========
+        handleView(row) {
+          this.detailRow = row
+          this.detailDialogVisible = true
+        },
+        handleReview(row) {
+          this.reviewForm = {
+            id: row.id,
+            applicationNo: row.applicationNo,
+            amount: row.amount,
+            status: 1,
+            remark: ''
+          }
+          this.reviewDialogVisible = true
+          this.$nextTick(() => { this.$refs.reviewFormRef && this.$refs.reviewFormRef.clearValidate() })
+        },
+        // 切换审核结果：动态规则变化后清除备注旧错误（拒绝→通过时红字消失）
+        onReviewStatusChange() {
+          this.$nextTick(() => { this.$refs.reviewFormRef && this.$refs.reviewFormRef.clearValidate('remark') })
+        },
+        async handleReviewSubmit() {
+          const self = this
+          this.$refs.reviewFormRef.validate(function (valid) {
+            if (!valid) {
+              return
+            }
+            self.submitLoading = true
+            reviewWithdrawal(self.reviewForm.id, {
+              status: self.reviewForm.status,
+              remark: self.reviewForm.remark
+            }).then(function(res) {
+              if (res.code === 1) {
+                ReggieUI.success('审核完成')
+                self.reviewDialogVisible = false
+                self.fetchData()
+                self.fetchStatistics()
+              } else {
+                ReggieUI.error(res.msg || '审核失败')
+              }
+            }).catch(function(err) {
+              ReggieUI.error('审核失败')
+            }).finally(function() {
+              self.submitLoading = false
+            })
+          })
+        },
+        handlePayment(row) {
+          this.paymentForm = {
+            id: row.id,
+            applicationNo: row.applicationNo,
+            amount: row.amount,
+            paymentNo: ''
+          }
+          this.paymentDialogVisible = true
+        },
+        async handlePaymentSubmit() {
+          const self = this
+          this.$refs.paymentFormRef.validate(function (valid) {
+            if (!valid) {
+              return
+            }
+            self.submitLoading = true
+            processWithdrawalPayment(self.paymentForm.id, {
+              paymentNo: self.paymentForm.paymentNo
+            }).then(function(res) {
+              if (res.code === 1) {
+                ReggieUI.success('打款成功')
+                self.paymentDialogVisible = false
+                self.fetchData()
+                self.fetchStatistics()
+              } else {
+                ReggieUI.error(res.msg || '打款失败')
+              }
+            }).catch(function(err) {
+              ReggieUI.error('打款失败')
+            }).finally(function() {
+              self.submitLoading = false
+            })
+          })
+        },
+        async handleCancel(row) {
+          try {
+            await ReggieUI.confirm('确定要取消该提现申请吗？', '取消确认', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+            
+            const res = await cancelWithdrawal(row.id)
+            if (res.code === 1) {
+              ReggieUI.success('已取消')
+              this.fetchData()
+              this.fetchStatistics()
+            } else {
+              ReggieUI.error(res.msg || '取消失败')
+            }
+          } catch (err) {
+            if (err === 'cancel') return
+            console.warn('[withdrawal] 取消提现失败:', err)
+            ReggieUI.error('取消失败')
+          }
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+
+

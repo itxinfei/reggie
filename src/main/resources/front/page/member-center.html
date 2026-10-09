@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>会员中心 - 瑞吉外卖</title>
+  <!-- 修改点(2026-09-17 UX)：base.js 移到 head 首位并升样式版本——原在 body 尾部加载，
+       首屏先按默认根字号渲染再跳变（FOUC）；全站其余页均在 head 加载 base.js -->
+  <script src="../js/base.js?v=20260930"></script>
+  <link rel="stylesheet" href="../styles/vant.min.css">
+  <link rel="stylesheet" href="../styles/index.css?v=20260930b">
+  <link rel="stylesheet" href="../styles/skeleton.css?v=20260930" />
+  <link rel="stylesheet" href="../styles/member-center.css?v=20260930">
+  <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css">
+  <!-- 修改点：emoji 兜底不再静态引入 —— fallback 在真字体之后加载会覆盖 ::before，导致权益图标渲染为彩色 emoji；
+       字体加载失败时改由 js/icon-fallback.js 动态注入 remixicon-fallback.css 降级，避免空白方块 -->
+  <script src="../js/icon-fallback.js?v=20260917"></script>
+</head>
+<body class="scrollable-page">
+  <div id="member-center">
+    <!-- 修改点：骨架屏替代 loading 遮罩 -->
+    <div v-if="loading" class="skeleton-container">
+      <!-- 头部骨架 -->
+      <div class="skeleton-header"></div>
+      <!-- 会员卡骨架 -->
+      <div class="skeleton-card">
+        <div class="skeleton-card-top">
+          <div class="skeleton-line skeleton-w30"></div>
+          <div class="skeleton-tag"></div>
+        </div>
+        <div class="skeleton-card-bottom">
+          <div class="skeleton-line skeleton-w40"></div>
+        </div>
+      </div>
+      <!-- 权益骨架 -->
+      <div class="skeleton-benefits">
+        <div class="skeleton-benefit" v-for="i in 4" :key="'sb'+i">
+          <div class="skeleton-circle"></div>
+          <div class="skeleton-line skeleton-w80"></div>
+        </div>
+      </div>
+      <!-- 积分卡片骨架 -->
+      <div class="skeleton-section">
+        <div class="skeleton-section-title">
+          <div class="skeleton-line skeleton-w30"></div>
+          <div class="skeleton-line skeleton-w20"></div>
+        </div>
+        <div class="skeleton-row" v-for="i in 3" :key="'sr'+i">
+          <div class="skeleton-line skeleton-w50"></div>
+          <div class="skeleton-line skeleton-w30"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 头部 -->
+    <div class="mc-header">
+      <div class="mc-header-bg">
+        <div class="mc-header-top">
+          <div class="mc-back" role="button" tabindex="0" aria-label="返回" @click="goBack" @keydown.enter="goBack"><i class="ri-arrow-left-s-line"></i></div>
+          <div class="mc-title">{{ memberInfo && memberInfo.isMember ? '我的会员' : '会员中心' }}</div>
+          <div class="mc-rule" @click="showRules">规则</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 会员卡 -->
+    <div class="mc-card" v-if="memberInfo">
+      <div class="mc-card-top" v-if="memberInfo.isMember && memberInfo.member">
+        <div class="mc-level-name">{{ memberInfo.level ? memberInfo.level.name : '普通会员' }}</div>
+        <!-- 修改点(2026-09-15)：原右侧 .mc-level-tag 渲染与左侧等级名同一字段（均=memberInfo.level.name），
+             导致「黄金会员」在卡片上重复出现两次。改为展示「等级折扣」（真实权益信息），无折扣时隐藏，消除重复 -->
+        <div :class="['mc-level-tag', levelTagClass]" v-if="levelDiscountText">{{ levelDiscountText }}</div>
+      </div>
+      <div class="mc-card-stats" v-if="memberInfo.isMember && memberInfo.member">
+        <div class="mc-card-stat">
+          <div class="val">{{ fmtNum(memberInfo.member.points) }}</div>
+          <div class="lbl">当前积分</div>
+        </div>
+        <div class="mc-card-stat-divider"></div>
+        <div class="mc-card-stat">
+          <div class="val">¥{{ fmtMoney(memberInfo.member.balance) }}</div>
+          <div class="lbl">储值余额</div>
+        </div>
+        <div class="mc-card-stat-divider"></div>
+        <div class="mc-card-stat">
+          <div class="val">{{ memberInfo.couponCount || 0 }}</div>
+          <div class="lbl">优惠券</div>
+        </div>
+      </div>
+      <div class="mc-card-progress" v-if="memberInfo.isMember && nextLevel">
+        <div class="mc-prog-label">
+          <span>距下一级 {{ nextLevel.name }}</span>
+          <span class="next">还差 {{ needPts }} 积分</span>
+        </div>
+        <div class="mc-prog-bar">
+          <div class="mc-prog-fill" :style="{width: progressPct + '%'}"></div>
+        </div>
+      </div>
+      <!-- 已达最高等级：进度条不再整块消失，给满进度条与满级反馈 -->
+      <div class="mc-card-progress" v-else-if="memberInfo.isMember">
+        <div class="mc-prog-label">
+          <span>已达最高等级{{ memberInfo.level ? ' ' + memberInfo.level.name : '' }}</span>
+          <span class="next">尊享全部权益</span>
+        </div>
+        <div class="mc-prog-bar">
+          <div class="mc-prog-fill is-full"></div>
+        </div>
+      </div>
+      <div class="mc-non-member" v-else-if="!memberInfo.isMember">
+        成为会员，享专属折扣与权益
+        <van-button type="warning" size="small" round class="mc-activate-btn" @click="activateMember">立即开通</van-button>
+      </div>
+      <!-- 会员在线充值入口（门店确认到账模式） -->
+      <div class="mc-recharge-entry" v-if="memberInfo.isMember && memberInfo.member" @click="openRecharge">
+        <i class="ri-wallet-3-line"></i><span>在线充值</span><i class="ri-arrow-right-s-line"></i>
+      </div>
+    </div>
+
+    <!-- 会员权益 -->
+    <div class="mc-section">
+      <div class="mc-section-title"><i class="ri-medal-line"></i> 会员权益</div>
+      <div class="mc-benefits">
+        <div class="mc-benefit">
+          <div class="mc-benefit-icon mc-benefit-icon--gold" :class="{locked: !memberInfo || !memberInfo.isMember}"><i class="ri-vip-diamond-line"></i></div>
+          <div class="mc-benefit-name">等级折扣</div>
+          <div class="mc-benefit-desc" v-if="memberInfo && memberInfo.level && memberInfo.level.discount != null">{{ formatDiscount(memberInfo.level.discount) }}折优惠</div>
+          <div class="mc-benefit-desc" v-else>按等级享优惠</div>
+        </div>
+        <div class="mc-benefit">
+          <div class="mc-benefit-icon mc-benefit-icon--green" :class="{locked: !memberInfo || !memberInfo.isMember}"><i class="ri-gift-line"></i></div>
+          <div class="mc-benefit-name">积分奖励</div>
+          <div class="mc-benefit-desc">消费获积分</div>
+        </div>
+        <div class="mc-benefit">
+          <div class="mc-benefit-icon mc-benefit-icon--gold" :class="{locked: !memberInfo || !memberInfo.isMember}"><i class="ri-coupon-line"></i></div>
+          <div class="mc-benefit-name">专属优惠券</div>
+          <div class="mc-benefit-desc">会员专享券</div>
+        </div>
+        <div class="mc-benefit">
+          <div class="mc-benefit-icon mc-benefit-icon--purple" :class="{locked: !memberInfo || !memberInfo.isMember}"><i class="ri-cake-2-line"></i></div>
+          <div class="mc-benefit-name">生日礼遇</div>
+          <!-- 后端暂无生日双倍积分逻辑，避免宣传无法兑现的量化承诺 -->
+          <div class="mc-benefit-desc">生日专属关怀</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: 积分 / 优惠券 / 充值 -->
+    <div class="mc-section">
+      <div class="mc-tabs">
+        <div :class="['mc-tab', activeTab==='points' ? 'active' : '']" @click="switchTab('points')">积分记录</div>
+        <div :class="['mc-tab', activeTab==='coupons' ? 'active' : '']" @click="switchTab('coupons')">我的优惠券</div>
+        <div :class="['mc-tab', activeTab==='recharge' ? 'active' : '']" @click="switchTab('recharge')">充值记录</div>
+      </div>
+
+      <!-- 积分记录 -->
+      <div class="mc-points-list mc-tab-pane" v-if="activeTab==='points'">
+        <div v-if="pointsData.length===0" class="empty-state"><i class="ri-coin-line"></i><p class="empty-text">暂无积分记录</p></div>
+        <div class="mc-point-item" v-for="item in pointsData" :key="item.id||item.createdTime">
+          <div :class="['mc-point-icon', item.type==='ACQUIRE'||item.type==='IN' ? 'in' : 'out']">
+            {{ item.type==='ACQUIRE'||item.type==='IN' ? '↑' : '↓' }}
+          </div>
+          <div class="mc-point-info">
+            <div class="p-title">{{ item.type==='ACQUIRE'||item.type==='IN' ? '获取积分' : '消耗积分' }}</div>
+            <div class="p-time">{{ item.createdTime ? item.createdTime.replace('T', ' ').substring(0, 16) : '' }}</div>
+          </div>
+          <div :class="['mc-point-val', item.type==='ACQUIRE'||item.type==='IN' ? 'in' : 'out']">
+            {{ item.type==='ACQUIRE'||item.type==='IN' ? '+' : '-' }}{{ item.points }}
+          </div>
+        </div>
+      </div>
+
+      <!-- 我的优惠券 -->
+      <div class="mc-coupons mc-tab-pane" v-if="activeTab==='coupons'">
+        <div class="mc-section-title mc-coupon-section-title">
+          可领取 <span class="count">({{ availCoupons.length }}张)</span>
+        </div>
+        <div v-if="availCoupons.length===0" class="empty-state"><i class="ri-coupon-line"></i><p class="empty-text">暂无可领取的优惠券</p></div>
+        <div class="mc-coupon" v-for="c in availCoupons" :key="'avail-'+c.id">
+          <div class="mc-coupon-left">
+            <div class="c-amount">¥{{ Number(c.discountAmount||0).toFixed(2) }}</div>
+            <div class="c-type">{{ c.type==='FULL_REDUCTION' ? '满减' : c.type==='DISCOUNT' ? '折扣' : '新客' }}</div>
+          </div>
+          <div class="mc-coupon-right">
+            <div class="c-name">{{ c.name }}</div>
+            <div class="c-cond" v-if="c.conditionAmount>0">满¥{{ c.conditionAmount }}可用</div>
+            <div class="mc-coupon-actions">
+              <!-- 修改点(2026-09-17 UX)：领取 loading 按券 ID 隔离，点任意一张不再禁用全部领取按钮 -->
+              <button class="mc-claim-btn" @click="doClaim(c.id)" :disabled="claimingId === c.id">{{ claimingId === c.id ? '领取中…' : '立即领取' }}</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mc-section-title mc-coupon-section-title mc-coupon-section-title--gap">
+          我的优惠券 <span class="count">({{ myCoupons.length }}张)</span>
+        </div>
+        <div v-if="myCoupons.length===0" class="empty-state"><i class="ri-coupon-line"></i><p class="empty-text">暂无优惠券</p></div>
+        <!-- 修改点(2026-09-18)：后端 /my 改为返回关联模板的 CouponUserVO；状态库值为小写
+             unused/used/expired（原比大写恒不生效）；金额按券类型区分满减/折扣 -->
+        <div :class="['mc-coupon', c.status==='used'||c.status==='expired' ? 'used' : '']" v-for="c in myCoupons" :key="'my-'+c.id">
+          <div class="mc-coupon-left">
+            <div class="c-amount">{{ couponValue(c) }}</div>
+            <div class="c-type">{{ couponTypeText(c) }}</div>
+          </div>
+          <div class="mc-coupon-right">
+            <div class="c-name">{{ c.name || '优惠券' }}</div>
+            <div class="c-expire" v-if="c.expireTime">有效期至 {{ fmtCouponDate(c.expireTime) }}</div>
+            <div class="c-cond" v-else-if="c.status==='used'">已使用</div>
+            <div class="c-cond" v-else-if="c.status==='expired'">已过期</div>
+            <!-- 未使用券提供"去使用"出口，跳首页点餐（券在结算页选择） -->
+            <div class="mc-coupon-actions" v-if="c.status==='unused'">
+              <button class="mc-claim-btn" @click="goUseCoupon">去使用</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 充值记录 -->
+      <div class="mc-recharge-list mc-tab-pane" v-if="activeTab==='recharge'">
+        <div v-if="rechargeData.length===0" class="empty-state"><i class="ri-wallet-line"></i><p class="empty-text">暂无充值记录</p></div>
+        <div class="mc-recharge-item" v-for="item in rechargeData" :key="item.id||item.createdTime">
+          <div class="mc-recharge-amount" :class="{'is-muted': item.status !== 'SUCCESS'}">
+            {{ item.status === 'SUCCESS' ? '+' : '' }}¥{{ Number(item.amount || 0).toFixed(2) }}
+          </div>
+          <div class="mc-recharge-info">
+            <div class="r-time">{{ item.createdTime ? item.createdTime.replace('T', ' ').substring(0, 16) : '' }}</div>
+            <div class="r-gift" v-if="item.giftAmount > 0 && item.status === 'SUCCESS'">赠送 ¥{{ Number(item.giftAmount || 0).toFixed(2) }}</div>
+            <van-tag v-if="item.status === 'PENDING'" plain type="warning" class="mc-recharge-status">待门店确认</van-tag>
+            <van-tag v-else-if="item.status === 'CANCELLED'" plain type="default" class="mc-recharge-status">已取消</van-tag>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 在线充值弹层 -->
+    <van-popup v-model="rc.show" position="bottom" round :close-on-click-overlay="!rc.submitting">
+      <div class="rc-sheet">
+        <div class="rc-sheet-title">会员充值</div>
+        <div class="rc-amount-grid">
+          <div v-for="a in amountOptions" :key="a"
+               :class="['rc-amount-cell', (!rc.customAmount && rc.amount===a) ? 'on':'']"
+               @click="pickAmount(a)">{{ a }}元</div>
+        </div>
+        <input class="rc-custom-input" type="number" v-model="rc.customAmount" min="1" placeholder="自定义金额（元）">
+        <div class="rc-channel-label">支付方式（在线支付，立即到账）</div>
+        <div class="rc-channel-row">
+          <div :class="['rc-channel', rc.paymentMethod==='WECHAT'?'on':'']" @click="rc.paymentMethod='WECHAT'">
+            <i class="ri-wechat-pay-line"></i><span>微信</span>
+          </div>
+          <div :class="['rc-channel', rc.paymentMethod==='ALIPAY'?'on':'']" @click="rc.paymentMethod='ALIPAY'">
+            <i class="ri-alipay-line"></i><span>支付宝</span>
+          </div>
+        </div>
+        <button class="rc-submit" :disabled="rc.submitting" @click="submitRecharge">
+          {{ rc.submitting ? '提交中…' : '立即充值' }}
+        </button>
+        <div class="rc-tip">在线支付成功后余额立即到账，可在下方充值记录查看</div>
+      </div>
+    </van-popup>
+
+    <!-- 充值待确认弹层 -->
+    <van-popup v-model="pending.show" position="center" round :close-on-click-overlay="false">
+      <div class="rc-pending-card">
+        <div class="rc-pending-icon"><i class="ri-time-line"></i></div>
+        <div class="rc-pending-title">充值待确认</div>
+        <div class="rc-pending-amount">¥{{ Number(pending.amount||0).toFixed(2) }}</div>
+        <div class="rc-pending-desc">请到店出示{{ pending.paymentMethod==='ALIPAY'?'支付宝':'微信' }}付款，门店确认收款后余额到账</div>
+        <div class="rc-pending-no">单号：{{ pending.rechargeNo }}</div>
+        <button class="rc-pending-close" @click="closePending">我知道了</button>
+      </div>
+    </van-popup>
+
+    <div class="mc-bottom-spacer"></div>
+  </div>
+
+  <script src="../../backend/plugins/vue/vue.js"></script>
+  <script src="../js/vant.min.js"></script>
+  <script src="../../backend/plugins/axios/axios.min.js"></script>
+  <script src="../js/request.js?v=20260930"></script>
+  <script src="../api/member-center.js?v=20260929"></script>
+  <script src="../api/payment.js?v=20260929"></script>
+  <script src="../api/coupon.js?v=20260917"></script>
+  <script>
+    new Vue({
+      el: '#member-center',
+      data: function() {
+        return {
+          loading: false, claimingId: null, // 修改点(2026-09-17 UX)：领取 loading 按券 ID 隔离（原 claimLoading 全局共用）
+          memberInfo: null,
+          activeTab: 'points',
+          pointsData: [],
+          myCoupons: [],
+          availCoupons: [],
+          rechargeData: [],
+          allLevels: [],
+          // 会员在线充值（门店确认到账模式）
+          amountOptions: [50, 100, 200, 500],
+          rc: { show: false, amount: 100, customAmount: '', paymentMethod: 'WECHAT', submitting: false, tradeNo: '' },
+          pending: { show: false, rechargeNo: '', amount: null, paymentMethod: 'WECHAT' },
+          activating: false
+        }
+      },
+      computed: {
+        levelTagClass: function() {
+          if (!this.memberInfo || !this.memberInfo.level) return 'new'
+          var n = this.memberInfo.level.name
+          if (n.indexOf('钻石')!==-1||n.indexOf('荣耀')!==-1||n.indexOf('至尊')!==-1||n.indexOf('传奇')!==-1) return 'high'
+          if (n.indexOf('黄金')!==-1||n.indexOf('金卡')!==-1||n.indexOf('铂金')!==-1) return 'high'
+          if (n.indexOf('银')!==-1) return 'mid'
+          return 'low'
+        },
+        // 修改点(2026-09-15)：右侧等级标签改为展示「等级折扣」，避免与左侧等级名重复。
+        // discount 以 0~1 小数表示（如 0.95 → 9.5折）；无折扣信息时返回空（配合模板 v-if 隐藏标签，卡片仅显示左侧等级名）
+        levelDiscountText: function() {
+          if (!this.memberInfo || !this.memberInfo.level) return ''
+          var d = this.memberInfo.level.discount
+          if (typeof d === 'number' && d > 0 && d < 1) {
+            var z = (d * 10).toFixed(1).replace(/\.0$/, '')
+            return z + '折'
+          }
+          return ''
+        },
+        // 等级按升级积分升序，computed 缓存供 nextLevel/progressPct 复用，避免每次重排
+        sortedLevels: function() {
+          return this.allLevels.slice().sort(function(a,b) { return (a.minPoints||0) - (b.minPoints||0) })
+        },
+        nextLevel: function() {
+          if (!this.memberInfo || !this.memberInfo.isMember || !this.allLevels.length) return null
+          var curPts = this.memberInfo.member ? (this.memberInfo.member.points || 0) : 0
+          var sorted = this.sortedLevels
+          for (var i = 0; i < sorted.length; i++) {
+            if ((sorted[i].minPoints||0) > curPts) return sorted[i]
+          }
+          return null
+        },
+        needPts: function() {
+          if (!this.nextLevel) return 0
+          return (this.nextLevel.minPoints||0) - (this.memberInfo && this.memberInfo.member ? (this.memberInfo.member.points||0) : 0)
+        },
+        progressPct: function() {
+          if (!this.nextLevel || !this.memberInfo || !this.memberInfo.member) return 0
+          var cur = this.memberInfo.member.points || 0
+          var sorted = this.sortedLevels
+          var curLevelIdx = -1
+          for (var i = sorted.length - 1; i >= 0; i--) { if ((sorted[i].minPoints||0) <= cur) { curLevelIdx = i; break } }
+          if (curLevelIdx < 0) return Math.min(100, cur / (sorted[0].minPoints||1) * 100)
+          var curMin = sorted[curLevelIdx].minPoints || 0
+          var nextMin = (sorted[curLevelIdx+1] ? sorted[curLevelIdx+1].minPoints : curMin*2) || 1
+          return Math.min(100, (cur - curMin) / (nextMin - curMin) * 100)
+        }
+      },
+      created: function() { this.loadAll() },
+      beforeDestroy: function() { this.stopRechargePolling() },
+      methods: {
+        // 等级折扣格式化：0.95 → "9.5"，0.9 → "9"（原 (discount*100) 把 9.5 折显示成 95 折）
+        formatDiscount(d) {
+          var s = (Number(d) * 10).toFixed(1)
+          return s.slice(-2) === '.0' ? s.slice(0, -2) : s
+        },
+        async loadAll() {
+          this.loading = true
+          // 修改点：getMyMemberInfo 独立 try/catch。此前会员信息接口失败会直接抛到外层，
+          // 积分/优惠券/充值三个 tab 全部加载不到（单点失败拖垮整页）
+          try {
+            var miRes = await getMyMemberInfo()
+            if (miRes.code === 1) {
+              this.memberInfo = miRes.data
+              if (miRes.data.isMember && miRes.data.member) {
+                sessionStorage.setItem("memberId", miRes.data.member.id)
+              }
+            }
+          } catch(e) { console.warn('[member-center] 会员信息加载失败:', e) }
+          // 等级列表(用于升级进度)
+          try {
+            var lvRes = await this.fetchLevels()
+            // 修改点：C端端点 /api/member/member/my-levels 返回裸 List，非分页对象 {records}
+            if (lvRes && lvRes.code === 1) this.allLevels = Array.isArray(lvRes.data) ? lvRes.data : ((lvRes.data && lvRes.data.records) || [])
+          } catch(e) { console.warn('[member-center] fetchLevels 失败:', e) }
+          // 加载各tab数据
+          await Promise.all([
+            this.loadPoints(),
+            this.loadCoupons(),
+            this.loadRecharge()
+          ])
+          this.loading = false
+        },
+        fetchLevels: function() {
+          return getMemberLevels()
+        },
+        async loadPoints() {
+          var memberId = this.memberInfo && this.memberInfo.member ? this.memberInfo.member.id : null
+          if (!memberId) return
+          try {
+            // 修改点：去掉 phone 参数。C端端点 /api/member/member/my-points 按登录态定位会员，
+            // 原 /api/member/points/page 带 @RequireEmployee，C端会被拦截导致积分记录永远加载失败。
+            var res = await getMyPointsList({ page: 1, pageSize: 30 })
+            if (res.code === 1) this.pointsData = res.data.records || []
+          } catch(e) { console.warn('[member-center] loadPoints 失败:', e) }
+        },
+        async loadCoupons() {
+          try {
+            var myRes = await getMyCouponsFront()
+            if (myRes.code === 1) this.myCoupons = myRes.data || []
+            var availRes = await getAvailableCouponsFront()
+            if (availRes.code === 1) {
+              var myTemplateIds = this.myCoupons.map(function(c) { return c.templateId })
+              this.availCoupons = (Array.isArray(availRes.data) ? availRes.data : []).filter(function(c) {
+                return (c.remainCount || 0) > 0 && myTemplateIds.indexOf(c.id) === -1
+              })
+            }
+          } catch(e) { console.warn('[member-center] loadCoupons 失败:', e) }
+        },
+        async loadRecharge() {
+          var memberId = this.memberInfo && this.memberInfo.member ? this.memberInfo.member.id : null
+          if (!memberId) return
+          try {
+            // 修改点：去掉 phone 参数。C端端点 /api/member/member/my-recharges 按登录态定位会员，
+            // 原 /api/member/recharge/page 接受任意 phone 参数存在越权查询风险。
+            var res = await getMyRechargeList({ page: 1, pageSize: 20 })
+            if (res.code === 1) this.rechargeData = res.data.records || []
+          } catch(e) { console.warn('[member-center] loadRecharge 失败:', e) }
+        },
+        switchTab: function(t) { this.activeTab = t },
+        // 去使用券：回首页点餐，结算时可选用券
+        goUseCoupon: function() {
+            window.requestAnimationFrame(function() {
+                window.location.href = '/front/index.html';
+            });
+        },
+        // 修改点(2026-09-17 UX)：领取 loading 按券 ID 隔离（原 claimLoading 全局共用，点任意一张禁用所有按钮）
+        async doClaim(templateId) {
+          if (!this.memberInfo || !this.memberInfo.member) { vant.Toast.fail('请先成为会员'); return }
+          this.claimingId = templateId
+          try {
+            var res = await claimCouponFront(templateId)
+            if (res.code === 1) {
+              vant.Toast.success('领取成功')
+              this.loadCoupons()
+            } else { vant.Toast.fail(res.msg || '领取失败') }
+          } catch(e) { vant.Toast.fail('领取失败') }
+          this.claimingId = null
+        },
+        activateMember: async function() {
+          if (this.activating) return
+          this.activating = true
+          try {
+            var res = await openMemberApi()
+            if (res.code === 1) {
+              vant.Toast.success('会员开通成功')
+              this.loadAll()
+            } else { vant.Toast.fail(res.msg || '开通失败') }
+          } catch(e) {
+            console.warn('[member-center] 开通失败:', e)
+            vant.Toast.fail('网络异常，请稍后重试')
+          }
+          this.activating = false
+        },
+        // ---------- 在线充值（门店确认到账） ----------
+        openRecharge: function() { this.rc.show = true },
+        pickAmount: function(a) {
+          this.rc.amount = a
+          this.rc.customAmount = ''
+        },
+        submitRecharge: async function() {
+          if (this.rc.submitting) return
+          var raw = (this.rc.customAmount || '').toString().trim()
+          var amount = raw ? Number(raw) : this.rc.amount
+          if (!amount || amount <= 0) { vant.Toast.fail('请输入正确的充值金额'); return }
+          if (amount > 5000) { vant.Toast.fail('单笔充值不能超过5000元'); return }
+          this.rc.submitting = true
+          try {
+            // 1. 创建 PENDING 充值单
+            var create = await createRechargeApi({ amount: amount, paymentMethod: this.rc.paymentMethod })
+            if (create.code !== 1) {
+              vant.Toast.fail(create.msg || '提交失败')
+              this.rc.submitting = false
+              return
+            }
+            var rechargeNo = (create.data || {}).rechargeNo
+            // 2. 发起在线支付
+            var pay = await rechargePayApi({ rechargeNo: rechargeNo, channel: this.rc.paymentMethod })
+            if (pay.code !== 1) {
+              // 支付发起失败：充值单仍 PENDING，关闭弹层提示，可走充值记录/门店确认兜底
+              this.rc.show = false
+              vant.Toast.fail(pay.msg || '支付发起失败，可稍后在充值记录中查看')
+              this.rc.submitting = false
+              return
+            }
+            var p = pay.data || {}
+            this.rc.tradeNo = p.tradeNo
+            if (p.mockMode) {
+              // 3a. 演示环境：模拟渠道支付回调推进入账
+              this.mockNotifyRecharge(amount)
+            } else if (p.payUrl) {
+              // 3b. 真实渠道：跳转支付，返回页面后重新加载确认到账
+              window.location.href = p.payUrl
+            } else {
+              this.rc.show = false
+              vant.Toast.fail('支付渠道响应异常，请稍后在充值记录查看')
+              this.rc.submitting = false
+            }
+          } catch(e) {
+            console.warn('[member-center] 充值支付异常:', e)
+            vant.Toast.fail('网络异常，请稍后重试')
+            this.rc.submitting = false
+          }
+        },
+        // 演示环境：构造渠道模拟回调，POST /api/payment/notify/{channel}（mock-mode 跳过验签直接受理）
+        mockNotifyRecharge: async function(amount) {
+          var channel = this.rc.paymentMethod
+          var params = { out_trade_no: this.rc.tradeNo, sign: 'mock' }
+          if (channel === 'WECHAT') {
+            // 微信回调：total_fee 单位分，result_code=SUCCESS 表示业务成功
+            params.total_fee = String(Math.round(Number(amount) * 100))
+            params.result_code = 'SUCCESS'
+            params.return_code = 'SUCCESS'
+            params.transaction_id = 'MOCK_WX_RC_' + Date.now()
+          } else {
+            // 支付宝回调：total_amount 单位元，trade_status=TRADE_SUCCESS
+            params.total_amount = Number(amount).toFixed(2)
+            params.trade_status = 'TRADE_SUCCESS'
+            params.trade_no = 'MOCK_ALI_RC_' + Date.now()
+          }
+          try {
+            var res = await paymentNotifyMockApi(channel, params)
+            if (res && res.code === 1) {
+              this.rc.show = false
+              vant.Toast.success('充值成功，余额已到账')
+              this.loadAll()
+            } else {
+              this.rc.show = false
+              vant.Toast.fail((res && res.msg) || '支付确认失败，请稍后在充值记录查看')
+            }
+          } catch(e) {
+            this.rc.show = false
+            vant.Toast.fail('网络异常，支付确认失败，请稍后在充值记录查看')
+          }
+          this.rc.submitting = false
+        },
+        closePending: function() {
+          // 仅关闭弹层，后台继续轮询，直到门店确认到账
+          this.pending.show = false
+        },
+        startRechargePolling: function() {
+          this.stopRechargePolling()
+          this._rcTicks = 0
+          this._rcFailTicks = 0
+          this._rcTimer = setInterval(this.pollRechargeStatus, 3000)
+        },
+        pollRechargeStatus: async function() {
+          if (!this.pending.rechargeNo) return
+          this._rcTicks = (this._rcTicks || 0) + 1
+          try {
+            var res = await getRechargeStatusApi(this.pending.rechargeNo)
+            if (res.code === 1) {
+              this._rcFailTicks = 0
+              var st = (res.data || {}).status
+              if (st === 'SUCCESS') {
+                this.stopRechargePolling()
+                this.pending.show = false
+                vant.Toast.success('充值成功，余额已到账')
+                this.loadAll()
+              } else if (st === 'CANCELLED') {
+                this.stopRechargePolling()
+                this.pending.show = false
+                vant.Toast.fail('充值单已取消')
+              }
+            } else {
+              this.onRechargePollFail()
+            }
+          } catch(e) { this.onRechargePollFail() }
+          // 最多轮询约10分钟（200次×3s），超时静默停止
+          if (this._rcTicks >= 200) { this.stopRechargePolling() }
+        },
+        stopRechargePolling: function() {
+          if (this._rcTimer) { clearInterval(this._rcTimer); this._rcTimer = null }
+        },
+        // 连续约30秒（10次×3s）查询失败才提示一次并停轮询，零散失败静默重试，既不轰炸也不无感
+        onRechargePollFail: function() {
+          this._rcFailTicks = (this._rcFailTicks || 0) + 1
+          if (this._rcFailTicks >= 10) {
+            this.stopRechargePolling()
+            if (this.pending.show) {
+              vant.Toast.fail('充值状态查询中断，请稍后在会员中心查看')
+            }
+          }
+        },
+        showRules: function() {
+          vant.Dialog.alert({
+            title: '会员规则',
+            // 修改点(2026-09-18)：删除「积分可用于兑换优惠券」——系统无积分兑换功能，属虚假承诺；
+            // 积分实际仅用于按门槛自动升级，规则条目重排为 1-4。
+            message: '1. 消费即可获取积分\n2. 积分达到门槛自动升级\n3. 等级越高，折扣越大\n4. 会员等级长期有效',
+            confirmButtonText: '知道了'
+          })
+        },
+        goBack: function() {
+          // 修改点(2026-09-18)：深链接直接进入无历史记录时，history.go(-1) 无效，兜底回首页
+          if (history.length > 1) { history.go(-1) }
+          else { window.location.href = '/front/index.html' }
+        },
+        fmtNum: function(n) {
+          if (n == null) return '0'
+          return Number(n).toLocaleString()
+        },
+        fmtMoney: function(v) {
+          if (v == null) return '0.00'
+          return Number(v).toFixed(2)
+        },
+        // 修改点(2026-09-18)：我的优惠券面额——折扣券显示折数（0.85→8.5折），其余显示满减金额
+        couponValue: function(c) {
+          if (c.type === 'DISCOUNT' && c.discountRate) {
+            var zhe = Math.round(Number(c.discountRate) * 100) / 10
+            return zhe + '折'
+          }
+          return '¥' + Number(c.discountAmount || 0).toFixed(2)
+        },
+        // 修改点(2026-09-18)：券类型码转中文（模板 type 为 FULL_REDUCTION/DISCOUNT/NEW_MEMBER）
+        couponTypeText: function(c) {
+          var m = { FULL_REDUCTION: '满减券', DISCOUNT: '折扣券', NEW_MEMBER: '新客券' }
+          return m[c.type] || '通用券'
+        },
+        // 修改点(2026-09-18)：有效期仅展示到日，兼容后端 LocalDateTime 的 ISO(带T) 序列化
+        fmtCouponDate: function(t) {
+          if (!t) return ''
+          return String(t).replace('T', ' ').substring(0, 10)
+        }
+      }
+    })
+  </script>
+</body>
+</html>

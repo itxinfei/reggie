@@ -1,0 +1,55 @@
+// 获取会员等级列表（C端：/api/member/member/my-levels，无需员工权限，供升级进度展示）
+function getMemberLevels() {
+  return $axios({ url: '/api/member/member/my-levels', method: 'get' })
+}
+
+// 获取当前用户的会员信息（含等级、积分、余额、优惠券数量）
+function getMyMemberInfo() {
+  return $axios({ url: '/api/member/member/my-info', method: 'get' })
+}
+
+// 获取我的积分记录（分页，C端：按登录态定位会员，禁止传 phone/memberId）
+function getMyPointsList(params) {
+  return $axios({ url: '/api/member/member/my-points', method: 'get', params: params })
+}
+
+// 获取我的充值记录（分页，C端：按登录态定位会员，禁止传 phone/memberId）
+function getMyRechargeList(params) {
+  return $axios({ url: '/api/member/member/my-recharges', method: 'get', params: params })
+}
+
+// 2026-09-30 移除 getMyCoupons(memberId) / claimCoupon(data)：
+// 打的是后台管理口径端点（已加 @RequireEmployee），C 端调用会 401；
+// C 端一律使用下方 getMyCouponsFront / claimCouponFront（/front/coupon/*，登录态绑定身份）
+
+// 获取可领取优惠券列表
+function getAvailableCoupons() {
+  return $axios({ url: '/api/member/coupon-template/page', method: 'get', params: { page: 1, pageSize: 100, status: 1 } })
+}
+
+// C端自助开通会员（使用账号真实手机号与姓名，无需参数）
+function openMemberApi() {
+  return $axios({ url: '/api/member/portal/open', method: 'post' })
+}
+
+// C端发起充值（先建 PENDING 充值单；data: {amount, paymentMethod}）
+function createRechargeApi(data) {
+  return $axios({ url: '/api/member/portal/recharge/create', method: 'post', data: data })
+}
+
+// 对充值单发起在线支付（P1-4；data: {rechargeNo, channel}）
+// 返回 PayResponse: tradeNo / payUrl / qrCodeUrl / mockMode
+function rechargePayApi(data) {
+  return $axios({ url: '/api/payment/recharge/pay', method: 'post', data: data })
+}
+
+// 查询本人充值单状态（门店确认到账后轮询）
+// 轮询请求静默：失败由页面连续失败计数统一处理，避免每 3 秒弹一次错误提示造成告警轰炸
+function getRechargeStatusApi(rechargeNo) {
+  return $axios({
+    url: '/api/member/portal/recharge/status/' + rechargeNo,
+    method: 'get',
+    skipNoWifiRedirect: true,
+    silent: true
+  })
+}

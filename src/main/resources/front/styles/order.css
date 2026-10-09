@@ -1,0 +1,666 @@
+/* 头部已由 cend-shell 的 .cend-navbar 统一接管（2026-09-22），本页不再定义金色 .divHead */
+
+#order {
+  height: 100%;
+}
+
+#order .divBody {
+  position: relative;
+  margin: 0 var(--spacing-md) var(--spacing-md);
+  background: transparent;
+  border-radius: var(--radius-lg);
+  /* 满高 flex 列中占满 navbar + status-tabs 之外的剩余，替代 calc 高度链 */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 修改点：首屏加载骨架屏覆盖层（覆盖在空列表上，不阻断 van-list 渲染） */
+#order .divBody .list-skeleton {
+  position: absolute;
+  top: 58rem; /* 状态Tab(46rem) + 呼吸间距 */
+  left: 0;
+  right: 0;
+  bottom: 12rem;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  z-index: 5;
+}
+
+/* 修改点：美团风格状态Tab筛选栏 */
+#order .status-tabs {
+  display: flex;
+  height: 46rem;
+  background: var(--surface-white-85);
+  padding: 0 4rem;
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  /* 修改点(2026-09-14)：7 个状态过多，允许横向滚动兜底，避免挤压 */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* 修改点(2026-09-17)：滚动时自动出现细微阴影，与下方内容视觉分离 */
+  transition: box-shadow var(--transition-fast);
+}
+/* 滚动出现阴影 — JS 滚动监听添加 .is-scrolled 类 */
+#order .status-tabs.is-scrolled {
+  box-shadow: 0 2rem 8rem rgba(0, 0, 0, 0.06);
+}
+
+#order .status-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+#order .status-tabs .status-tab {
+  flex: 0 0 auto;
+  min-width: auto;
+  text-align: center;
+  line-height: 46rem;
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-body);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  position: relative;
+  padding: 0 12rem;
+  white-space: nowrap;
+  transition: color var(--transition-fast);
+}
+
+/* 修改点(2026-09-14 可访问性)：原激活态文字用品牌金 #ffc200（白底对比度约 1.6:1，远低于 AA 4.5:1）；
+   改为深色加粗文字 + 金色指示条（对比度约 12.6:1），品牌识别由指示条承载 */
+#order .status-tabs .status-tab.active {
+  color: var(--color-text-primary);
+  font-weight: 700;
+  font-family: var(--font-family-title);
+}
+
+#order .status-tabs .status-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28rem;
+  height: 3rem;
+  background: var(--color-primary);
+  border-radius: var(--radius-xl);
+}
+
+#order .divBody .van-list .van-cell::after {
+  border: 0;
+}
+
+/* 修改点(2026-09-17)：订单卡片化 —— 每个订单独立成卡（白底+圆角+投影+间距） */
+#order .divBody .van-list .van-cell.item {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 0 var(--spacing-md) 4rem;
+  margin-bottom: 12rem;
+}
+#order .divBody .van-pull-refresh {
+  padding-top: 12rem;
+}
+
+/* ---- 订单卡片头部：订单号 + 时间 + 状态 ---- */
+#order .divBody .item .order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--spacing-md) 0 var(--spacing-sm);
+  border-bottom: var(--hairline);
+}
+
+#order .divBody .item .order-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+}
+
+/* 主标题：外卖订单 · 下单时间（对标美团卡头，15rem 主文字色） */
+#order .divBody .item .order-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+#order .divBody .item .order-title .title-dot {
+  margin: 0 6rem;
+  color: var(--color-text-hint);
+  font-weight: 400;
+}
+
+#order .divBody .item .order-title .order-time {
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+/* 次要单号行：小号弱化 */
+#order .divBody .item .order-no-row {
+  display: flex;
+  align-items: center;
+}
+
+#order .divBody .item .order-no {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-hint);
+  font-family: var(--font-family-number);
+}
+
+/* 修改点(2026-09-24)：订单号一键复制按钮 —— 行内小图标，透明热区扩到 44rem 保触控 */
+#order .divBody .item .copy-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 2rem;
+  margin-left: 4rem;
+  color: var(--color-text-hint);
+  font-size: 13rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+#order .divBody .item .copy-btn:hover,
+#order .divBody .item .copy-btn:active {
+  color: var(--color-primary-text);
+}
+#order .divBody .item .copy-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44rem;
+  height: 44rem;
+  transform: translate(-50%, -50%);
+}
+
+#order .divBody .item .order-status {
+  /* 修改点(2026-09-17)：状态文字改为胶囊衬底，扫读性提升（复用 --status-*-bg 令牌） */
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  flex-shrink: 0;
+  padding: 3rem 10rem;
+  border-radius: var(--radius-round);
+}
+
+/* 订单状态颜色 —— 修改点(2026-09-14)：统一引用共享层状态色令牌（--status-*），
+   不再各自硬编码；同时补齐「待接单/售后中」两类，旧类名保留兼容 */
+#order .order-status.status-pending   { color: var(--status-pending);   background: var(--status-pending-bg); }
+#order .order-status.status-accepted  { color: var(--status-accepted);  background: var(--status-accepted-bg); }
+#order .order-status.status-shipped,
+#order .order-status.status-delivering { color: var(--status-shipped);   background: var(--status-shipped-bg); }
+#order .order-status.status-completed,
+#order .order-status.status-complete   { color: var(--status-completed); background: var(--status-completed-bg); }
+#order .order-status.status-cancelled,
+#order .order-status.status-cancel     { color: var(--status-cancelled); background: var(--status-cancelled-bg); }
+#order .order-status.status-refunding  { color: var(--status-refunding); background: var(--status-refunding-bg); }
+
+/* ---- 迷你进度条（配送中/待接单） ---- */
+#order .order-progress {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-sm) 0;
+  gap: 0;
+}
+
+#order .progress-step {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-hint);
+  white-space: nowrap;
+  position: relative;
+}
+
+#order .progress-step.done {
+  color: var(--color-success-text);
+}
+
+#order .progress-step.active {
+  color: var(--color-primary-text);
+  font-weight: 600;
+}
+
+#order .progress-line {
+  flex: 1;
+  height: 2rem;
+  background: var(--border-light);
+  margin: 0 6rem;
+  border-radius: 1rem;
+}
+
+#order .progress-line.done {
+  background: var(--color-success);
+}
+
+/* ---- 菜品列表：左侧缩略图 ---- */
+#order .dish-list {
+  padding: var(--spacing-sm) 0;
+}
+
+#order .dish-item {
+  display: flex;
+  align-items: center;
+  /* 修改点(2026-09-17)：4→6rem，菜品行更透气 */
+  padding: 6rem 0;
+  gap: var(--spacing-sm);
+}
+
+#order .dish-img {
+  width: 56rem;
+  height: 56rem;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+#order .dish-img-placeholder {
+  background: var(--bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-disabled);
+  font-size: 20rem;
+}
+
+#order .dish-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+#order .dish-name {
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#order .dish-qty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+}
+
+#order .dish-price {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-number);
+  flex-shrink: 0;
+}
+
+#order .dish-more {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted, var(--color-text-hint));
+  text-align: left;
+  padding: 2rem 0;
+}
+
+/* ---- 合计行 ---- */
+#order .order-total {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 4rem;
+  padding: var(--spacing-sm) 0;
+  /* 修改点(2026-09-17)：标签降级(sm/hint)，金额保持 lg/600，价格更聚焦 */
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+  border-top: var(--hairline);
+}
+
+#order .order-total .price {
+  color: var(--color-price);
+  font-weight: 600;
+  font-family: var(--font-family-number);
+  font-size: var(--font-size-lg);
+}
+
+/* ---- 操作按钮（对齐美团：主按钮+描边按钮） ---- */
+#order .order-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0 var(--spacing-xs);
+}
+
+#order .act-btn {
+  /* 修改点(2026-09-21)：高 32→36 视觉更稳；::after 透明扩命中区到 44 */
+  position: relative;
+  height: 36rem;
+  padding: 0 16rem;
+  border-radius: var(--radius-xl);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+  white-space: nowrap;
+}
+
+/* 透明命中区：视觉高 36，实际可点高度 44（移动端手指友好） */
+#order .act-btn::after {
+  content: '';
+  position: absolute;
+  top: -4rem;
+  bottom: -4rem;
+  left: -8rem;
+  right: -8rem;
+}
+
+#order .act-btn:active {
+  transform: scale(0.96);
+}
+
+/* 描边按钮（次要操作） */
+#order .act-outline {
+  /* 修改点(2026-09-17)：#ccc 边框与禁用态无法区分 → #999 提升可辨识度 */
+  border: 1px solid var(--color-text-hint);
+  background: var(--bg-card);
+  color: var(--color-text-primary);
+}
+
+#order .act-outline:active {
+  background: var(--bg-hover);
+  border-color: var(--color-primary);
+}
+
+/* 实心按钮（主操作） */
+#order .act-primary {
+  border: none;
+  background: var(--color-primary-gradient);
+  color: var(--color-text-primary);
+  box-shadow: 0 2rem 6rem var(--color-primary-tint-lg);
+}
+
+#order .act-primary:active {
+  box-shadow: 0 1rem 3rem var(--color-primary-tint-md);
+}
+
+
+/* 修改点(2026-09-17)：删除 #order .divNoData 自定义空态样式，统一使用全局 .empty-state */
+
+/* =========================================================================
+   订单详情页（order-detail.html）—— 复用上方 .dish-* / .act-btn / status 卡片样式
+   （2026-09-30：原横幅文案在注释里写了「星号+斜杠」连排，会提前闭合注释，
+   使紧随的 #order .od-body 整条规则被解析器丢弃 → 详情页裁切无法滚动）
+   ========================================================================= */
+
+#order .od-body {
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  /* 满高 flex 列中的滚动区，替代无高度导致的裁切 */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* 给固定底部操作栏留位（栏高 + 安全区） */
+  padding-bottom: calc(72rem + env(safe-area-inset-bottom, 0rem));
+}
+
+#order .od-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+}
+
+/* 状态横幅：履约积极态用品牌金，完成绿、取消灰、退款红 */
+#order .od-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  background: var(--color-primary-gradient);
+  /* 修改点(2026-09-26)：金渐变底文字钉深棕，暗色模式不随 text-primary 翻白 */
+  color: var(--color-primary-text);
+}
+
+#order .od-hero.s-4 { background: var(--color-success-text); color: var(--color-text-white); }
+#order .od-hero.s-5 { background: var(--bg-hover); color: var(--color-text-secondary); }
+#order .od-hero.s-6 { background: var(--color-danger); color: var(--color-text-white); }
+
+#order .od-hero-icon { font-size: 34rem; line-height: 1; }
+
+#order .od-hero-main { display: flex; flex-direction: column; gap: 4rem; }
+
+#order .od-hero-title { font-size: 18rem; font-weight: 700; line-height: 1.2; }
+
+#order .od-hero-desc { font-size: 12rem; opacity: .85; }
+
+/* 配送中：预计送达时间高亮（美团式倒计时强调） */
+#order .od-eta-live { opacity: 1; font-size: 13rem; }
+#order .od-eta-live b { font-size: 15rem; font-weight: 700; }
+
+/* hero 下「查看骑手实时位置」入口行 */
+#order .od-tracking-entry {
+  display: flex;
+  align-items: center;
+  gap: 6rem;
+  background: var(--color-primary-tint);
+  border-radius: var(--radius-lg);
+  padding: 12rem var(--spacing-lg);
+  font-size: 14rem;
+  font-weight: 600;
+  color: var(--color-primary-text);
+  cursor: pointer;
+}
+#order .od-tracking-entry .ri-motorbike-line { font-size: 18rem; }
+#order .od-tracking-entry .ri-arrow-right-s-line {
+  margin-left: auto;
+  font-size: 18rem;
+}
+#order .od-tracking-entry:active { opacity: .8; }
+
+/* 收货信息行内的拨号/复制小图标按钮 */
+#order .od-mini-btn {
+  margin-left: auto;
+  width: 32rem;
+  height: 32rem;
+  border-radius: 50%;
+  background: var(--color-primary-tint);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: center;
+  cursor: pointer;
+}
+#order .od-mini-btn i { font-size: 16rem; color: var(--color-primary-text); }
+#order .od-mini-btn:active { background: var(--bg-hover); }
+
+/* 信息 / 价格行 */
+#order .od-rows { display: flex; flex-direction: column; gap: 12rem; }
+
+#order .od-row {
+  display: flex;
+  align-items: flex-start;
+  font-size: 14rem;
+  line-height: 20rem;
+}
+
+#order .od-label {
+  flex-shrink: 0;
+  width: 72rem;
+  color: var(--color-text-secondary);
+}
+
+#order .od-value {
+  flex: 1;
+  color: var(--color-text-primary);
+  text-align: right;
+  word-break: break-all;
+}
+
+#order .od-section-title {
+  font-size: 14rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 12rem;
+}
+
+/* 菜品明细：行间 1px 分隔 */
+#order .od-goods .dish-item + .dish-item {
+  border-top: var(--separator);
+}
+
+#order .dish-info { gap: 2rem; }
+
+#order .od-flavor {
+  font-size: 12rem;
+  color: var(--color-text-hint);
+}
+
+/* 价格明细 */
+#order .od-discount { color: var(--color-price); }
+
+#order .od-pay-row {
+  border-top: var(--separator);
+  padding-top: 12rem;
+  align-items: center;
+}
+
+#order .od-pay-value {
+  color: var(--color-price);
+  font-family: var(--font-family-number);
+  font-size: 18rem;
+  font-weight: 700;
+}
+
+#order .od-invoice-link {
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+  margin-top: 12rem;
+  padding-top: 12rem;
+  border-top: var(--separator);
+  font-size: 13rem;
+  color: var(--color-text-secondary);
+}
+
+#order .od-invoice-link i:last-child { margin-left: auto; }
+
+/* 加载 / 缺单 */
+#order .od-loading { background: var(--bg-card); border-radius: var(--radius-md); padding: var(--spacing-lg); }
+
+#order .od-notfound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rem;
+  padding: 60rem var(--spacing-lg);
+  color: var(--color-text-hint);
+}
+
+#order .od-notfound i { font-size: 48rem; }
+
+#order .od-notfound p { font-size: 14rem; margin: 0; }
+
+#order .od-retry-btn {
+  padding: 10rem 32rem;
+  font-size: 14rem;
+  color: var(--color-text-primary);
+  background: var(--color-primary);
+  border: none;
+  border-radius: 22rem;
+}
+#order .od-retry-btn:active { opacity: 0.85; }
+
+/* 固定底部操作栏 */
+#order .od-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* 修改点(2026-09-27 审查P2桌面居中族)：收敛到 750px 居中列（同 .divCart 手法） */
+  max-width: 750px;
+  margin: 0 auto;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+  padding: 12rem var(--spacing-lg);
+  padding-bottom: calc(12rem + env(safe-area-inset-bottom, 0rem));
+  background: var(--bg-card);
+  border-top: var(--separator);
+}
+
+#order .od-bar .act-btn { margin: 0; }
+
+/* ==================== 售后记录区（订单详情） ==================== */
+#order .od-refund-records {
+  margin: 12rem;
+  padding: 14rem 16rem;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+#order .od-rr-title {
+  font-size: 15rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 10rem;
+}
+#order .od-rr-item {
+  padding: 10rem 0;
+}
+#order .od-rr-item + .od-rr-item {
+  border-top: var(--separator);
+}
+#order .od-rr-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+#order .od-rr-status {
+  font-size: 12rem;
+  padding: 2rem 8rem;
+  border-radius: var(--radius-sm);
+  line-height: 1.6;
+}
+#order .od-rr-status.st-pending,
+#order .od-rr-status.st-processing {
+  color: var(--color-warning-text);
+  background: var(--color-warning-tint);
+}
+#order .od-rr-status.st-SUCCESS {
+  color: var(--color-success-text);
+  background: var(--color-success-tint);
+}
+#order .od-rr-status.st-fail,
+#order .od-rr-status.st-rejected {
+  color: var(--color-danger);
+  background: var(--color-danger-tint);
+}
+#order .od-rr-amount {
+  font-size: 14rem;
+  font-weight: 600;
+  color: var(--color-price);
+}
+#order .od-rr-reason {
+  font-size: 12rem;
+  color: var(--color-text-secondary);
+  margin-top: 6rem;
+  line-height: 1.5;
+}
+#order .od-rr-time {
+  font-size: 11rem;
+  color: var(--color-text-hint);
+  margin-top: 6rem;
+}
+
+/* 骨架屏容器内边距（原内联 padding 收口） */
+.skeleton-page { padding: 16rem 12rem; }
+
+/* 售后退款弹窗：Vant 裸 popup 无内边距，内容需自带 padding（功能布局，非美化） */
+#order .refund-pop { padding: 18rem 16rem 24rem; }
+#order .refund-pop .rp-title { font-size: 16rem; font-weight: 600; margin-bottom: 12rem; }
+#order .refund-pop .rp-tip { font-size: 13rem; color: var(--color-text-secondary); line-height: 1.5; margin-bottom: 12rem; }
+#order .refund-pop .rp-actions { display: flex; gap: 12rem; margin-top: 16rem; }

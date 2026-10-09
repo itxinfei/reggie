@@ -1,0 +1,95 @@
+package com.reggie.module.member.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.reggie.module.member.model.Member;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * <p>
+ * 会员 Mapper 接口
+ * </p>
+ *
+ * @author 心飞为你飞
+ * @since 2024-01-01
+ */
+@Mapper
+public interface MemberMapper extends BaseMapper<Member> {
+
+    /**
+     * 原子扣减会员余额：balance = balance - #{amount}，WHERE balance >= #{amount} 防扣成负数
+     * 修改点：改为参数化 @Update，消除 LambdaUpdateWrapper.setSql 的字符串拼接（违反“禁止拼接 SQL”规范）。
+     * tenant_id 由 TenantLineInnerInterceptor 自动注入，无需手动拼接。
+     * @param id 会员ID
+     * @param amount 扣减金额（正数）
+     * @return 受影响行数，0 表示余额不足或会员不存在
+     */
+    @Update("UPDATE member SET balance = balance - #{amount}, update_time = NOW() " +
+            "WHERE id = #{id} AND balance >= #{amount}")
+    int deductBalanceById(@Param("id") Long id, @Param("amount") BigDecimal amount);
+
+    /**
+     * 原子增加会员积分：points = IFNULL(points, 0) + #{points}
+     * 修改点：改为参数化 @Update，消除 LambdaUpdateWrapper.setSql 的字符串拼接。
+     * @param id 会员ID
+     * @param points 增加积分数（正数）
+     * @return 受影响行数
+     */
+    @Update("UPDATE member SET points = IFNULL(points, 0) + #{points}, update_time = NOW() " +
+            "WHERE id = #{id}")
+    int incrementPointsById(@Param("id") Long id, @Param("points") int points);
+
+    /**
+     * 原子减少会员积分（回退场景）：points = IFNULL(points, 0) - #{points}，不低于 0
+     * 用于拒单/取消时回退已发放积分，防止扣成负数。
+     * @param id 会员ID
+     * @param points 扣减积分数（正数）
+     * @return 受影响行数
+     */
+    @Update("UPDATE member SET points = GREATEST(IFNULL(points, 0) - #{points}, 0), update_time = NOW() " +
+            "WHERE id = #{id}")
+    int decrementPointsById(@Param("id") Long id, @Param("points") int points);
+
+    /**
+     * 积分兑换条件扣减：points = points - #{points}，WHERE points >= #{points}。
+     * 与 {@link #decrementPointsById}（GREATEST 兜底到 0，用于回退）不同，
+     * 余额不足时受影响行数为 0，由调用方据此判定"积分不足"，
+     * 杜绝积分不足却被扣到 0 仍然发出券。
+     * @param id 会员ID
+     * @param points 扣减积分数（正数）
+     * @return 受影响行数，0 表示积分不足或会员不存在
+     */
+    @Update("UPDATE member SET points = points - #{points}, update_time = NOW() " +
+            "WHERE id = #{id} AND points >= #{points}")
+    int deductPointsIfEnough(@Param("id") Long id, @Param("points") int points);
+
+    /**
+     * 原子增加会员余额：balance = balance + #{amount} + IFNULL(#{giftAmount}, 0)
+     * 修改点：用于充值场景，消除 read-modify-write 并发丢失更新。
+     * tenant_id 由 TenantLineInnerInterceptor 自动注入，无需手动拼接。
+     * @param id 会员ID
+     * @param amount 充值金额（正数）
+     * @param giftAmount 赠送金额（可为 null）
+     * @return 受影响行数，0 表示会员不存在
+     */
+    @Update("UPDATE member SET balance = balance + #{amount} + IFNULL(#{giftAmount}, 0), update_time = NOW() " +
+            "WHERE id = #{id}")
+    int addBalance(@Param("id") Long id, @Param("amount") BigDecimal amount,
+            @Param("giftAmount") BigDecimal giftAmount);
+
+    /**
+     * 按会员等级统计会员数量：返回 level_id -> 数量 的明细
+     * 修改点：用于会员统计看板，替代前端 pageSize=9999 拉全量后在浏览器按等级计数。
+     * tenant_id 由 TenantLineInnerInterceptor 自动注入（原生 @Select 同样生效），无需手动拼接。
+     * 注意：level_id 为 NULL 的会员会被归并到一组（levelId=null），由调用方单独处理“无等级”计数。
+     * @return 每组 {levelId, cnt}
+     */
+    @Select("SELECT level_id AS levelId, COUNT(*) AS cnt FROM member WHERE 1=1 GROUP BY level_id")
+    List<Map<String, Object>> countByLevel();
+}

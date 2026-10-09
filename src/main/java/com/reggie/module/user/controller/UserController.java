@@ -1,0 +1,538 @@
+package com.reggie.module.user.controller;
+import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.common.utils.PageUtils;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
+import com.reggie.common.R;
+import com.reggie.dto.SendMsgDTO;
+import com.reggie.dto.UserLoginDTO;
+import com.reggie.module.user.model.User;
+import com.reggie.module.user.service.UserService;
+import com.reggie.utils.SMSUtils;
+import com.reggie.common.RateLimit;
+import com.reggie.common.RateLimitType;
+import com.reggie.common.LogMaskUtils;
+import com.reggie.common.SecurityConstants;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+import javax.validation.Valid;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * 用户管理
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
+@RestController
+@RequestMapping("/user")
+@Slf4j
+@Tag(name = "用户管理", description = "C端用户管理")
+public class UserController {
+
+    @Autowired
+    private UserService userService;
+
+    /**
+     * 验证码按手机号频控（2026-09-30 修复：60s 间隔原存 HttpSession，清 Cookie 换新会话即归零，
+     * 可对任意手机号短信轰炸）。Redis 全局维度：60s 冷却 + 每手机号每日上限；Redis 不可用时降级
+     * 回退会话检查（单机部署下仍有效）。
+     */
+    @Autowired(required = false)
+    private org.springframework.data.redis.core.StringRedisTemplate smsRateLimitRedisTemplate;
+
+    /** 每手机号每日验证码发送上限 */
+    private static final int SMS_DAILY_LIMIT = 10;
+
+    /**
+     * 当前激活的Spring Profile（dev / prod），用于区分开发/生产环境
+     */
+
+    /**
+     * 短信签名（从配置文件注入，生产环境需配置）
+     */
+    @Value("${reggie.sms.sign-name:瑞吉外卖}")
+    private String smsSignName;
+
+    /**
+     * 短信模板编码（从配置文件注入，生产环境需配置）
+     */
+    @Value("${reggie.sms.template-code:}")
+    private String smsTemplateCode;
+
+    /**
+     * 验证码有效期（5分钟，单位：毫秒）
+     */
+    private static final long CODE_EXPIRE_MS = 5 * 60 * 1000;
+
+    /**
+     * 验证码发送间隔（60秒，同一手机号）
+     */
+    private static final long CODE_INTERVAL_MS = 60 * 1000;
+
+    /** 安全随机数生成器 */
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    /**
+     * 默认租户ID（主餐厅）
+     * <p>历史脏数据（用户登录时 register 因无租户上下文遗漏 tenant_id）归属默认租户。</p>
+     */
+    private static final Long DEFAULT_TENANT_ID = 1L;
+
+    /**
+     * 发送短信验证码
+     *
+     * @param dto 发送短信请求
+     * @param session HTTP会话
+     * @return 发送结果
+     */
+    @com.reggie.common.RateLimit(maxRequestsPerSecond = 3)
+    @PostMapping("/sendMsg")
+    @Operation(summary = "发送短信验证码", description = "向指定手机号发送登录验证码，60秒内不可重复发送")
+    public R<String> sendMsg(@Valid @RequestBody SendMsgDTO dto, HttpSession session){
+        String phone = dto.getPhone();
+
+        if(phone == null || phone.isEmpty()){
+            return R.error("手机号不能为空");
+        }
+        if(!phone.matches(SecurityConstants.PHONE_PATTERN)){
+            return R.error("手机号格式不正确");
+        }
+
+        Long lastSendTime = (Long) session.getAttribute("smsCode_" + phone + "_time");
+        if(lastSendTime != null && System.currentTimeMillis() - lastSendTime < CODE_INTERVAL_MS){
+            long remaining = (CODE_INTERVAL_MS - (System.currentTimeMillis() - lastSendTime)) / 1000;
+            return R.error("请" + remaining + "秒后再试");
+        }
+
+        // 按手机号全局频控：60s 冷却（跨会话生效）+ 每日上限，防短信轰炸
+        if (smsRateLimitRedisTemplate != null) {
+            try {
+                String cooldownKey = "sms:cooldown:" + phone;
+                Boolean first = smsRateLimitRedisTemplate.opsForValue()
+                        .setIfAbsent(cooldownKey, "1", java.time.Duration.ofMillis(CODE_INTERVAL_MS));
+                if (!Boolean.TRUE.equals(first)) {
+                    Long ttl = smsRateLimitRedisTemplate.getExpire(cooldownKey);
+                    long remaining = ttl != null && ttl > 0 ? ttl : CODE_INTERVAL_MS / 1000;
+                    return R.error("请" + remaining + "秒后再试");
+                }
+                String dailyKey = "sms:daily:" + phone + ":"
+                        + java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
+                Long sent = smsRateLimitRedisTemplate.opsForValue().increment(dailyKey);
+                if (sent != null && sent == 1L) {
+                    smsRateLimitRedisTemplate.expire(dailyKey, java.time.Duration.ofHours(25));
+                }
+                if (sent != null && sent > SMS_DAILY_LIMIT) {
+                    // 超限时回滚本次计数，避免冷却键已占位但短信未发导致的额度虚耗
+                    smsRateLimitRedisTemplate.delete(cooldownKey);
+                    return R.error("今日验证码发送次数已达上限，请明日再试");
+                }
+            } catch (Exception e) {
+                // Redis 异常降级：仅保留会话级 60s 检查，不阻断发送链路
+                log.warn("验证码Redis频控异常，降级会话检查: phone={}, error={}",
+                        LogMaskUtils.maskPhone(phone), e.getMessage());
+            }
+        }
+
+        // 修改点(2026-09-18)：验证码由 4 位改为 6 位，与 C 端登录页前端正则 /^\d{6}$/ 对齐
+        // （此前后端 4 位 + 前端要求 6 位，输入框永远不满足 canLogin 条件，登录按钮永久禁用，无法登录）
+        int code = SECURE_RANDOM.nextInt(900000) + 100000;
+        String codeStr = String.valueOf(code);
+
+        // 存储验证码及生成时间到Session
+        session.setAttribute("smsCode_" + phone, codeStr);
+        session.setAttribute("smsCode_" + phone + "_time", System.currentTimeMillis());
+
+        // 发送短信：凭证+模板配置完整则真实发送（同时在日志打印验证码），否则进入控制台模式——
+        // 验证码仅打印到服务端日志、不调用外部接口、流程继续。控制台模式不抛错，无需返回失败。
+        try {
+            SMSUtils.sendMessage(smsSignName, smsTemplateCode, phone, codeStr);
+        } catch (Exception e) {
+            // 仅真实发送链路异常才会进入：清除本次验证码并提示用户稍后重试
+            log.error("短信发送失败，phone={}, error={}", LogMaskUtils.maskPhone(phone), e.getMessage(), e);
+            session.removeAttribute("smsCode_" + phone);
+            session.removeAttribute("smsCode_" + phone + "_time");
+            return R.error("短信发送失败，请稍后再试");
+        }
+        return R.success("短信发送成功");
+    }
+
+    /**
+     * 用户登录
+     *
+     * @param dto 用户登录信息
+     * @param session HTTP会话
+     * @return 用户信息
+     */
+    @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.IP)
+    @PostMapping("/login")
+    @Operation(summary = "用户登录", description = "手机号+验证码登录，新用户自动注册")
+    public R<User> login(HttpServletRequest request, @Valid @RequestBody UserLoginDTO dto, HttpSession session){
+        String phone = dto.getPhone();
+        String code = dto.getCode();
+
+        if (phone == null || phone.isEmpty()) {
+            return R.error("手机号不能为空");
+        }
+        if (code == null || code.isEmpty()) {
+            return R.error("验证码不能为空");
+        }
+
+        String sessionCode = (String) session.getAttribute("smsCode_" + phone);
+        Long codeTime = (Long) session.getAttribute("smsCode_" + phone + "_time");
+
+        if (sessionCode == null || codeTime == null) {
+            return R.error("请先获取验证码");
+        }
+        if (System.currentTimeMillis() - codeTime > CODE_EXPIRE_MS) {
+            session.removeAttribute("smsCode_" + phone);
+            session.removeAttribute("smsCode_" + phone + "_time");
+            return R.error("验证码已过期，请重新获取");
+        }
+        if (!sessionCode.equals(code)) {
+            return R.error("验证码错误");
+        }
+
+        // 验证通过，清除Session中的验证码（一次性使用）
+        session.removeAttribute("smsCode_" + phone);
+        session.removeAttribute("smsCode_" + phone + "_time");
+
+        log.info("用户登录，手机号={}", LogMaskUtils.maskPhone(phone));
+
+        User user = userService.getByPhoneForLogin(phone);
+
+        if(user == null){
+            user = new User();
+            user.setPhone(phone);
+            user.setStatus(1);
+            // 设置租户ID，确保新用户关联到当前租户
+            user.setTenantId(BaseContext.getCurrentTenantId() != null ? BaseContext
+                    .getCurrentTenantId() : DEFAULT_TENANT_ID);
+            userService.save(user);
+        } else {
+            // 2026-09-30 修复：被禁用（风控/投诉封禁）的账号不允许登录（须在租户兜底前检查）
+            if (user.getStatus() != null && user.getStatus() == 0) {
+                return R.error("账号已被禁用，如有疑问请联系客服");
+            }
+            if (user.getTenantId() == null) {
+                // 兼容历史脏数据：登录查询是跨租户的，若用户 tenant_id 为 null（旧版注册遗漏），
+                // 则归属默认租户（主餐厅），并回写数据库，避免登录后被 LoginCheckFilter 以
+                // "用户登录态不完整"拒绝，同时保证购物车/订单等按租户过滤的查询有上下文。
+                user.setTenantId(DEFAULT_TENANT_ID);
+                userService.updateById(user);
+            }
+        }
+
+        session.setAttribute("user", user.getId());
+        if (user.getTenantId() != null) {
+            session.setAttribute("tenantId", user.getTenantId());
+        }
+        // 防止Session Fixation攻击：登录成功后切换Session ID
+        request.changeSessionId();
+        // 脱敏：返回前清除敏感字段
+        user.setIdNumber(null);
+        user.setPhone(user.getPhone() != null ? maskPhone(user.getPhone()) : null);
+        return R.success(user);
+    }
+
+    /**
+     * 用户退出
+     *
+     * @param session HTTP会话
+     * @return 退出结果
+     */
+    @PostMapping("/loginout")
+    @Operation(summary = "用户退出", description = "退出当前登录账号，清除会话信息")
+    public R<String> loginout(HttpSession session) {
+        // 必须 invalidate 整个 Session，仅 removeAttribute 不会使 Session ID 失效
+        try {
+            session.invalidate();
+        } catch (IllegalStateException e) {
+            log.warn("[登出] Session 已失效或不存在", e);
+        }
+        BaseContext.remove();
+        return R.success("退出成功");
+    }
+
+    /**
+     * 获取当前登录用户信息
+     *
+     * @param session HTTP会话
+     * @return 用户信息
+     */
+    @GetMapping("/info")
+    @Operation(summary = "获取当前登录用户信息", description = "返回当前登录用户的基本信息（默认手机号脱敏；full=true 时返回本人完整手机号），需携带有效会话")
+    public R<User> getCurrentUser(@RequestParam(value = "full", required = false, defaultValue = "false") Boolean full,
+                                  HttpSession session) {
+        Long userId = (Long) session.getAttribute("user");
+        if (userId == null) {
+            return R.error("NOTLOGIN");
+        }
+        User user = userService.getById(userId);
+        if (user == null) {
+            return R.error("用户不存在");
+        }
+        // 脱敏：返回前清除敏感字段
+        user.setIdNumber(null);
+        // full=true：会话已鉴权且只查本人，返回完整手机号供前端恢复本地登录态（新标签页场景）；
+        // 默认仍脱敏，保持既有调用方行为
+        if (full == null || !full) {
+            user.setPhone(user.getPhone() != null ? maskPhone(user.getPhone()) : null);
+        }
+        return R.success(user);
+    }
+
+    /**
+     * 更新当前登录用户基本信息（昵称 / 性别 / 头像）
+     * <p>
+     * 修改点(2026-09-16)：C 端个人中心需要编辑资料与更换头像，原 {@code UserController} 仅提供
+     * GET /info，无更新入口，导致前端无法持久化修改。此处补充 PUT /info。
+     * <b>安全约束</b>：忽略请求体中的 {@code id}，强制使用会话中的当前用户，杜绝通过传入他人 id 越权改资料。
+     * 仅更新 name / sex / avatar 三个非敏感字段（{@code updateUserBaseInfo} 本身已做非空判空，不会清空其它列）。
+     *
+     * @param user   待更新字段（name / sex / avatar 可部分为空）
+     * @param session HTTP 会话
+     * @return 更新后的脱敏用户信息
+     */
+    @PutMapping("/info")
+    @Operation(summary = "更新当前登录用户基本信息", description = "更新昵称/性别/头像，仅作用于当前登录用户自身，忽略请求体中的 id 防止越权")
+    public R<User> updateCurrentUser(@RequestBody User user, HttpSession session) {
+        Long userId = (Long) session.getAttribute("user");
+        if (userId == null) {
+            return R.error("NOTLOGIN");
+        }
+        if (user == null) {
+            return R.error("参数不能为空");
+        }
+        // 强制绑定会话用户，禁止通过传入 id 修改他人资料（越权防护）
+        user.setId(userId);
+        userService.updateUserBaseInfo(user);
+        User updated = userService.getById(userId);
+        if (updated == null) {
+            return R.error("用户不存在");
+        }
+        // 脱敏：返回前清除敏感字段
+        updated.setIdNumber(null);
+        updated.setPhone(updated.getPhone() != null ? maskPhone(updated.getPhone()) : null);
+        return R.success(updated);
+    }
+
+    /**
+     * 用户分页查询
+     *
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param name 姓名
+     * @param phone 手机号
+     * @param status 状态：0禁用 1正常
+     * @return 分页结果
+     */
+    @RequireEmployee
+        @GetMapping("/page")
+    @Operation(summary = "用户分页查询", description = "分页查询用户列表，支持按姓名、手机号模糊搜索和状态筛选，自动过滤当前租户数据")
+    public R<Page<User>> page(
+            @Parameter(name = "page", description = "页码", required = false, example = "1")
+            @RequestParam(defaultValue = "1") Integer page,
+            @Parameter(name = "pageSize", description = "每页数量", required = false, example = "10")
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @Parameter(name = "name", description = "姓名") String name,
+            @Parameter(name = "phone", description = "手机号") String phone,
+            @Parameter(name = "status", description = "状态：0禁用 1正常") Integer status) {
+
+        log.info("用户分页查询：page={}, pageSize={}, name={}, phone={}, status={}",
+                page, pageSize, name, phone != null ? LogMaskUtils.maskPhone(phone) : "", status);
+
+        Page<User> pageInfo = PageUtils.of(page, pageSize);
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.like(name != null && !name.isEmpty(), User::getName, name)
+                    .like(phone != null && !phone.isEmpty(), User::getPhone, phone)
+                    .eq(status != null, User::getStatus, status)
+                    .orderByDesc(User::getId);
+
+        // 多租户隔离：仅查询当前租户的用户
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            queryWrapper.eq(User::getTenantId, tenantId);
+        }
+
+        userService.page(pageInfo, queryWrapper);
+
+        // 脱敏：移除手机号、身份证等敏感字段
+        if (pageInfo.getRecords() != null) {
+            for (User u : pageInfo.getRecords()) {
+                u.setIdNumber(null);
+                u.setPhone(u.getPhone() != null ? maskPhone(u.getPhone()) : null);
+            }
+        }
+
+        return R.success(pageInfo);
+    }
+
+    /**
+     * 修改用户状态
+     *
+     * @param id 用户ID
+     * @param status 状态：0禁用 1正常
+     * @return 操作结果
+     */
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
+    @PutMapping("/status")
+    @Operation(summary = "修改用户状态", description = "启用或禁用指定用户账号，自动校验租户权限")
+    public R<String> updateStatus(
+            @Parameter(name = "id", description = "用户ID", required = true) Long id,
+            @Parameter(name = "status", description = "状态：0禁用 1正常", required = true) Integer status) {
+
+        log.info("修改用户状态：id={}, status={}", id, status);
+
+        User user = userService.getById(id);
+        if (user == null) {
+            return R.error("用户不存在");
+        }
+
+        // 多租户校验：确保只能操作当前租户的用户
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(user.getTenantId())) {
+            return R.error("无权操作其他租户的用户");
+        }
+
+        user.setStatus(status);
+        boolean success = userService.updateById(user);
+
+        return success ? R.success("操作成功") : R.error("操作失败");
+    }
+
+    /**
+     * 用户统计
+     *
+     * @return 统计信息
+     */
+    @RequireEmployee
+        @GetMapping("/stats")
+    @Operation(summary = "用户统计", description = "获取用户总数、正常数、已禁用数、本月新增数")
+    public R<Map<String, Object>> stats() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+
+        LambdaQueryWrapper<User> totalQw = new LambdaQueryWrapper<>();
+        LambdaQueryWrapper<User> activeQw = new LambdaQueryWrapper<>();
+        LambdaQueryWrapper<User> disabledQw = new LambdaQueryWrapper<>();
+        LambdaQueryWrapper<User> newQw = new LambdaQueryWrapper<>();
+
+        if (tenantId != null) {
+            totalQw.eq(User::getTenantId, tenantId);
+            activeQw.eq(User::getTenantId, tenantId);
+            disabledQw.eq(User::getTenantId, tenantId);
+            newQw.eq(User::getTenantId, tenantId);
+        }
+
+        activeQw.eq(User::getStatus, 1);
+        disabledQw.eq(User::getStatus, 0);
+
+        // 本月新增：createTime >= 当月1日
+        java.time.LocalDateTime monthStart = java.time.LocalDate.now()
+                .withDayOfMonth(1).atStartOfDay();
+        newQw.ge(User::getCreateTime, monthStart);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalUsers", userService.count(totalQw));
+        result.put("activeUsers", userService.count(activeQw));
+        result.put("disabledUsers", userService.count(disabledQw));
+        result.put("newUsersThisMonth", userService.count(newQw));
+        return R.success(result);
+    }
+
+    /**
+     * 删除用户
+     *
+     * @param id 用户ID
+     * @return 操作结果
+     */
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
+    @DeleteMapping
+    @Operation(summary = "删除用户", description = "删除指定用户，自动校验租户权限")
+    public R<String> delete(@Parameter(name = "id", description = "用户ID", required = true) Long id) {
+        log.info("删除用户：id={}", id);
+
+        User user = userService.getById(id);
+        if (user == null) {
+            return R.error("删除失败，用户不存在");
+        }
+
+        // 多租户校验：确保只能删除当前租户的用户
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(user.getTenantId())) {
+            return R.error("无权删除其他租户的用户");
+        }
+
+        boolean success = userService.removeById(id);
+        return success ? R.success("删除成功") : R.error("删除失败");
+    }
+
+    /**
+     * 获取筛选下拉选项（用户姓名 + 手机号列表）
+     * <p>从数据库动态查询当前租户的所有C端用户，供前端下拉框使用。
+     * 后台专用接口：需员工登录权限；手机号列表脱敏，防批量拉取裸手机号。</p>
+     */
+    @GetMapping("/options")
+    @RequireEmployee
+    @Operation(summary = "筛选选项", description = "获取所有用户姓名和手机号，供搜索条件下拉框使用")
+    public R<Map<String, List<String>>> options() {
+        LambdaQueryWrapper<User> qw = new LambdaQueryWrapper<>();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) { qw.eq(User::getTenantId, tenantId); }
+        qw.orderByAsc(User::getName);
+        List<User> list = userService.list(qw);
+
+        Set<String> nameSet = new HashSet<>();
+        Set<String> phoneSet = new HashSet<>();
+        for (User u : list) {
+            if (u.getName() != null && !u.getName().isEmpty()) { nameSet.add(u.getName()); }
+            if (u.getPhone() != null && !u.getPhone().isEmpty()) {
+                phoneSet.add(maskPhone(u.getPhone()));
+            }
+        }
+        Map<String, List<String>> result = new HashMap<>();
+        result.put("names", new ArrayList<>(nameSet));
+        result.put("phones", new ArrayList<>(phoneSet));
+        return R.success(result);
+    }
+
+    /**
+     * 手机号脱敏
+     * @param phone 原始手机号
+     * @return 脱敏后的手机号（如 138****1234）
+     */
+    private String maskPhone(String phone) {
+        if (phone == null || phone.length() < 7) {
+            return phone;
+        }
+        return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);
+    }
+
+}
+
+
+

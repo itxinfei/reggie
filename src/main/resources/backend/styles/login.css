@@ -1,0 +1,431 @@
+/* ============================================================
+   瑞吉外卖管理端 - 登录页
+   设计：简洁双栏布局 + 实心令牌表面（去除玻璃/渐变/光球等装饰）
+   统一规范：圆角卡片 12px、输入 8px；颜色全部引设计令牌
+   ============================================================ */
+
+/* ---- CSS 变量 ---- */
+:root, html.light-theme {
+  --c-bg1:  var(--legacy-f0f2f8);
+  --c-bg2:  var(--legacy-e4e9f2);
+  --c-card: var(--color-white);
+  --c-card-bd: var(--color-gray-200);
+  --c-shadow: 0 8px 40px rgba(0,0,0,.08);
+  --c-t1:  var(--legacy-1a1d2e);
+  --c-t2:  var(--legacy-5a5f7a);
+  /* 修改点：原 #8b90a5 白底仅 3.17:1（页脚版权等三级文字不达 AA）。
+     改用与深色主题同值的 #6b7088，实测 4.88:1，且更贴合整体灰蓝调。 */
+  --c-t3:  var(--legacy-6b7088);
+  --c-inp-bg: var(--color-white);
+  --c-inp-bd: var(--color-gray-300);
+  --c-focus: var(--color-brand-500);
+  --c-focus-2: var(--color-brand-300);
+  --c-focus-g: rgba(255,194,0,.16);
+  --c-err:  var(--legacy-ef4444);
+  --c-err-g: rgba(239,68,68,.08);
+  --c-ok:   var(--legacy-22c55e);
+  --c-left1: var(--legacy-1a1d2e);
+  --c-left2: var(--legacy-2d1f3d);
+  --c-left-t: var(--color-white);
+}
+
+html.dark-theme {
+  --c-bg1:  var(--legacy-0a0d17);
+  --c-bg2:  var(--legacy-121530);
+  --c-card: rgba(18,22,38,.92);
+  --c-card-bd: rgba(255,255,255,.08);
+  --c-shadow: 0 8px 40px rgba(0,0,0,.45);
+  --c-t1:  var(--legacy-f1f3f9);
+  --c-t2:  var(--legacy-a0a5ba);
+  --c-t3:  var(--legacy-6b7088);
+  --c-inp-bg: rgba(22,26,38,.8);
+  --c-inp-bd: rgba(255,255,255,.14);
+  --c-focus: var(--color-brand-500);
+  --c-focus-2: var(--color-brand-300);
+  --c-focus-g: rgba(255,194,0,.2);
+  --c-err:  var(--legacy-f87171);
+  --c-err-g: rgba(248,113,113,.12);
+  --c-ok:   var(--legacy-4ade80);
+  --c-left1: var(--legacy-0a0d17);
+  --c-left2: var(--legacy-1a1030);
+  --c-left-t: var(--color-white);
+}
+
+/* ---- 基础 ---- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body.login-page {
+  height: 100%; margin: 0; padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.login-page {
+  background: var(--c-bg1);
+}
+
+/* ================================================================
+   主容器
+   ================================================================ */
+#login-app {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh;
+  padding: max(24px, env(safe-area-inset-top)) 24px 24px;
+  padding-top: calc(24px + env(safe-area-inset-top));
+}
+
+.login-shell {
+  display: flex;
+  width: 100%; max-width: 980px; min-height: 600px;
+  border-radius: 12px;
+  background: var(--c-card);
+  box-shadow: var(--c-shadow);
+  border: 1px solid var(--c-card-bd);
+  overflow: hidden;
+}
+
+/* ---- 左侧品牌区 ---- */
+.shell-left {
+  position: relative; flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  padding: 60px 52px;
+  background: var(--c-left1);
+  overflow: hidden; min-height: 100%;
+}
+
+.left-inner {
+  position: relative; z-index: 2;
+  color: var(--c-left-t); text-align: center;
+  animation: fadeUp .5s ease .1s both;
+}
+
+.left-brand {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; margin-bottom: 36px;
+}
+
+.brand-icon {
+  width: 48px; height: 48px; display: flex;
+  align-items: center; justify-content: center;
+  background: var(--c-focus);
+  border-radius: 12px;
+  font-size: 24px; color: var(--text-on-brand);
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+
+.brand-name {
+  font-size: 22px; font-weight: 700;
+  opacity: .95;
+}
+
+.left-heading {
+  font-size: 26px; font-weight: 700;
+  margin: 0 0 14px; line-height: 1.35;
+}
+
+.left-sub {
+  font-size: 14px; margin: 0;
+  opacity: .6; line-height: 1.8;
+  letter-spacing: 1px;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- 右侧表单区 ---- */
+.shell-right {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  padding: 48px 52px;
+  background: var(--c-card);
+}
+
+.login-card {
+  width: 100%; max-width: 360px;
+  opacity: 0; transform: translateY(20px);
+  transition: opacity .55s ease .1s, transform .55s ease .1s;
+}
+.login-card.in { opacity: 1; transform: translateY(0); }
+
+.card-top { text-align: center; margin-bottom: 36px; }
+
+.card-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 56px; height: 56px; border-radius: 12px;
+  background: var(--c-focus);
+  color: var(--text-on-brand); font-size: 26px;
+  margin-bottom: 22px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+
+.card-h2 {
+  font-size: 24px; font-weight: 700;
+  color: var(--c-t1); margin: 0 0 6px;
+}
+
+.card-p {
+  font-size: 14px; color: var(--c-t2); margin: 0;
+}
+
+/* ================================================================
+   表单
+   ================================================================ */
+.login-form { width: 100%; padding: 0 !important; }
+.login-form .el-form-item { display: block; margin-bottom: 22px; }
+.login-form .el-form-item__label { width: 0 !important; padding: 0 !important; }
+.login-form .el-form-item__content { line-height: normal; width: 100% !important; margin-left: 0 !important; }
+.fi { margin-bottom: 22px; }
+.fi .el-form-item__content { line-height: normal; width: 100%; }
+.fi .el-form-item__content .inp-wrap { width: 100%; }
+
+/* 输入框包裹 */
+.inp-wrap {
+  display: flex; align-items: center;
+  height: 50px;
+  border: 1.5px solid var(--c-inp-bd);
+  border-radius: 8px;
+  background: var(--c-inp-bg);
+  box-shadow: 0 1px 2px rgba(0,0,0,.04), inset 0 1px 2px rgba(0,0,0,.02);
+  transition: border-color .25s, box-shadow .25s, transform .2s, background .25s;
+  overflow: hidden;
+}
+.inp-wrap:hover:not(.on):not(.bad) {
+  border-color: var(--color-gray-400);
+  box-shadow: 0 1px 3px rgba(0,0,0,.06), inset 0 1px 2px rgba(0,0,0,.02);
+}
+.inp-wrap.on {
+  border-color: var(--c-focus);
+  box-shadow: 0 0 0 3px var(--c-focus-g), 0 2px 6px rgba(0,0,0,.06);
+  transform: translateY(-1px);
+  background: var(--color-white);
+}
+.inp-wrap.ok {
+  border-color: var(--color-gray-400);
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.inp-wrap.bad {
+  border-color: var(--c-err);
+  box-shadow: 0 0 0 3px var(--c-err-g);
+  animation: shake .45s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15%  { transform: translateX(-5px); }
+  30%  { transform: translateX(5px); }
+  45%  { transform: translateX(-4px); }
+  60%  { transform: translateX(3px); }
+  75%  { transform: translateX(-2px); }
+  90%  { transform: translateX(1px); }
+}
+
+.inp-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 48px; height: 50px; flex-shrink: 0;
+  color: var(--c-t3); font-size: 18px;
+  transition: color .25s;
+}
+.inp-wrap.on .inp-icon { color: var(--c-focus); }
+
+.inp-wrap .el-input { flex: 1; height: 100%; width: 100%; }
+.inp-wrap .el-input .el-input__inner {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 4px 0 0 !important;
+  height: 48px !important; line-height: 48px !important;
+  font-size: 15px !important;
+  color: var(--c-t1) !important;
+  box-shadow: none !important; outline: none !important;
+}
+.inp-wrap .el-input .el-input__inner::placeholder {
+  color: var(--c-t3); opacity: .45; font-size: 14px;
+}
+
+.inp-eye {
+  display: flex; align-items: center; justify-content: center;
+  width: 46px; height: 50px; flex-shrink: 0;
+  background: none; border: none;
+  color: var(--c-t3); font-size: 17px;
+  cursor: pointer;
+  transition: color .2s, background .2s;
+}
+.inp-eye:hover { color: var(--c-focus); background: var(--c-focus-g); }
+
+.inp-ok {
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 50px; flex-shrink: 0;
+  color: var(--c-ok); font-size: 16px; font-weight: 700;
+}
+
+/* ---- 登录按钮 ---- */
+.fi-btn { margin-top: 28px; margin-bottom: 0; }
+.fi-btn .el-form-item__content { line-height: normal; }
+
+.btn-login {
+  position: relative;
+  width: 100%; height: 50px;
+  border: none; border-radius: 8px;
+  background: var(--c-focus);
+  color: var(--text-on-brand); font-size: 16px; font-weight: 600;
+  letter-spacing: 2px; cursor: pointer; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  transition: transform .2s cubic-bezier(.16,1,.3,1), box-shadow .3s, opacity .2s, background .2s;
+}
+
+.btn-login:hover:not(:disabled) {
+  background: var(--c-focus-2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0,0,0,.16);
+}
+.btn-login:active:not(:disabled) {
+  transform: translateY(0) scale(.97);
+}
+.btn-login:disabled {
+  cursor: not-allowed; opacity: .65;
+  box-shadow: 0 2px 6px rgba(0,0,0,.1);
+}
+.btn-login:focus-visible {
+  outline: 2px solid var(--c-focus); outline-offset: 2px;
+}
+
+/* 加载点 */
+.btn-dot {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: var(--color-white);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- 卡片底部 ---- */
+.card-foot {
+  margin-top: 30px; text-align: center;
+  font-size: 12px; color: var(--c-t3);
+  animation: fadeUp .5s ease .25s both;
+}
+
+.foot-divider { margin: 0 8px; opacity: .4; }
+
+.forgot-link {
+  color: var(--c-t3); cursor: pointer;
+  text-decoration: none; font-size: 12px;
+  padding: 2px 4px; border-radius: 4px;
+  transition: color .2s;
+}
+.forgot-link:hover { color: var(--c-focus); }
+
+/* 表单错误 */
+.fi .el-form-item__error {
+  color: var(--c-err); font-size: 12px;
+  padding-top: 6px; padding-left: 4px;
+}
+
+/* ---- 主题按钮 ---- */
+.theme-btn {
+  position: fixed;
+  top: calc(22px + env(safe-area-inset-top));
+  right: calc(22px + env(safe-area-inset-right));
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 1px solid var(--c-inp-bd);
+  background: var(--c-card);
+  color: var(--c-t2); font-size: 19px;
+  cursor: pointer; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+  transition: all .3s;
+}
+.theme-btn:hover {
+  transform: rotate(25deg) scale(1.12);
+  color: var(--c-focus); border-color: var(--c-focus);
+}
+.theme-btn:focus-visible {
+  box-shadow: 0 0 0 3px var(--c-focus-g);
+}
+
+/* ---- 忘记密码弹窗 ---- */
+.fp-dialog .el-dialog {
+  border-radius: 12px; overflow: hidden;
+  background: var(--c-card); border: 1px solid var(--c-card-bd);
+}
+.fp-dialog .el-dialog__header { padding: 22px 24px 0; border-bottom: none; }
+.fp-dialog .el-dialog__title { font-size: 16px; font-weight: 600; color: var(--c-t1); }
+.fp-dialog .el-dialog__body { padding: 22px 24px 8px; }
+.fp-dialog .el-dialog__footer { padding: 10px 24px 22px; }
+.fp-dialog .el-form-item__label { color: var(--c-t2); font-size: 13px; }
+.fp-dialog .el-input__inner {
+  border-radius: 8px; background: var(--c-inp-bg);
+  border-color: var(--c-inp-bd); color: var(--c-t1);
+  height: 42px; line-height: 42px;
+}
+.fp-dialog .el-input__inner:focus {
+  border-color: var(--c-focus); box-shadow: var(--c-focus-g);
+}
+.fp-dialog .el-dialog__headerbtn { top: 22px; right: 24px; }
+.fp-dialog .el-dialog__headerbtn .el-dialog__close { color: var(--c-t3); }
+.fp-dialog .el-dialog__headerbtn:hover .el-dialog__close { color: var(--c-focus); }
+.fp-dialog .el-button--primary {
+  background: var(--c-focus); border-color: var(--c-focus); border-radius: 8px;
+  color: var(--text-on-brand);
+}
+.fp-dialog .el-button--primary:hover {
+  background: var(--c-focus-2); border-color: var(--c-focus-2);
+}
+
+/* ================================================================
+   响应式
+   ================================================================ */
+@media (max-width: 800px) {
+  #login-app { padding: 16px; align-items: flex-start; padding-top: calc(72px + env(safe-area-inset-top)); }
+  .login-shell { flex-direction: column; max-width: 420px; min-height: auto; }
+  .shell-left { padding: 28px 28px; min-height: 140px; }
+  .left-heading { font-size: 22px; }
+  .left-sub { font-size: 13px; }
+  .left-brand { margin-bottom: 20px; }
+  .brand-icon { width: 36px; height: 36px; font-size: 18px; }
+  .brand-name { font-size: 17px; }
+  .shell-right { padding: 28px 30px; }
+  .card-top { margin-bottom: 28px; }
+  .card-badge { width: 48px; height: 48px; font-size: 22px; margin-bottom: 16px; }
+  .card-h2 { font-size: 20px; }
+  .theme-btn { top: calc(12px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); width: 36px; height: 36px; font-size: 17px; }
+}
+
+@media (max-width: 480px) {
+  #login-app { padding: 10px; padding-top: calc(48px + env(safe-area-inset-top)); }
+  .login-shell { border-radius: 12px; }
+  .shell-left { padding: 20px; min-height: 100px; }
+  .shell-right { padding: 20px 22px; }
+  .btn-login { height: 46px; font-size: 15px; }
+  .inp-wrap { height: 46px; border-radius: 8px; }
+  .inp-wrap .el-input .el-input__inner { height: 44px !important; line-height: 44px !important; }
+}
+
+/* ---- 减少动画 ---- */
+@media (prefers-reduced-motion: reduce) {
+  .login-card, .left-inner, .card-foot, .btn-dot {
+    animation: none !important;
+  }
+  .login-card, .left-inner, .card-foot {
+    opacity: 1 !important; transform: none !important;
+  }
+  .inp-wrap, .btn-login { transition: none !important; }
+}
+
+/* ---- 深色主题 Element UI 覆盖 ---- */
+html.dark-theme .el-dialog {
+  background: var(--c-card); border: 1px solid var(--c-card-bd);
+}
+html.dark-theme .el-dialog__title { color: var(--c-t1); }
+html.dark-theme .el-dialog__headerbtn .el-dialog__close { color: var(--c-t3); }
+html.dark-theme .el-message {
+  background: var(--c-card) !important; border: 1px solid var(--c-card-bd);
+}
+html.dark-theme .el-message--error {
+  background: rgba(239,68,68,.12) !important; border-color: rgba(239,68,68,.3);
+}
+html.dark-theme .el-message--error .el-message__content { color: var(--legacy-fca5a5); }

@@ -1,0 +1,317 @@
+/* ================================================================
+   消息中心样式 — 瑞吉外卖 v5
+   修改点：从HTML内联样式提取，统一品牌色头
+   ================================================================ */
+
+#messageApp {
+  min-height: 100vh;
+  background: var(--bg-page);
+}
+
+/* ---- 顶部导航：统一品牌色 ---- */
+#messageApp .divHead {
+  width: 100%;
+  height: var(--header-height);
+  height: calc(var(--header-height) + constant(safe-area-inset-top));
+  height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  background: var(--color-primary-gradient);
+  padding: 0 var(--spacing-lg);
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: border-box;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+#messageApp .divHead .divTitle {
+  font-size: var(--header-title-font-size);
+  font-family: var(--font-family-title);
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-text-primary);
+  line-height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#messageApp .divHead .divTitle i {
+  position: absolute;
+  left: var(--spacing-lg);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20rem;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+#messageApp .divHead .divTitle i:active {
+  transform: translateY(-50%) scale(0.85);
+}
+
+/* ---- 全部已读按钮（收敛到 cend-shell 的 #right 插槽，由 .cend-navbar__right 定位） ---- */
+#messageApp .cend-navbar__right .mark-all-btn {
+  font-size: 13rem;
+  font-weight: 500;
+  font-family: var(--font-family-body);
+  color: var(--color-text-primary);
+  opacity: 0.85;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+#messageApp .cend-navbar__right .mark-all-btn:active {
+  opacity: 1;
+}
+
+/* ---- 内容区 ---- */
+#messageApp .divContent {
+  padding: var(--spacing-lg);
+}
+
+/* ---- 消息卡片 ---- */
+#messageApp .msg-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  /* 2026-09-22：纵向 padding 14rem → 12rem，收入 4 倍数节奏 */
+  padding: 12rem var(--spacing-lg);
+  margin-bottom: var(--spacing-sm);
+  box-shadow: var(--shadow-card);
+  position: relative;
+  cursor: pointer;
+  transition: background-color var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+#messageApp .msg-card:active {
+  background: var(--surface-white-85);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* 修改点(2026-09-21)：删除未读 3px 金左边框，未读仅靠红点 + 标题加粗区分 */
+#messageApp .msg-card.unread .msg-title {
+  font-weight: 700;
+}
+
+/* ---- 未读红点 ---- */
+#messageApp .unread-dot {
+  position: absolute;
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
+  width: 8rem;
+  height: 8rem;
+  background: var(--color-danger);
+  border-radius: var(--radius-round);
+}
+
+/* 已读消息无任何标记（对标美团：仅未读显示红点） */
+
+/* ---- 消息头部 ---- */
+#messageApp .msg-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6rem;
+  padding-right: var(--spacing-xl);
+}
+
+#messageApp .msg-title {
+  font-size: 15rem;
+  color: var(--color-text-primary);
+  flex: 1;
+  line-height: 1.4;
+}
+
+/* ---- 消息标签 ---- */
+#messageApp .msg-tag {
+  display: inline-block;
+  padding: 2rem 6rem;
+  border-radius: var(--radius-md);
+  font-size: 11rem;
+  margin-left: var(--spacing-sm);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+#messageApp .tag-notification {
+  /* 改为品牌金 tint：与瑞吉品牌主色一致，不引入蓝色功能色 */
+  background: var(--color-primary-tint);
+  color: var(--color-primary-text);
+}
+#messageApp .tag-popup { background: var(--color-primary-dark-tint); color: var(--color-warning-text); }
+#messageApp .tag-sms { background: var(--color-success-tint); color: var(--color-success-text); }
+/* 2026-09-22：红包标签红底收敛到价格红 tint 令牌（色值由 rgba(243,69,70,.1) 微调到令牌值） */
+#messageApp .tag-coupon { background: var(--color-price-tint); color: var(--color-price); }
+
+/* ---- 消息内容 ---- */
+#messageApp .msg-content {
+  font-size: 13rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--spacing-sm);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+#messageApp .msg-time {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ---- 空状态 — 使用全局 .empty-state 组件（index.css），此处仅保留页面专属覆盖 ---- */
+#messageApp .empty-state {
+  padding: 60rem var(--spacing-xl);
+}
+
+/* ---- 加载更多 ---- */
+#messageApp .load-more {
+  text-align: center;
+  padding: var(--spacing-lg);
+  font-size: 13rem;
+  color: var(--color-text-hint);
+  cursor: pointer;
+}
+
+#messageApp .load-more:active {
+  color: var(--color-primary-text);
+}
+
+/* ---- 详情弹窗 ---- */
+#messageApp .detail-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--mask-strong);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+}
+
+#messageApp .detail-overlay.show {
+  display: flex;
+}
+
+#messageApp .detail-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  width: 85%;
+  max-width: 500rem;
+  max-height: 75vh;
+  overflow-y: auto;
+  padding: var(--spacing-xl);
+  box-shadow: 0 4rem 20rem var(--mask-medium);
+}
+
+#messageApp .detail-title {
+  font-size: 17rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+#messageApp .detail-content {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  margin-bottom: var(--spacing-lg);
+  white-space: pre-wrap;
+}
+
+#messageApp .detail-time {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+  margin-bottom: var(--spacing-lg);
+}
+
+/* 详情后续操作出口 */
+#messageApp .detail-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+#messageApp .detail-btn {
+  flex: 1;
+  padding: 10rem;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+#messageApp .detail-btn-primary {
+  background: var(--color-primary);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+#messageApp .detail-btn-plain {
+  background: var(--bg-input);
+  color: var(--color-text-secondary);
+}
+
+#messageApp .detail-btn-primary:active { background: var(--color-primary-dark); }
+#messageApp .detail-btn-plain:active { background: var(--color-text-disabled); }
+
+#messageApp .detail-close {
+  width: 100%;
+  padding: 10rem;
+  background: var(--bg-input);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+#messageApp .detail-close:active {
+  background: var(--color-text-disabled);
+}
+
+/* ---- 客服会话置顶卡片（2026-09-27 审查P0-4：消息中心补客服消息落点） ---- */
+#messageApp .cs-msg-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 12rem var(--spacing-lg);
+  margin-bottom: var(--spacing-sm);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  transition: background-color var(--transition-normal);
+}
+
+#messageApp .cs-msg-card:active { background: var(--surface-white-85); }
+
+#messageApp .cs-msg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6rem;
+}
+
+#messageApp .cs-msg-name {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+/* 修改点(2026-09-27 审查P1对比度族)：橙色客服图标 → 深金 strong，与文字档一致 */
+#messageApp .cs-msg-name i { vertical-align: -2rem; margin-right: 4rem; color: var(--color-primary-text-strong); }
+
+#messageApp .cs-msg-time {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+}
+
+#messageApp .cs-msg-content {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

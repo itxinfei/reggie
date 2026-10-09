@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>秒杀活动管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <!-- ==================== 秒杀活动管理 ==================== -->
+  <!-- 功能说明：管理限时秒杀活动，设置秒杀菜品/原价/秒杀价/总量/限购/时段，支持状态切换 -->
+</head>
+<body>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="dashboard-container" id="app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">限时秒杀</h1>
+      <!-- 统计卡片：全部/进行中/已暂停/已结束，点击可筛选 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
+
+      <!-- 搜索栏：按活动名称搜索 + 新增秒杀活动按钮 -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        :show-refresh="true"
+        @search="onSearch"
+        @reset="onReset"
+        @refresh="init()"
+        @action="onAction"
+      ></table-bar>
+
+      <!-- 数据表格：ID/活动名称/秒杀菜品/原价/秒杀价/已售总量/每人限购/活动时间/状态 -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :selection="false"
+        :show-actions="true" :viewable="true"
+        :actions-width="180"
+        :actions-fixed="true"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+        aria-label="秒杀活动列表"
+      >
+        <template #col-dish="{ row }">
+          <span>{{ row.dishName || '-' }}</span>
+        </template>
+        <template #col-originalPrice="{ row }">
+          <span style="text-decoration: line-through; color: var(--text-muted)">¥{{ formatMoney(row.originalPrice) }}</span>
+        </template>
+        <template #col-flashPrice="{ row }">
+          <span style="color: var(--color-danger); font-weight: 600">¥{{ formatMoney(row.flashPrice) }}</span>
+        </template>
+        <template #col-stock="{ row }">
+          <span>{{ row.soldQuantity || 0 }}/{{ row.totalQuantity || 0 }}</span>
+        </template>
+        <template #col-maxPerUser="{ row }">
+          <span>{{ row.maxPerUser || '不限' }}</span>
+        </template>
+        <template #col-time="{ row }">
+          <span>{{ formatDate(row.startTime) }} ~ {{ formatDate(row.endTime) }}</span>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="statusTagType(row.status)" size="small">
+            {{ statusText(row.status) }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="handleEdit(row)">编辑</el-button>
+          <el-button type="text" size="small" :class="row.status === 1 ? 'btn-warning' : 'btn-success'" @click="handleToggleStatus(row)" :disabled="row.status === 0 || row.status === 3">
+            {{ row.status === 1 ? '暂停' : '启用' }}
+          </el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- 新增/编辑弹窗：活动名称/秒杀菜品/原价/秒杀价/总量/限购/活动时段/描述/状态 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :size="'lg'"
+      :title="dialogTitle"
+      :visible.sync="dialogVisible"
+      :close-on-click-modal="false"
+      :submit-loading="submitLoading"
+      @submit="handleSubmit"
+    >
+      <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="100px" size="small">
+        <el-form-item label="活动名称" prop="name">
+          <el-input v-model="formData.name" placeholder="请输入活动名称"></el-input>
+        </el-form-item>
+        <el-form-item label="秒杀菜品" prop="dishId">
+          <el-select v-model="formData.dishId" placeholder="请选择菜品" filterable @change="onDishChange" style="width: 100%;">
+            <el-option v-for="d in dishOptions" :key="d.value" :label="d.label" :value="d.value"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="原价(元)">
+              <el-input-number v-model="formData.originalPrice" :precision="2" :min="0" disabled style="width: 100%;"></el-input-number>
+              <div class="form-tip">选择菜品后自动带出</div>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="秒杀价(元)" prop="flashPrice">
+              <el-input-number v-model="formData.flashPrice" :precision="2" :min="0.01" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="总数量" prop="totalQuantity">
+              <el-input-number v-model="formData.totalQuantity" :min="1" :max="9999" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="每人限购">
+              <el-input-number v-model="formData.maxPerUser" :min="0" :max="99" style="width: 100%;"></el-input-number>
+              <div class="form-tip">填0表示不限制，1表示每人限购1份</div>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="活动时段" prop="timeRange">
+          <el-date-picker
+            v-model="formData.timeRange"
+            type="datetimerange"
+            range-separator="至"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+            :picker-options="{ shortcuts: dateShortcuts }"
+            style="width: 100%;">
+          </el-date-picker>
+        </el-form-item>
+        <el-form-item label="活动描述">
+          <el-input v-model="formData.description" type="textarea" :rows="2" placeholder="请输入活动描述"></el-input>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-radio-group v-model="formData.status">
+            <el-radio :label="0">草稿</el-radio>
+            <el-radio :label="1">进行中</el-radio>
+            <el-radio :label="2">暂停</el-radio>
+            <el-radio :label="3">结束</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../js/common.js?v=20260926"></script>
+  <script src="../../api/marketing.js?v=20260926"></script>
+  <script src="../../api/food.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data: function() {
+        return {
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          loading: false,
+          activeFilter: '',
+          tableData: [],
+          // 修改点：后端返回全量活动，保存全量供本地筛选/切片/统计使用
+          allData: [],
+          dishOptions: [],
+          searchConfig: [
+            { type: 'input', field: 'name', placeholder: '请输入活动名称', width: '200px' }
+          ],
+          actionConfig: [
+            { key: 'add', text: '+ 新增秒杀活动', type: 'primary' }
+          ],
+          columns: [
+            { prop: 'id', label: 'ID', width: 60, align: 'center' },
+            { prop: 'name', label: '活动名称', minWidth: 160 },
+            { prop: 'dish', label: '秒杀菜品', slot: true, minWidth: 120 },
+            { prop: 'originalPrice', label: '原价', slot: true, width: 100, align: 'center', type: 'money' },
+            { prop: 'flashPrice', label: '秒杀价', slot: true, width: 100, align: 'center', type: 'money' },
+            { prop: 'stock', label: '已售/总量', slot: true, width: 100, align: 'center' },
+            { prop: 'maxPerUser', label: '每人限购', slot: true, width: 80, align: 'center' },
+            { prop: 'time', label: '活动时间', slot: true, width: 240 },
+            { prop: 'status', label: '状态', slot: true, width: 80, align: 'center' }
+          ],
+          stats: { total: 0, active: 0, paused: 0, ended: 0 },
+          lastSearch: {},
+          dialogVisible: false,
+          dialogTitle: '新增秒杀活动',
+          submitLoading: false,
+          dateShortcuts: [
+            { text: '今日', onClick: function(picker) { const start = new Date(); const end = new Date(); end.setHours(23, 59, 59); picker.$emit('pick', [start, end]) } },
+            { text: '未来 3 天', onClick: function(picker) { const start = new Date(); const end = new Date(); end.setTime(start.getTime() + 3 * 24 * 60 * 60 * 1000); picker.$emit('pick', [start, end]) } },
+            { text: '未来 7 天', onClick: function(picker) { const start = new Date(); const end = new Date(); end.setTime(start.getTime() + 7 * 24 * 60 * 60 * 1000); picker.$emit('pick', [start, end]) } }
+          ],
+          formData: {
+            id: null,
+            name: '',
+            description: '',
+            dishId: null,
+            dishName: '',
+            originalPrice: null,
+            flashPrice: null,
+            totalQuantity: 100,
+            soldQuantity: 0,
+            maxPerUser: 1,
+            startTime: null,
+            endTime: null,
+            timeRange: null,
+            status: 1
+          },
+          formRules: {
+            name: [{ required: true, message: '请输入活动名称', trigger: 'blur' }],
+            dishId: [{ required: true, message: '请选择秒杀菜品', trigger: 'change' }],
+            flashPrice: [{ required: true, message: '请输入秒杀价', trigger: 'blur' }],
+            totalQuantity: [{ required: true, message: '请输入总数量', trigger: 'blur' }],
+            timeRange: [{ required: true, message: '请选择活动时间', trigger: 'change' }]
+          }
+        }
+      },
+      computed: {
+        statsCards: function() {
+          const self = this
+          return [
+            { key: '', icon: 'ri-flashlight-line', label: '全部活动', value: self.stats.total, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: '1', icon: 'ri-flashlight-line', label: '进行中', value: self.stats.active, color: 'success', clickable: true, active: self.activeFilter === '1' },
+            { key: '2', icon: 'ri-pause-circle-line', label: '已暂停', value: self.stats.paused, color: 'warning', clickable: true, active: self.activeFilter === '2' },
+            { key: '3', icon: 'ri-close-circle-line', label: '已结束', value: self.stats.ended, color: 'info', clickable: true, active: self.activeFilter === '3' }
+          ]
+        }
+      },
+      created: function() {
+        this.loadDishOptions()
+        this.init()
+        this.loadStats()
+      },
+      methods: {
+        // ========== 辅助方法 ==========
+        formatMoney: function(value) {
+          if (!value && value !== 0) return '0.00'
+          return Number(value).toFixed(2)
+        },
+        formatDate: function(dt) {
+          if (!dt) return '-'
+          const d = new Date(dt)
+          const year = d.getFullYear()
+          const month = ('0' + (d.getMonth() + 1)).slice(-2)
+          const day = ('0' + d.getDate()).slice(-2)
+          const hour = ('0' + d.getHours()).slice(-2)
+          const min = ('0' + d.getMinutes()).slice(-2)
+          return year + '-' + month + '-' + day + ' ' + hour + ':' + min
+        },
+        statusTagType: function(status) {
+          const map = { 0: 'info', 1: 'success', 2: 'warning', 3: 'info' }
+          return map[status] || 'info'
+        },
+        statusText: function(status) {
+          const map = { 0: '草稿', 1: '进行中', 2: '已暂停', 3: '已结束' }
+          return map[status] || '未知'
+        },
+        // 修改点：/dish/options 返回 Map<String,List<String>>（无 id/price），秒杀需按 id 回写菜名与原价，
+        // 故改用 /dish/list 获取带 id/name/price 的菜品列表
+        // ========== 数据加载 ==========
+        loadDishOptions: function() {
+          const self = this
+          queryDishList({}).then(function(res) {
+            if (res.code === 1 && Array.isArray(res.data)) {
+              self.dishOptions = res.data.map(function(d) {
+                const price = d.price ? Number(d.price).toFixed(2) : '0.00'
+                return { value: d.id, label: d.name + ' (¥' + price + ')', price: d.price, dishName: d.name }
+              })
+            }
+          }).catch(function(err) {
+            console.warn('加载菜品选项失败:', err)
+          })
+        },
+        async init() {
+          this.loading = true
+          const self = this
+          try {
+            // 修改点：使用后端分页接口，支持状态筛选 + 分页
+            const params = {
+              page: self.page,
+              pageSize: self.pageSize
+            }
+            const searchName = self.lastSearch && self.lastSearch.name ? String(self.lastSearch.name).trim() : ''
+            if (searchName) {
+              params.name = searchName
+            }
+            if (self.activeFilter !== '' && self.activeFilter != null) {
+              params.status = Number(self.activeFilter)
+            }
+            const res = await pageFlashSales(params)
+            if (String(res.code) === '1' && res.data) {
+              self.tableData = res.data.records || []
+              self.counts = res.data.total || 0
+            } else {
+              self.tableData = []
+              self.counts = 0
+            }
+          } catch (err) {
+            ReggieUI.error('获取秒杀活动列表失败')
+          }
+          self.loading = false
+        },
+        // 修改点：使用后端统计接口获取各状态数量
+        loadStats: function() {
+          const self = this
+          flashSaleStats().then(function(res) {
+            if (String(res.code) === '1' && res.data) {
+              self.stats = {
+                total: res.data.total || 0,
+                active: res.data.active || 0,
+                paused: res.data.paused || 0,
+                ended: res.data.ended || 0
+              }
+            }
+          }).catch(function(err) {
+            console.warn('加载秒杀统计失败:', err)
+          })
+        },
+        // ========== 筛选/分页事件 ==========
+        onCardClick: function(payload) {
+          const self = this
+          self.activeFilter = payload.activeKey
+          self.lastSearch = {}
+          self.page = 1
+          self.init()
+        },
+        onSearch: function(searchParams) {
+          this.activeFilter = ''
+          this.lastSearch = searchParams
+          this.page = 1
+          this.init()
+        },
+        onReset: function() {
+          this.activeFilter = ''
+          this.lastSearch = {}
+          this.page = 1
+          this.init()
+        },
+        onAction: function(payload) {
+          switch (payload.key) {
+            case 'add': this.handleAdd(); break
+          }
+        },
+        onPageChange: function(payload) {
+          // 修改点：使用后端分页，翻页需重新请求
+          this.page = payload.page
+          this.init()
+        },
+        onSizeChange: function(payload) {
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
+        },
+        // ========== 新增/编辑 ==========
+        onDishChange: function(id) {
+          const self = this
+          var opt = self.dishOptions.filter(function(d) { return d.value === id })[0]
+          if (opt) {
+            self.formData.dishName = opt.dishName || ''
+            self.formData.originalPrice = opt.price || null
+          }
+        },
+        handleAdd: function() {
+          this.dialogTitle = '新增秒杀活动'
+          this.formData = {
+            id: null,
+            name: '',
+            description: '',
+            dishId: null,
+            dishName: '',
+            originalPrice: null,
+            flashPrice: null,
+            totalQuantity: 100,
+            soldQuantity: 0,
+            maxPerUser: 1,
+            startTime: null,
+            endTime: null,
+            timeRange: null,
+            status: 1
+          }
+          this.dialogVisible = true
+          this.$nextTick(function() {
+            this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
+          }.bind(this))
+        },
+        handleEdit: function(row) {
+          this.dialogTitle = '编辑秒杀活动'
+          const fd = Object.assign({}, row)
+          if (fd.startTime && fd.endTime) {
+            fd.timeRange = [fd.startTime, fd.endTime]
+          }
+          this.formData = fd
+          this.dialogVisible = true
+          this.$nextTick(function() {
+            this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
+          }.bind(this))
+        },
+        // ========== 状态切换/删除 ==========
+        async handleToggleStatus(row) {
+          try {
+            if (row.status === 0 || row.status === 3) {
+              ReggieUI.warning('草稿或已结束状态不可切换')
+              return
+            }
+            const newStatus = row.status === 1 ? 2 : 1
+            var res = await updateFlashSale(Object.assign({}, row, { status: newStatus }))
+            if (res.code === 1) {
+              ReggieUI.success(newStatus === 1 ? '已启用' : '已暂停')
+              this.init()
+              this.loadStats()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          } catch (err) {
+            ReggieUI.error('操作失败')
+          }
+        },
+        async handleDelete(row) {
+          try {
+            await ReggieUI.confirm('确定要删除该秒杀活动吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+            const res = await deleteFlashSale(row.id)
+            if (res.code === 1) {
+              ReggieUI.success('删除成功')
+              this.init()
+              this.loadStats()
+            } else {
+              ReggieUI.error(res.msg || '删除失败')
+            }
+          } catch (err) {
+            if (err === 'cancel') return
+            console.warn('[flash-sale] 删除失败:', err)
+            ReggieUI.error('删除失败')
+          }
+        },
+        // 修改点：`async X: function(){}` 是非法语法（整页 JS 解析失败导致白屏），改为合法的 async 方法简写
+        async handleSubmit() {
+          const self = this
+          if (self.submitLoading) return // 提交防重
+          // 修改点：原 catch 吞掉校验失败后仍继续执行提交，改为校验不通过直接中断
+          let valid = false
+          try {
+            valid = await new Promise(function(resolve) {
+              self.$refs.ruleForm.validate(function(v) { resolve(v) })
+            })
+          } catch (e) {
+            valid = false
+          }
+          if (!valid) return
+          // 编辑时总数量不能改到小于已售数量，否则已下单部分将无库存对应
+          var sold = Number(self.formData.soldQuantity) || 0
+          if (Number(self.formData.totalQuantity) < sold) {
+            ReggieUI.error('总数量不能小于已售数量（已售 ' + sold + ' 件）')
+            return
+          }
+          // 非空判断而非真值判断：秒杀价为 0 时旧条件被短路，0 元秒杀可绕过
+          if (self.formData.flashPrice == null || self.formData.flashPrice === '') {
+            ReggieUI.error('请输入秒杀价')
+            return
+          }
+          if (Number(self.formData.flashPrice) <= 0) {
+            ReggieUI.error('秒杀价必须大于0')
+            return
+          }
+          if (self.formData.originalPrice != null && self.formData.flashPrice >= self.formData.originalPrice) {
+            ReggieUI.error('秒杀价必须低于原价')
+            return
+          }
+          if (self.formData.timeRange && self.formData.timeRange.length === 2) {
+            self.formData.startTime = self.formData.timeRange[0]
+            self.formData.endTime = self.formData.timeRange[1]
+          }
+          self.submitLoading = true
+          const submitData = Object.assign({}, self.formData, { timeRange: null })
+          const apiCall = self.formData.id ? updateFlashSale(submitData) : saveFlashSale(submitData)
+          apiCall.then(function(res) {
+            if (res.code === 1) {
+              ReggieUI.success(self.formData.id ? '更新成功' : '新增成功')
+              self.dialogVisible = false
+              self.init()
+              self.loadStats()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          }).catch(function(err) {
+            ReggieUI.error('操作失败')
+          }).finally(function() {
+            self.submitLoading = false
+          })
+        }
+      }
+    })
+  </script>
+</body>
+</html>

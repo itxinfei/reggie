@@ -1,0 +1,639 @@
+package com.reggie.module.order.controller;
+import com.reggie.common.RateLimit;
+import com.reggie.common.RateLimitType;
+import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.common.utils.PageUtils;
+
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
+import com.reggie.common.LogMaskUtils;
+import com.reggie.common.R;
+import com.reggie.dto.OrderDto;
+import com.reggie.dto.EatInOrderRequest;
+import com.reggie.module.order.dto.OrderAgainDTO;
+import com.reggie.module.order.dto.OrderDispatchDTO;
+import com.reggie.module.order.dto.OrderSubmitDTO;
+import com.reggie.module.order.dto.OrderUpdateStatusDTO;
+import com.reggie.module.order.dto.SelfPickupVerifyDTO;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.service.OrderDetailService;
+import com.reggie.module.order.service.OrderService;
+import com.reggie.module.order.service.statusflow.OrderStatusFlowService;
+import com.reggie.module.dashboard.service.DashboardService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
+import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 订单管理
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
+@Slf4j
+@RestController
+@RequestMapping("/order")
+@Tag(name = "订单管理", description = "订单提交、查询及状态管理接口")
+public class OrderController {
+
+    @Autowired
+    private OrderService orderService;
+
+    @Autowired
+    private OrderStatusFlowService statusFlowService;
+
+    @Autowired
+    private OrderDetailService orderDetailService;
+
+    @Autowired
+    private DashboardService dashboardService;
+
+    @Autowired
+    private com.reggie.module.payment.service.RefundRecordService refundRecordService;
+
+    /**
+     * 店长派单：将待接单订单指派给指定骑手。
+     * <p>指派后 status 仍为 2（待骑手接单）；骑手超时未接由定时任务回流抢单大厅。</p>
+     *
+     * @param dto 订单ID + 骑手ID
+     * @return 操作结果
+     */
+    @PostMapping("/dispatch")
+    @RequireEmployee
+    @Operation(summary = "店长派单", description = "将待接单订单指派给指定骑手，骑手需在超时前接单")
+    public R<String> dispatch(@Valid @RequestBody OrderDispatchDTO dto) {
+        log.info("店长派单：订单ID={}，骑手ID={}", dto.getOrderId(), dto.getRiderId());
+        statusFlowService.dispatchOrder(dto.getOrderId(), dto.getRiderId());
+        return R.success("派单成功");
+    }
+
+    /**
+     * 用户下单
+     * @param orders 订单信息
+     * @return 订单关键信息（id, number, amount）
+     */
+    @PostMapping("/submit")
+    @Operation(summary = "提交订单", description = "用户下单，返回订单ID、订单号和金额供前端跳转支付")
+    @Parameter(name = "orders", description = "订单信息（含幂等令牌idempotencyKey）", required = true)
+    @RateLimit(maxRequestsPerSecond = 5) // 防止高频提交订单
+    public R<Map<String, Object>> submit(@Valid @RequestBody OrderSubmitDTO dto){
+        Orders orders = new Orders();
+        orders.setAddressBookId(dto.getAddressBookId());
+        orders.setRemark(dto.getRemark());
+        orders.setPhone(dto.getPhone());
+        orders.setIdempotencyKey(dto.getIdempotencyKey());
+        // 修改点：透传支付方式 / 预约配送时间 / 优惠券ID（原 DTO 无此三字段，
+        // C 端传来的值被静默丢弃，导致选券、预约配送、支付方式均不生效）
+        orders.setPayMethod(dto.getPayMethod());
+        orders.setExpectDeliveryTime(dto.getExpectDeliveryTime());
+        orders.setUsedCouponId(dto.getUsedCouponId());
+        // 修改点（P1-2 自提）：透传履约来源，默认 TAKEOUT 保持外卖向后兼容
+        if (dto.getSource() != null && !dto.getSource().trim().isEmpty()) {
+            orders.setSource(dto.getSource());
+        } else {
+            orders.setSource(com.reggie.enums.OrderSource.TAKEOUT.getValue());
+        }
+        log.info("订单数据：手机号={}，地址ID={}，来源={}",
+            LogMaskUtils.maskPhone(orders.getPhone()),
+            dto.getAddressBookId(), orders.getSource());
+
+        // 幂等性校验：检查是否重复提交
+        String idempotencyKey = orders.getIdempotencyKey();
+        if (idempotencyKey != null && !idempotencyKey.trim().isEmpty()) {
+            Orders existingOrder = orderService.checkIdempotency(idempotencyKey);
+            if (existingOrder != null) {
+                log.warn("检测到重复提交订单：idempotencyKey={}, orderId={}", idempotencyKey, existingOrder.getId());
+                Map<String, Object> result = new HashMap<>();
+                result.put("id", existingOrder.getId());
+                result.put("number", existingOrder.getNumber());
+                result.put("amount", existingOrder.getAmount());
+                result.put("status", existingOrder.getStatus());
+                result.put("duplicate", true);
+                return R.success(result);
+            }
+        }
+
+        // 设置租户ID
+        orders.setTenantId(BaseContext.getCurrentTenantId());
+        try {
+            orderService.submit(orders);
+        } catch (CustomException e) {
+            return R.error(e.getMessage());
+        }
+
+        // 修改点：下单后清除 Dashboard 缓存，确保今日订单数实时更新
+        clearDashboardCache();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", orders.getId());
+        result.put("number", orders.getNumber());
+        result.put("amount", orders.getAmount());
+        result.put("status", orders.getStatus());
+        result.put("duplicate", false);
+        return R.success(result);
+    }
+
+    /**
+     * 堂食扫码下单（不经过购物车，直接传入菜品列表）
+     * @param request 堂食下单请求（含订单信息和明细列表）
+     * @return 订单关键信息
+     */
+    @PostMapping("/eatIn")
+    @Operation(summary = "堂食扫码下单", description = "顾客扫码点餐，直接传入菜品列表下单，自动更新桌台状态")
+    @Parameter(name = "request", description = "堂食下单请求（订单信息+明细列表）", required = true)
+    @RateLimit(maxRequestsPerSecond = 5) // 防止高频提交订单
+    public R<Map<String, Object>> eatIn(@RequestBody @Validated EatInOrderRequest request) {
+        log.info("[堂食] 扫码下单: tableId={}, customerCount={}, items={}",
+            request.getOrder().getTableId(),
+            request.getOrder().getCustomerCount(),
+            request.getOrderDetails() != null ? request.getOrderDetails().size() : 0);
+
+        // 构建 Orders 对象
+        EatInOrderRequest.OrderInfo orderInfo = request.getOrder();
+        Orders orders = new Orders();
+        orders.setTableId(orderInfo.getTableId());
+        orders.setTableName(orderInfo.getTableName());
+        orders.setUserName(orderInfo.getUserName());
+        orders.setPhone(orderInfo.getPhone());
+        orders.setRemark(orderInfo.getRemark());
+        orders.setPayMethod(orderInfo.getPayMethod());
+        orders.setCustomerCount(orderInfo.getCustomerCount());
+
+        // 幂等性校验：使用 UUID 防止重复提交
+        String idempotencyKey = "EATIN_" + java.util.UUID.randomUUID().toString();
+        orders.setIdempotencyKey(idempotencyKey);
+
+        orders.setTenantId(BaseContext.getCurrentTenantId());
+        orderService.submitEatInOrder(orders, request.getOrderDetails());
+
+        // 清除 Dashboard 缓存
+        clearDashboardCache();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", orders.getId());
+        result.put("number", orders.getNumber());
+        result.put("amount", orders.getAmount());
+        result.put("status", orders.getStatus());
+        result.put("tableId", orders.getTableId());
+        result.put("tableName", orders.getTableName());
+        return R.success(result);
+    }
+
+    /**
+     * 根据ID查询订单详情
+     * @param id 订单ID
+     * @return 订单详情及关联明细
+     */
+    @GetMapping("/{id}")
+    @Operation(summary = "查询订单详情", description = "根据订单ID查询订单基本信息及关联明细信息")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    public R<OrderDto> getById(@PathVariable Long id){
+        Orders orders = orderService.getById(id);
+        if (orders == null) {
+            return R.error("订单不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId == null || !Objects.equals(currentTenantId, orders.getTenantId())) {
+            return R.error("订单不属于当前租户");
+        }
+        // 用户端查询他人订单详情拦截（防 IDOR 越权，参照 userCancel 归属校验模式）
+        // 修改点：仅当请求方是 C 端用户时校验归属；管理后台员工端放行。
+        // 判断方式：session 中有 "employee" 属性 → 员工端，跳过用户归属校验；
+        // session 中有 "user" 属性 → C 端用户，校验 userId 归属。
+        org.springframework.web.context.request.ServletRequestAttributes attrs =
+                (org.springframework.web.context.request.ServletRequestAttributes)
+                        org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        javax.servlet.http.HttpSession session = attrs != null ? attrs.getRequest().getSession(false) : null;
+        boolean isEmployeeSession = session != null && session.getAttribute("employee") != null;
+        if (!isEmployeeSession) {
+            Long currentUserId = BaseContext.getCurrentId();
+            if (currentUserId != null && !Objects.equals(currentUserId, orders.getUserId())) {
+                return R.error("无权操作此订单");
+            }
+        }
+        orderService.backfillUserInfo(orders);
+        OrderDto orderDto = new OrderDto();
+        org.springframework.beans.BeanUtils.copyProperties(orders, orderDto);
+        // 查询订单明细
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<OrderDetail> detailWrapper =
+            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        detailWrapper.eq(OrderDetail::getOrderId, id);
+        orderDto.setOrderDetails(orderDetailService.list(detailWrapper));
+        return R.success(orderDto);
+    }
+
+    /**
+     * 后台分页查询订单列表
+     *
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param number 订单号（可选）
+     * @param beginTime 开始时间（可选）
+     * @param endTime 结束时间（可选）
+     * @return 分页结果
+     */
+    @GetMapping("/page")
+    @RequireEmployee
+    @Operation(summary = "订单分页查询", description = "后台分页查询订单列表")
+    @Parameter(name = "page", description = "页码", required = true)
+    @Parameter(name = "pageSize", description = "每页数量", required = true)
+    @Parameter(name = "number", description = "订单号（可选）")
+    @Parameter(name = "beginTime", description = "开始时间（可选）")
+    @Parameter(name = "endTime", description = "结束时间（可选）")
+    @Parameter(name = "status", description = "订单状态（可选，1=待付款,2=待接单/处理中,3=已接单/派送中,4=已完成,5=已取消,6=已退款）")
+    public R<Page<Orders>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize, @RequestParam(required = false) String number,
+            @RequestParam(required = false) String beginTime, @RequestParam(required = false) String endTime,
+            @RequestParam(required = false) Integer status) {
+        // 租户ID已由 LoginCheckFilter 设置到 BaseContext
+        Page<Orders> pageInfo = orderService.orderPage(page, PageUtils.cap(pageSize), number, beginTime, endTime,
+                status);
+        // 脱敏：列表页手机号脱敏，保护用户隐私
+        if (pageInfo.getRecords() != null) {
+            for (Orders order : pageInfo.getRecords()) {
+                order.setPhone(order.getPhone() != null ? LogMaskUtils.maskPhone(order.getPhone()) : null);
+            }
+        }
+        return R.success(pageInfo);
+    }
+
+    /**
+     * 平台订单分页查询（外卖平台拉取的订单）
+     *
+     * @param page          页码
+     * @param pageSize      每页数量
+     * @param platformType  平台类型（MEITUAN/ELEME/DOUYIN/SELF/OTHER，可选）
+     * @param status        订单状态（可选）
+     * @return 平台订单分页结果
+     */
+    @GetMapping("/platform/page")
+    @RequireEmployee
+    @Operation(summary = "平台订单分页查询", description = "后台分页查询外卖平台拉取的订单，支持按平台类型与状态筛选")
+    public R<Page<Orders>> platformOrderPage(
+            @Parameter(description = "页码", required = true, example = "1") @RequestParam(defaultValue =
+                    "1") @Min(1) int page,
+            @Parameter(description = "每页数量", required = true, example = "10") @RequestParam(defaultValue =
+                    "10") @Min(1) @Max(100) int pageSize,
+            @Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN/SELF/OTHER，可选）") @RequestParam(required =
+                    false) String platformType,
+            @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status,
+            @Parameter(description = "平台订单号（可选，模糊查询）") @RequestParam(required = false) String platformOrderId) {
+        // 租户ID已由 LoginCheckFilter 设置到 BaseContext
+        Page<Orders> pageInfo = orderService.platformOrderPage(page, PageUtils.cap(pageSize), platformType, status, platformOrderId);
+        if (pageInfo.getRecords() != null) {
+            for (Orders order : pageInfo.getRecords()) {
+                order.setPhone(order.getPhone() != null ? LogMaskUtils.maskPhone(order.getPhone()) : null);
+            }
+        }
+        return R.success(pageInfo);
+    }
+
+    /**
+     * 查询用户的所有订单
+     *
+     * @return 订单列表
+     */
+    @GetMapping("/list")
+    @Operation(summary = "查询订单列表", description = "查询用户的所有订单")
+    public R<List<Orders>> list() {
+        // 租户ID已由 LoginCheckFilter 设置到 BaseContext
+        List<Orders> list = orderService.userList();
+        return R.success(list);
+    }
+
+    /**
+     * 收银台待收银订单列表（管理端专用）
+     * 筛选条件：本租户下 status=STATUS_ORDERED 且无收银记录的订单
+     *
+     * @return 待收银订单列表（按下单时间倒序）
+     */
+    @GetMapping("/pendingCheckout")
+    @RequireEmployee
+    @Operation(summary = "待收银订单列表", description = "收银台专用，返回本租户下所有待结账的订单")
+    public R<List<Orders>> pendingCheckout() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        return R.success(orderService.listPendingCheckout(tenantId));
+    }
+
+    /**
+     * 分页查询当前用户的订单
+     *
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param status 订单状态（可选：1待付款 2派送中 3已派送 4已完成 5已取消，不传则查全部）
+     * @return 分页结果
+     */
+    @GetMapping("/userPage")
+    @Operation(summary = "用户订单分页查询", description = "分页查询当前用户的订单，支持按状态筛选")
+    @Parameter(name = "page", description = "页码", required = true)
+    @Parameter(name = "pageSize", description = "每页数量", required = true)
+    @Parameter(name = "status", description = "订单状态（可选：1待付款 2待接单/处理中 3已接单/派送中 4已完成 5已取消 6已退款，不传则查全部）")
+    public R<Page<OrderDto>> userPage(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize,
+                         @RequestParam(required = false) Integer status) {
+        // 租户ID已由 LoginCheckFilter 设置到 BaseContext
+        return R.success(orderService.userPage(page, PageUtils.cap(pageSize), status));
+    }
+
+    /**
+     * 再来一单，将订单商品重新添加到购物车
+     *
+     * @param orders 订单信息
+     * @return 操作结果
+     */
+    @PostMapping("/again")
+    @Operation(summary = "再来一单", description = "将订单商品重新添加到购物车")
+    @Parameter(name = "orders", description = "订单信息（只需包含id）", required = true)
+    public R<String> again(@Valid @RequestBody OrderAgainDTO dto) {
+        if (dto.getId() == null) {
+            return R.error("订单ID不能为空");
+        }
+        Orders existing = orderService.getById(dto.getId());
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (existing == null || currentTenantId == null || !Objects.equals(currentTenantId, existing.getTenantId())) {
+            return R.error("订单不存在或不属于当前租户");
+        }
+        // 用户端再来一单越权拦截：防止把他人订单商品加入自己购物车（防 IDOR）
+        // 修改点：仅当请求方是 C 端用户（currentUserId 非空）时校验归属；
+        // 管理后台员工端 BaseContext.getCurrentId() 为 null 放行，避免后台管理端被误拦截。
+        Long currentUserId = BaseContext.getCurrentId();
+        if (currentUserId != null && !Objects.equals(currentUserId, existing.getUserId())) {
+            return R.error("无权操作此订单");
+        }
+        orderService.again(dto.getId());
+        return R.success("添加购物车成功");
+    }
+
+    /**
+     * 更新订单状态
+     *
+     * @param orders 订单状态信息
+     * @return 操作结果
+     */
+    @PutMapping
+    @RequireEmployee
+    @Operation(summary = "更新订单状态", description = "更新订单状态")
+    @Parameter(name = "orders", description = "订单状态信息（含id和status）", required = true)
+    public R<String> updateStatus(@Valid @RequestBody OrderUpdateStatusDTO dto) {
+        if (dto.getId() == null) {
+            return R.error("订单ID不能为空");
+        }
+        if (dto.getStatus() == null) {
+            return R.error("订单状态不能为空");
+        }
+        Orders existing = orderService.getById(dto.getId());
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (existing == null || currentTenantId == null || !Objects.equals(currentTenantId, existing.getTenantId())) {
+            return R.error("订单不存在或不属于当前租户");
+        }
+        statusFlowService.updateStatus(dto.getStatus(), dto.getId());
+        // 修改点：订单状态变更后清除 Dashboard 缓存，防止数据不实
+        clearDashboardCache();
+        return R.success("操作成功");
+    }
+
+    // ==================== 后台订单管理 ====================
+
+    /**
+     * 接单：待接单(2) → 配送中(3)
+     */
+    @PutMapping("/confirm")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 20, type = RateLimitType.USER)
+    @Operation(summary = "接单", description = "后台确认接单，订单状态从待接单变为配送中")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    public R<String> confirm(@RequestParam Long id) {
+        statusFlowService.confirmOrder(id);
+        return R.success("接单成功");
+    }
+
+    /**
+     * 拒单：待接单(2) → 已取消(5)
+     */
+    @PutMapping("/reject")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 20, type = RateLimitType.USER)
+    @Operation(summary = "拒单", description = "后台拒单，订单状态变为已取消")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    public R<String> reject(@RequestParam Long id) {
+        statusFlowService.rejectOrder(id);
+        return R.success("已拒单");
+    }
+
+    /**
+     * 店员核销自提订单：核对取餐码后完成
+     */
+    @PutMapping("/selfPickup/verify")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 20, type = RateLimitType.USER)
+    @Operation(summary = "核销自提订单", description = "校验顾客取餐码，通过后订单完成")
+    public R<String> verifySelfPickup(@Valid @RequestBody SelfPickupVerifyDTO dto) {
+        statusFlowService.verifySelfPickupOrder(dto.getId(), dto.getPickupCode());
+        return R.success("核销成功");
+    }
+
+    /**
+     * 完成订单：配送中(3) → 已完成(4)
+     */
+    @PutMapping("/complete")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 20, type = RateLimitType.USER)
+    @Operation(summary = "完成订单", description = "标记订单为已完成")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    public R<String> complete(@RequestParam Long id) {
+        statusFlowService.completeOrder(id);
+        return R.success("订单已完成");
+    }
+
+    /**
+     * 取消订单：非完成/取消状态 → 已取消(5)
+     */
+    @PutMapping("/cancel")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 20, type = RateLimitType.USER)
+    @Operation(summary = "取消订单", description = "取消订单，需填写取消原因")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    @Parameter(name = "reason", description = "取消原因", required = false)
+    public R<String> cancel(@RequestParam Long id, @RequestParam(required = false) String reason) {
+        statusFlowService.cancelOrder(id, reason);
+        return R.success("订单已取消");
+    }
+
+    /**
+     * 更新内部备注（仅后台可见，店员运营信息）
+     */
+    @PutMapping("/internal-remark")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10, type = RateLimitType.USER)
+    @Operation(summary = "更新内部备注", description = "更新订单内部备注，仅后台可见")
+    public R<String> updateInternalRemark(@RequestParam Long id, @RequestParam(required = false) String remark) {
+        if (id == null) {
+            return R.error("订单ID不能为空");
+        }
+        Orders existing = orderService.getById(id);
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (existing == null || currentTenantId == null || !Objects.equals(currentTenantId, existing.getTenantId())) {
+            return R.error("订单不存在或不属于当前租户");
+        }
+        Orders update = new Orders();
+        update.setId(id);
+        update.setInternalRemark(remark);
+        orderService.updateById(update);
+        return R.success("备注已保存");
+    }
+
+    /**
+     * 订单统计：今日各状态订单数量、营业额
+     */
+    @GetMapping("/statistics")
+    @RequireEmployee
+    @Operation(summary = "订单统计", description = "获取当前租户的订单统计数据，包含各状态数量和今日营业额")
+    public R<Map<String, Object>> statistics() {
+        Map<String, Object> stats = orderService.getOrderStatistics();
+        return R.success(stats);
+    }
+
+    /**
+     * 平台订单全量统计：总订单数、待接单数、已完成数、已完成金额
+     * <p>与列表筛选条件一致（platformType/status），供平台订单页顶部统计卡片使用，翻页不重算。</p>
+     *
+     * @param platformType 平台类型（MEITUAN/ELEME/DOUYIN/SELF/OTHER，可选）
+     * @param status       订单状态（可选）
+     * @return 统计结果
+     */
+    @GetMapping("/platform/statistics")
+    @RequireEmployee
+    @Operation(summary = "平台订单统计", description = "获取当前租户的平台订单统计数据，包含总订单数、待接单数、已完成数与已完成金额")
+    public R<Map<String, Object>> platformStatistics(
+            @Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN/SELF/OTHER，可选）") @RequestParam(required =
+                    false) String platformType,
+            @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status) {
+        return R.success(orderService.getPlatformOrderStatistics(platformType, status));
+    }
+
+
+    /**
+     * 用户取消订单
+     * @param id 订单ID
+     * @return 操作结果
+     */
+    @PutMapping("/userCancel")
+    @Operation(summary = "用户取消订单", description = "用户主动取消待付款/待接单状态的订单")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    public R<String> userCancel(@RequestParam Long id) {
+        Orders existing = orderService.getById(id);
+        if (existing == null) {
+            return R.error("订单不存在");
+        }
+        Long currentUserId = BaseContext.getCurrentId();
+        if (currentUserId == null || !Objects.equals(currentUserId, existing.getUserId())) {
+            return R.error("无权操作此订单");
+        }
+        if (!Objects.equals(existing.getStatus(), Orders.STATUS_PENDING_PAY)
+            && !Objects.equals(existing.getStatus(), Orders.STATUS_ORDERED)) {
+            return R.error("当前状态不允许取消，如需退款请联系客服");
+        }
+        statusFlowService.cancelOrder(id, "用户主动取消");
+        return R.success("订单已取消");
+    }
+
+    /**
+     * 用户端确认收货：配送中(3) → 已完成(4)
+     * @param id 订单ID
+     * @return 操作结果
+     */
+    @PutMapping("/userConfirmReceipt")
+    @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
+    @Operation(summary = "用户确认收货", description = "用户对配送中订单确认收货，订单状态变为已完成")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    public R<String> userConfirmReceipt(@RequestParam Long id) {
+        Orders existing = orderService.getById(id);
+        if (existing == null) {
+            return R.error("订单不存在");
+        }
+        Long currentUserId = BaseContext.getCurrentId();
+        if (currentUserId == null || !Objects.equals(currentUserId, existing.getUserId())) {
+            return R.error("无权操作此订单");
+        }
+        if (!Objects.equals(existing.getStatus(), Orders.STATUS_DELIVERING)) {
+            return R.error("当前订单状态不支持确认收货");
+        }
+        // 堂食订单由门店员工在上菜完成时完结并释放桌台，顾客端不允许确认收货
+        if (existing.getTableId() != null) {
+            return R.error("堂食订单请由门店确认上菜");
+        }
+        statusFlowService.completeOrder(id);
+        clearDashboardCache();
+        return R.success("确认收货成功");
+    }
+
+    /**
+     * 用户端申请售后（整单退款）
+     * @param id 订单ID
+     * @param reason 退款原因
+     * @return 退款流水号
+     */
+    @PostMapping("/userApplyRefund")
+    @RateLimit(maxRequestsPerSecond = 3, type = RateLimitType.USER)
+    @Operation(summary = "用户申请售后", description = "用户对已完成订单申请整单退款，进入待审核状态")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    @Parameter(name = "reason", description = "退款原因", required = true)
+    public R<Map<String, Object>> userApplyRefund(@RequestParam Long id, @RequestParam String reason) {
+        com.reggie.module.payment.model.RefundRecord record = refundRecordService.applyUserRefund(id, reason);
+        Map<String, Object> data = new HashMap<>();
+        data.put("refundNo", record.getRefundNo());
+        data.put("status", record.getStatus());
+        data.put("amount", record.getAmount());
+        return R.success(data);
+    }
+
+    /**
+     * 用户端查询某订单的售后申请记录
+     * @param id 订单ID
+     * @return 退款记录列表
+     */
+    @GetMapping("/userRefundRecords")
+    @Operation(summary = "用户查询售后记录", description = "查询某订单的全部售后/退款申请记录")
+    @Parameter(name = "id", description = "订单ID", required = true)
+    public R<?> userRefundRecords(@RequestParam Long id) {
+        return R.success(refundRecordService.listUserRefundByOrderId(id));
+    }
+
+    /**
+     * 清除 Dashboard 缓存（在订单创建或状态变更后调用，确保概览数据实时准确）
+     */
+    private void clearDashboardCache() {
+        try {
+            Long tenantId = BaseContext.getCurrentTenantId();
+            if (dashboardService != null && tenantId != null) {
+                dashboardService.clearOverviewCache(tenantId);
+            }
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.warn("清除Dashboard缓存失败", e);
+        }
+    }
+}
+
+

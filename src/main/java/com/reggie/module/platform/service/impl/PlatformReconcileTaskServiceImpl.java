@@ -1,0 +1,205 @@
+package com.reggie.module.platform.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.service.OrderService;
+import com.reggie.module.platform.mapper.PlatformReconcileTaskMapper;
+import com.reggie.module.platform.model.PlatformReconcileTask;
+import com.reggie.module.platform.model.PlatformConfig;
+import com.reggie.module.platform.service.PlatformConfigService;
+import com.reggie.module.platform.service.PlatformReconcileTaskService;
+import com.reggie.module.platform.service.PlatformSyncService;
+import com.reggie.module.platform.adapter.PlatformOrder;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+/**
+ * 平台对账任务服务实现
+ *
+ * @author reggie
+ * @since 2026-08-24
+ */
+@Slf4j
+@Service
+public class PlatformReconcileTaskServiceImpl extends ServiceImpl<PlatformReconcileTaskMapper,
+        PlatformReconcileTask> implements PlatformReconcileTaskService {
+
+    @Autowired
+    private OrderService orderService;
+
+    @Autowired
+    private PlatformConfigService platformConfigService;
+
+    @Autowired
+    private PlatformSyncService platformSyncService;
+
+    /**
+     * 按 tenantId+platformType+date 串行化对账任务创建请求，防止并发重复对账（TOCTOU）
+     *
+     * <p>说明：本锁为单 JVM 内的串行化，多实例部署时无法跨节点互斥。跨节点/多实例的
+     * 最终防线是 platform_reconcile_task 上的 UNIQUE(reconcile_date, platform_type, tenant_id)
+     * 索引——并发插入会被唯一键拒绝（DuplicateKeyException），见下方对 save 的兜底处理。
+     * 若后续需多实例强互斥，应改用 Redis 分布式锁统一 getByDate+save 临界区。
+     * 内存占用极小（每个租户每天仅新增 1 个 key），无需主动回收。
+     */
+    private final ConcurrentHashMap<String, Object> reconcileLock = new ConcurrentHashMap<>();
+
+    /**
+     * 对账。
+     * @param platformType 参数 platformType
+     * @param date 参数 date
+     * @return 返回结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PlatformReconcileTask reconcile(String platformType, LocalDate date) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文缺失");
+        }
+
+        // 按 tenantId+platformType+date 串行化对账请求，防止并发重复创建
+        String lockKey = tenantId + ":" + platformType + ":" + date;
+        Object lock = reconcileLock.computeIfAbsent(lockKey, k -> new Object());
+        synchronized (lock) {
+            return executeReconcile(tenantId, platformType, date);
+        }
+    }
+
+    /**
+     * 执行对账核心逻辑（等价抽取，降低方法长度）。
+     *
+     * @param tenantId 租户ID
+     * @param platformType 平台类型
+     * @param date 对账日期
+     * @return 对账任务
+     */
+    private PlatformReconcileTask executeReconcile(Long tenantId, String platformType, LocalDate date) {
+        // 检查是否已存在该日期的对账任务
+        PlatformReconcileTask existing = getByDate(platformType, date);
+        if (existing != null) {
+            log.info("对账任务已存在: platformType={}, date={}", platformType, date);
+            return existing;
+        }
+
+        // 创建对账任务
+        PlatformReconcileTask task = new PlatformReconcileTask();
+        task.setTenantId(tenantId);
+        task.setPlatformType(platformType);
+        task.setReconcileDate(date);
+        task.setBeginTime(LocalDateTime.of(date, LocalTime.MIDNIGHT));
+        task.setEndTime(LocalDateTime.of(date, LocalTime.MIDNIGHT).plusDays(1));
+        task.setStatus(0); // 进行中
+        task.setCreateTime(LocalDateTime.now());
+
+        try {
+            // 插入对账任务。多实例并发时可能已被其他节点插入，UNIQUE 索引会抛
+            // DuplicateKeyException；此时视为"已存在"，返回对方创建的任务，避免向调用方抛 500。
+            try {
+                save(task);
+            } catch (org.springframework.dao.DuplicateKeyException dke) {
+                log.warn("对账任务并发创建被唯一键拒绝，返回已存在任务: platformType={}, date={}", platformType, date);
+                return getByDate(platformType, date);
+            }
+
+            // 查询平台配置
+            PlatformConfig config = platformConfigService.getByPlatformType(platformType, tenantId);
+            if (config == null) {
+                task.setStatus(2); // 失败
+                task.setErrorMessage("平台配置不存在: " + platformType);
+                updateById(task);
+                return task;
+            }
+
+            // 拉取平台订单
+            List<PlatformOrder> platformOrders = platformSyncService.pullOrders(config,
+                    task.getBeginTime().toString(), task.getEndTime().toString());
+
+            // 查询本地订单
+            LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
+            qw.eq(Orders::getTenantId, tenantId)
+              .eq(Orders::getPlatformType, platformType)
+              .between(Orders::getOrderTime, task.getBeginTime(), task.getEndTime());
+            List<Orders> localOrders = orderService.list(qw);
+
+            // 匹配统计并回填任务结果
+            applyReconcileStats(task, platformOrders, localOrders);
+            task.setUpdateTime(LocalDateTime.now());
+            updateById(task);
+
+            log.info("对账完成: platformType={}, date={}, 平台={}, 本地={}, 匹配={}, 差异(平台多)={}, 差异(本地多)={}",
+                    platformType, date, platformOrders.size(), localOrders.size(),
+                    task.getMatchCount(), task.getMissingLocalCount(), task.getMissingPlatformCount());
+
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.error("对账失败: platformType={}, date={}", platformType, date, e);
+            task.setStatus(2); // 失败
+            task.setErrorMessage(e.getMessage());
+            task.setUpdateTime(LocalDateTime.now());
+            updateById(task);
+        }
+
+        return task;
+    }
+
+    /**
+     * 统计平台/本地订单匹配情况并回填任务（等价抽取）。
+     *
+     * @param task 对账任务
+     * @param platformOrders 平台订单
+     * @param localOrders 本地订单
+     */
+    private void applyReconcileStats(PlatformReconcileTask task, List<PlatformOrder> platformOrders,
+            List<Orders> localOrders) {
+        Set<String> platformOrderIds = platformOrders.stream()
+                .map(PlatformOrder::getPlatformOrderId)
+                .collect(Collectors.toSet());
+        Set<String> localPlatformOrderIds = localOrders.stream()
+                .map(Orders::getPlatformOrderId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+
+        int matchCount = 0;
+        for (String orderId : localPlatformOrderIds) {
+            if (platformOrderIds.contains(orderId)) {
+                matchCount++;
+            }
+        }
+
+        task.setTotalPlatformCount(platformOrders.size());
+        task.setTotalLocalCount(localOrders.size());
+        task.setMatchCount(matchCount);
+        task.setMissingLocalCount(platformOrderIds.size() - matchCount); // 平台有本地无
+        task.setMissingPlatformCount(localPlatformOrderIds.size() - matchCount); // 本地有平台无
+        task.setStatus(1); // 完成
+    }
+
+    /**
+     * 获取 by date。
+     * @param platformType 参数 platformType
+     * @param date 参数 date
+     * @return 返回结果
+     */
+    @Override
+    public PlatformReconcileTask getByDate(String platformType, LocalDate date) {
+        LambdaQueryWrapper<PlatformReconcileTask> qw = new LambdaQueryWrapper<>();
+        qw.eq(PlatformReconcileTask::getTenantId, BaseContext.getCurrentTenantId())
+          .eq(PlatformReconcileTask::getPlatformType, platformType)
+          .eq(PlatformReconcileTask::getReconcileDate, date);
+        return getOne(qw);
+    }
+}

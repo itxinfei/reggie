@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>瑞吉外卖管理端</title>
+    <link rel="shortcut icon" href="favicon.ico">
+    <!-- 引入样式 -->
+    <!-- 修改点(2026-09-01)：移除 plugins/element-ui/index.css 官方样式表 ——
+         与 common.css（→common-el.css，token 化副本）重复加载，统一由后者单源提供 -->
+    <link rel="stylesheet" href="styles/common.css?v=20260926" />
+    <link rel="stylesheet" href="styles/index.css?v=20260926" />
+    <link rel="stylesheet" href="styles/design-system.css?v=20260930" />
+    <!-- Remix Icon v4.6 — 2700+ 免费商用图标，替代原 iconfont（仅7个图标） -->
+    <link href="plugins/remixicon/remixicon.css" rel="stylesheet" />
+    <style>
+    /* ── 全局菜单检索命令面板（Ctrl+K）── */
+    .palette-trigger { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 11px; margin-right: 14px; background: var(--bg-surface, #fff); border: 1px solid var(--border-default, #e5e7eb); border-radius: 8px; color: var(--text-secondary, #4b5563); font-size: 13px; cursor: pointer; transition: border-color .2s, box-shadow .2s; }
+    .palette-trigger:hover { border-color: var(--color-brand-500, #ffc200); }
+    .palette-trigger-text { color: var(--text-muted, #9ca3af); }
+    .palette-trigger-kbd { font-family: inherit; font-size: 11px; color: var(--text-muted, #9ca3af); background: var(--bg-subtle, #f5f6fa); border: 1px solid var(--border-default, #e5e7eb); border-radius: 4px; padding: 1px 5px; }
+    .palette-overlay { position: fixed; inset: 0; z-index: 2200; background: var(--overlay-scrim); display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; }
+    .palette { width: 600px; max-width: calc(100vw - 32px); background: var(--bg-surface, #fff); border-radius: 12px; box-shadow: var(--shadow-overlay); overflow: hidden; }
+    .palette-search { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border-default, #e5e7eb); }
+    .palette-search-icon { color: var(--text-muted, #9ca3af); flex-shrink: 0; }
+    .palette-input { flex: 1; border: none; outline: none; font-size: 15px; color: var(--text-primary, #1f2937); background: transparent; }
+    .palette-list { list-style: none; margin: 0; padding: 8px; max-height: 340px; overflow-y: auto; }
+    .palette-item { display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--text-primary, #1f2937); }
+    .palette-item.active { background: var(--color-brand-50, #fff8e0); }
+    .palette-item-icon { color: var(--color-brand-500, #ffc200); font-size: 17px; width: 20px; text-align: center; }
+    .palette-item-name { flex: 1; }
+    .palette-item-group { font-size: 12px; color: var(--text-muted, #9ca3af); }
+    .palette-empty { padding: 28px; text-align: center; color: var(--text-muted, #9ca3af); font-size: 13px; }
+    .palette-footer { display: flex; gap: 16px; align-items: center; padding: 9px 16px; border-top: 1px solid var(--border-default, #e5e7eb); font-size: 12px; color: var(--text-muted, #9ca3af); }
+    .palette-footer kbd { font-family: inherit; font-size: 11px; padding: 1px 5px; margin: 0 2px; border: 1px solid var(--border-default, #e5e7eb); border-radius: 4px; background: var(--bg-subtle, #f5f6fa); }
+    @media (max-width: 768px) { .palette-trigger-text, .palette-trigger-kbd { display: none; } .palette-trigger { padding: 0 9px; } }
+      .app-main{
+        height: calc(100% - 56px);
+      }
+      .app-main .divTmp{
+        width: 100%;
+        height: 100%;
+      }
+      /* 面包屑样式已归位 styles/index.css 唯一权威定义（2026-09-19），
+         CSS 为 head 渲染阻塞资源、Vue 挂载晚于 CSS 加载，无需内联防缓存 */
+    </style>
+  </head>
+
+  <body>
+    <div class="app" id="app">
+      <div :class="['app-wrapper', 'clearfix', { 'sidebar-collapsed': sidebarCollapsed }]">
+        <!-- 侧边栏遮罩（移动端） -->
+        <div class="sidebar-overlay" :class="{ visible: sidebarOpen }" @click="closeSidebar"></div>
+
+        <!-- sidebar -->
+        <div class="sidebar-container" :class="{ collapsed: sidebarCollapsed, 'mobile-open': sidebarOpen }">
+          <div class="sidebar-logo" @click="goHome()">
+            <div class="logo-icon">
+              <img :src="shopLogo || 'images/login/login-logo.png'" :alt="shopName" style="width: 36px; height: 36px;" />
+            </div>
+            <div class="logo-text">
+              <span class="logo-brand">{{ shopName }}</span>
+              <span class="logo-sub">REGGIE TAKEOUT</span>
+            </div>
+          </div>
+
+          <div class="sidebar-menu-wrap">
+            <el-menu
+              :default-active="defAct"
+              :unique-opened="false"
+              :collapse-transition="false"
+              background-color="transparent"
+              :text-color="menuTextColor"
+              :active-text-color="menuActiveColor"
+            >
+              <div v-for="item in visibleMenuList" :key="item.id">
+                <el-submenu :index="item.id" v-if="item.children && item.children.length>0">
+                  <template slot="title">
+                    <i :class="item.icon"></i>
+                    <span>{{item.name}}</span>
+                  </template>
+                  <el-menu-item
+                    v-for="sub in item.children"
+                    :index="sub.id"
+                    :key="sub.id"
+                    @click="menuHandle(sub,false)"
+                  >
+                    <i :class="sub.icon"></i>
+                    <span slot="title">{{sub.name}}</span>
+                  </el-menu-item>
+                </el-submenu>
+                <el-menu-item v-else :index="item.id" @click="menuHandle(item,false)">
+                  <i :class="item.icon"></i>
+                  <span slot="title">{{item.name}}</span>
+                </el-menu-item>
+              </div>
+            </el-menu>
+          </div>
+
+          <!-- 折叠切换按钮 -->
+          <div class="sidebar-toggle-btn" @click="toggleSidebar" title="收起菜单">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-container">
+          <div class="topbar">
+            <div class="topbar-left">
+              <!-- 汉堡按钮（移动端/折叠切换） -->
+              <button class="hamburger-btn" @click="toggleSidebar" title="展开菜单">
+                <span></span><span></span><span></span>
+              </button>
+              <!-- 返回按钮 -->
+              <button v-if="goBackFlag" class="back-btn" @click="goBack()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                返回
+              </button>
+              <!-- 面包屑导航（同时作为页面标题，最后一级不再重复显示） -->
+              <div class="breadcrumb" v-if="breadcrumbs.length > 0">
+                <template v-for="(crumb, index) in breadcrumbs">
+                  <!-- 分隔符 "/" 纯装饰：对读屏隐藏，避免读屏念出无意义的斜杠；同时提升其可见性（见 styles/index.css） -->
+                  <span v-if="index > 0" class="crumb-sep" aria-hidden="true">/</span>
+                  <span :class="['crumb-item', { clickable: index < breadcrumbs.length - 1, 'crumb-current': index === breadcrumbs.length - 1 }]"
+                        @click="index < breadcrumbs.length - 1 && navigateToBreadcrumb(index)">
+                    {{ crumb }}
+                  </span>
+                </template>
+              </div>
+            </div>
+            <div class="topbar-right">
+              <button class="palette-trigger" @click="openPalette" title="搜索菜单（Ctrl+K）" aria-label="搜索菜单">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span class="palette-trigger-text">搜索菜单</span>
+                <kbd class="palette-trigger-kbd">Ctrl K</kbd>
+              </button>
+              <div class="user-info">
+                <div class="user-avatar">
+                  <img v-if="userInfo.avatar" :src="imgUrl(userInfo.avatar)" alt="用户头像" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                  <template v-else>{{ userInfo.name ? userInfo.name.charAt(0) : '管' }}</template>
+                </div>
+                <span class="user-name">{{ userInfo.name }}</span>
+              </div>
+              <button class="logout-btn" @click="logout" title="退出登录">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="app-main" v-loading="loading">
+            <div class="divTmp" v-show="loading"></div>
+            <!-- 修改点：移除 height="auto"（浏览器不识别），添加 scrolling="yes" 让 iframe 内部页面自行滚动；高度由 JS 控制为 window.innerHeight - 56（视口 - 顶栏） -->
+            <!-- 修改点（2026-09-27 P0 修复）：移除 sandbox 属性。
+                 原因：sandbox 同时含 allow-scripts + allow-same-origin 时，iframe 内脚本
+                 可直接访问 parent.document 操作顶层窗口，浏览器明示"可逃逸沙箱"
+                 （控制台每次进页告警，全站 71 次），等于没有隔离，却额外引入了
+                 下载被拦（曾为此打 allow-downloads 补丁）等限制。
+                 同域后台要做真隔离须拆分跨域部署（内容域 ≠ 外壳域）；
+                 在拆分前移除 sandbox，恢复普通 iframe 行为：功能不受影响，安全告警清零。
+                 登录态防护不依赖 sandbox：由后端会话校验 + 子页面未登录信号上报顶层跳转兜底。 -->
+            <!-- 修改点(2026-09-27)：补 title。iframe 是读屏用户进入内容区的唯一入口，
+                 缺 title 时会被念作"未命名框架"，用户无法判断里面是什么。 -->
+            <iframe
+              id="cIframe"
+              class="c_iframe"
+              name="cIframe"
+              title="主要内容区域"
+              :src="iframeUrl"
+              width="100%"
+              scrolling="yes"
+              frameborder="0"
+              v-show="!loading"
+            ></iframe>
+          </div>
+        </div>
+      </div>
+    <!-- 全局菜单检索命令面板（Ctrl+K） -->
+    <div v-if="paletteOpen" class="palette-overlay" @click.self="closePalette">
+      <div class="palette" role="dialog" aria-modal="true" aria-label="菜单快速跳转">
+        <div class="palette-search">
+          <svg class="palette-search-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input ref="paletteInput" v-model="paletteQuery" class="palette-input" type="text" placeholder="搜索页面名称，如 订单、会员、报表…" aria-label="搜索页面" @keydown="onPaletteKeydown">
+        </div>
+        <ul class="palette-list" role="listbox">
+          <li v-for="(it, i) in paletteResults" :key="it.id" class="palette-item" :class="{ active: i === paletteIndex }" role="option" :aria-selected="i === paletteIndex" @mouseenter="paletteIndex = i" @click="goPalette(it)">
+            <i :class="it.icon" class="palette-item-icon" aria-hidden="true"></i>
+            <span class="palette-item-name">{{ it.name }}</span>
+            <span class="palette-item-group">{{ it.group }}</span>
+          </li>
+        </ul>
+        <div v-if="!paletteResults.length" class="palette-empty">未找到匹配的页面</div>
+        <div class="palette-footer">
+          <span><kbd>↑</kbd><kbd>↓</kbd> 选择</span>
+          <span><kbd>Enter</kbd> 跳转</span>
+          <span><kbd>Esc</kbd> 关闭</span>
+          <span><kbd>Ctrl K</kbd> 唤起</span>
+        </div>
+      </div>
+    </div>
+    </div>
+    <!-- 开发环境版本，包含了有帮助的命令行警告 -->
+    <script src="plugins/vue/vue.js"></script>
+    <!-- 引入组件库 -->
+    <script src="plugins/element-ui/index.js?v=20260915"></script>
+    <!-- 引入axios -->
+    <script src="plugins/axios/axios.min.js"></script>
+    <script src="js/request.js?v=20260930"></script>
+    <script src="js/components.js?v=20261002"></script>
+    <script src="./api/login.js?v=20260926"></script>
+    <script src="./api/sys.js?v=20260928"></script>
+    <script src="./api/employee.js?v=20260922"></script>
+    <script src="./api/store.js?v=20261003"></script>
+    <script>
+
+      new Vue({
+        el: '#app',
+        data() {
+          return {
+            defAct: '1',
+            menuActived: '1',
+            userInfo: {},
+            // 侧边栏品牌：登录后从 /restaurant/info 实时拉取，商家"店铺设置"改名后同步
+            shopName: '瑞吉外卖',
+            shopLogo: '',
+            sidebarCollapsed: false,
+            sidebarOpen: false,
+            // 全局菜单检索命令面板（Ctrl+K）
+            paletteOpen: false,
+            paletteQuery: '',
+            paletteIndex: 0,
+            // 菜单颜色统一走 RgPalette（单一来源，不再硬编码）
+            menuTextColor: RgPalette.textSecondary || '#9da3b5',
+            menuActiveColor: RgPalette.brand || '#ffc200',
+            menuList: [
+              /* ──1. 数据概览（直链，无二级）── */
+              { id: '1', name: '数据概览', url: 'page/dashboard/overview.html', icon: 'ri-dashboard-line' },
+
+              /* ──2. 商品管理（4 项）── */
+              { id: '2', name: '商品管理', icon: 'ri-shopping-bag-3-line', children: [
+                { id: '2-1', name: '分类管理', url: 'page/category/list.html', icon: 'ri-apps-2-line' },
+                { id: '2-2', name: '菜品管理', url: 'page/food/list.html', icon: 'ri-restaurant-2-line' },
+                { id: '2-3', name: '套餐管理', url: 'page/combo/list.html', icon: 'ri-stack-line' },
+                { id: '2-4', name: '菜品规格', url: 'page/food/spec-management.html', icon: 'ri-list-check-2' },
+              ]},
+
+              /* ──3. 订单中心（6 项，合并订单管理+收银台+催菜）── */
+              { id: '3', name: '订单中心', icon: 'ri-file-list-3-line', children: [
+                { id: '3-1', name: '订单明细', url: 'page/order/list.html', icon: 'ri-file-list-3-line' },
+                { id: '3-2', name: '待处理订单', url: 'page/order/pending-monitor.html', icon: 'ri-radar-line' },
+                { id: '3-7', name: '出餐大屏', url: 'page/kds/board.html', icon: 'ri-tv-line' },
+                { id: '3-3', name: '紧急催菜', url: 'page/urgency/urgency.html', icon: 'ri-alarm-warning-line' },
+                { id: '3-4', name: '支付管理', url: 'page/payment/order-list.html', icon: 'ri-money-dollar-circle-line' },
+                { id: '3-8', name: '支付渠道配置', url: 'page/payment/channel-config.html', icon: 'ri-bank-card-line' },
+                { id: '3-5', name: '收银台', url: 'page/cashier/index.html', icon: 'ri-money-cny-circle-line' },
+                { id: '3-6', name: '收银日结', url: 'page/cashier/daily-settlement.html', icon: 'ri-calendar-check-line' },
+                { id: '3-9', name: '打印记录', url: 'page/printer/task-list.html', icon: 'ri-file-history-line' },
+              ]},
+
+              /* ──4. 堂食管理（4 项）── */
+              { id: '4', name: '堂食管理', icon: 'ri-store-2-line', children: [
+                { id: '4-1', name: '桌台管理', url: 'page/dining/table-list.html', icon: 'ri-layout-grid-line' },
+                { id: '4-2', name: '区域管理', url: 'page/dining/area-list.html', icon: 'ri-map-pin-2-line' },
+                { id: '4-3', name: '排队管理', url: 'page/dining/queue-list.html', icon: 'ri-ticket-line' },
+                { id: '4-4', name: '预订管理', url: 'page/dining/reservation-list.html', icon: 'ri-calendar-check-line' },
+                { id: '4-5', name: '团餐预订', url: 'page/dining/group-booking.html', icon: 'ri-restaurant-2-line' },
+              ]},
+
+              /* ──5. 履约配送（3 项，新增骑手管理）── */
+              { id: '5', name: '履约配送', icon: 'ri-truck-line', children: [
+                { id: '5-1', name: '配送订单', url: 'page/delivery/order-list.html', icon: 'ri-map-pin-line' },
+                { id: '5-2', name: '配送范围', url: 'page/delivery/range-management.html', icon: 'ri-road-map-line' },
+                { id: '5-3', name: '骑手管理', url: 'page/delivery/rider-list.html', icon: 'ri-motorbike-line' },
+              ]},
+
+              /* ──12. 外卖平台对接（3 项，原「配送平台」拆分）── */
+              { id: '12', name: '外卖平台对接', icon: 'ri-store-3-line', children: [
+                { id: '12-1', name: '平台订单', url: 'page/platform/order-list.html', icon: 'ri-list-check-2' },
+                { id: '12-2', name: '商品映射', url: 'page/platform/dish-mapping.html', icon: 'ri-price-tag-3-line' },
+                { id: '12-3', name: '平台配置', url: 'page/platform/config.html', icon: 'ri-settings-3-line' },
+              ]},
+
+              /* ──10. 库存管理（7 项，原库存模块页面此前漏挂菜单）── */
+              { id: '10', name: '库存管理', icon: 'ri-archive-line', children: [
+                { id: '10-1', name: '食材分类', url: 'page/inventory/category-list.html', icon: 'ri-price-tag-3-line' },
+                { id: '10-2', name: '食材管理', url: 'page/inventory/material-list.html', icon: 'ri-shopping-basket-line' },
+                { id: '10-3', name: '库存记录', url: 'page/inventory/stock-record.html', icon: 'ri-inbox-line' },
+                { id: '10-4', name: '采购入库', url: 'page/inventory/purchase-list.html', icon: 'ri-shopping-cart-line' },
+                { id: '10-5', name: '供应商', url: 'page/inventory/supplier-list.html', icon: 'ri-building-line' },
+                { id: '10-6', name: '库存预警', url: 'page/inventory/material-warning.html', icon: 'ri-error-warning-line' },
+                { id: '10-7', name: '库存盘点', url: 'page/inventory/stock-check.html', icon: 'ri-survey-line' },
+              ]},
+
+              /* ──6. 会员中心（5 项）── */
+              { id: '6', name: '会员中心', icon: 'ri-group-line', children: [
+                { id: '6-1', name: '会员列表', url: 'page/member-center/member-list.html', icon: 'ri-user-star-line' },
+                { id: '6-2', name: '会员等级', url: 'page/member-center/level-list.html', icon: 'ri-vip-crown-line' },
+                { id: '6-3', name: '积分管理', url: 'page/member-center/points-list.html', icon: 'ri-coin-line' },
+                { id: '6-4', name: '优惠券', url: 'page/member-center/coupon-list.html', icon: 'ri-coupon-line' },
+                { id: '6-5', name: '充值记录', url: 'page/member-center/recharge-list.html', icon: 'ri-bank-card-line' },
+                { id: '6-6', name: '用户管理', url: 'page/user/list.html', icon: 'ri-user-line' },
+              ]},
+
+              /* ──11. 营销管理（6 项，原营销活动卡片导航页只会 window.open 跳走，
+                      改为各类活动直链自带弹窗 CRUD 的管理页）── */
+              { id: '11', name: '营销管理', icon: 'ri-megaphone-line', children: [
+                { id: '11-1', name: '折扣活动', url: 'page/marketing/discount.html', icon: 'ri-percent-line' },
+                { id: '11-2', name: '满减活动', url: 'page/marketing/full-reduction.html', icon: 'ri-gift-line' },
+                { id: '11-3', name: '秒杀活动', url: 'page/marketing/flash-sale.html', icon: 'ri-flashlight-line' },
+                { id: '11-4', name: '买赠活动', url: 'page/marketing/buy-get-free.html', icon: 'ri-gift-2-line' },
+                { id: '11-5', name: '新客优惠', url: 'page/marketing/new-customer.html', icon: 'ri-user-star-line' },
+                { id: '11-6', name: '智能营销', url: 'page/recommend/campaigns.html', icon: 'ri-lightbulb-flash-line' },
+              ]},
+
+              /* ──7. 数据报表（7 项，合并报表+导出+支付分析；原经营报表与日报/销售报表重叠已下线）── */
+              { id: '7', name: '数据报表', icon: 'ri-bar-chart-line', children: [
+                { id: '7-1', name: '营业日报', url: 'page/report/daily.html', icon: 'ri-file-chart-line' },
+                { id: '7-3', name: '销售报表', url: 'page/report/sales-report.html', icon: 'ri-bar-chart-grouped-line' },
+                { id: '7-4', name: '菜品排行', url: 'page/report/dish-ranking.html', icon: 'ri-trophy-line' },
+                { id: '7-5', name: '时段分析', url: 'page/report/time-slot.html', icon: 'ri-time-line' },
+                { id: '7-6', name: '支付分析', url: 'page/report/payment-analysis.html', icon: 'ri-wallet-line' },
+                { id: '7-7', name: '评价管理', url: 'page/report/evaluation-list.html', icon: 'ri-star-line' },
+                { id: '7-8', name: '导出中心', url: 'page/export/index.html?v=20260915d', icon: 'ri-file-download-line' },
+              ]},
+
+              /* ──8. 财务管理（4 项）── */
+              { id: '8', name: '财务管理', icon: 'ri-wallet-3-line', children: [
+                { id: '8-1', name: '成本概览', url: 'page/cost/overview.html', icon: 'ri-pie-chart-line' },
+                { id: '8-2', name: '菜品成本', url: 'page/cost/dish-cost.html', icon: 'ri-restaurant-line' },
+                { id: '8-3', name: '提现管理', url: 'page/finance/withdrawal.html', icon: 'ri-bank-card-2-line' },
+                { id: '8-4', name: '发票管理', url: 'page/finance/invoice-list.html', icon: 'ri-receipt-line' },
+                { id: '8-5', name: '骑手提现', url: 'page/delivery/rider-withdrawal.html', icon: 'ri-bike-line' },
+                { id: '8-6', name: '骑手评价', url: 'page/delivery/rider-evaluation.html', icon: 'ri-star-line' },
+                { id: '8-7', name: '骑手异常', url: 'page/delivery/rider-exception.html', icon: 'ri-alert-line' },
+              ]},
+
+              /* ──9. 系统设置（14 项，精简+合并扩展功能）── */
+              { id: '9', name: '系统设置', icon: 'ri-settings-3-line', children: [
+                { id: '9-16', name: '租户管理', url: 'page/tenant/list.html?v=20260922', icon: 'ri-building-2-line', roles: ['SUPER_ADMIN'] },
+                { id: '9-17', name: '门店管理', url: 'page/store/list.html', icon: 'ri-store-line' },
+                { id: '9-18', name: '总部看板', url: 'page/store/dashboard.html', icon: 'ri-bar-chart-box-line' },
+                { id: '9-19', name: '店铺设置', url: 'page/store/shop-settings.html?v=20260930', icon: 'ri-store-2-line' },
+                { id: '9-1', name: '员工管理', url: 'page/employee/list.html?v=20260922', icon: 'ri-user-settings-line' },
+                { id: '9-2', name: '角色管理', url: 'page/sys/role-list.html', icon: 'ri-shield-user-line', roles: ['SUPER_ADMIN'] },
+                { id: '9-20', name: '部门管理', url: 'page/sys/department-list.html', icon: 'ri-sitemap-line', roles: ['SUPER_ADMIN'] },
+                { id: '9-21', name: '餐补管理', url: 'page/subsidy/account-list.html', icon: 'ri-hand-coin-line', roles: ['SUPER_ADMIN'] },
+                { id: '9-3', name: '考勤管理', url: 'page/attendance/attendance.html', icon: 'ri-calendar-check-line' },
+                { id: '9-15', name: '排班管理', url: 'page/schedule/schedule.html', icon: 'ri-calendar-schedule-line' },
+                { id: '9-4', name: '客服管理', url: 'page/customer-service/list.html', icon: 'ri-customer-service-2-line' },
+                { id: '9-5', name: '通知模板', url: 'page/sys/template-list.html', icon: 'ri-message-2-line' },
+                { id: '9-6', name: '消息通知', url: 'page/notification/list.html', icon: 'ri-notification-3-line' },
+                { id: '9-7', name: '系统配置', url: 'page/sys/config-list.html', icon: 'ri-tools-line' },
+                { id: '9-8', name: '操作日志', url: 'page/sys/operation-log.html', icon: 'ri-file-list-2-line' },
+                { id: '9-9', name: '地区管理', url: 'page/region/list.html', icon: 'ri-map-2-line' },
+                { id: '9-10', name: 'AI 助手', url: 'page/ai/assistant.html', icon: 'ri-robot-line' },
+                { id: '9-13', name: '提示词模板', url: 'page/ai/prompt-list.html', icon: 'ri-message-3-line' },
+                { id: '9-14', name: '知识库', url: 'page/ai/knowledge-list.html', icon: 'ri-database-2-line' },
+              ]},
+            ],
+            iframeUrl: 'page/dashboard/overview.html',
+            headTitle: '数据概览',
+            goBackFlag: false,
+            loading: true,
+            timer: null,
+            loadingSince: 0,  // 本次切页遮罩显示时刻（用于最短 200ms 防闪）
+            navHistory: [],  // 导航历史栈，用于返回按钮
+            // 修改点(P1-1)：菜单按角色过滤所需（角色标识 / 超管标识 / 权限集合）
+            roleKey: '',
+            isSuperAdmin: false,
+            permSet: new Set()
+          }
+        },
+        computed: {
+          // 扁平化全部叶子菜单，供命令面板检索（兼容二级与三级菜单）
+          // 修改点(P1-1)：按角色/权限过滤菜单（仅 UX 收敛，越权仍由后端注解拦截）
+          visibleMenuList() {
+            const self = this
+            const allow = function (node) {
+              if (!node) return false
+              if (self.isSuperAdmin) return true
+              if (node.roles && node.roles.length) {
+                return !!self.roleKey && node.roles.indexOf(self.roleKey) !== -1
+              }
+              if (node.perm) {
+                return !!self.permSet && self.permSet.has(node.perm)
+              }
+              // 无显式限制：保留原有可见范围（风险控制：不误伤旧角色）
+              return true
+            }
+            const out = []
+            self.menuList.forEach(function (group) {
+              if (group.roles && group.roles.length && !allow(group)) return
+              const kids = (group.children || []).filter(allow)
+              if (kids.length) out.push(Object.assign({}, group, { children: kids }))
+            })
+            // 兜底：若过滤后为空（异常/无权限）则回退全量，避免整个后台不可用
+            return out.length ? out : self.menuList
+          },
+          flatMenuList() {
+            const result = []
+            this.visibleMenuList.forEach(function (group) {
+              const kids = group.children || []
+              kids.forEach(function (leaf) {
+                if (leaf.url) {
+                  result.push({ id: leaf.id, name: leaf.name, url: leaf.url, icon: leaf.icon, group: group.name })
+                } else if (leaf.children) {
+                  leaf.children.forEach(function (sub) {
+                    if (sub.url) result.push({ id: sub.id, name: sub.name, url: sub.url, icon: sub.icon, group: group.name + ' / ' + leaf.name })
+                  })
+                }
+              })
+            })
+            return result
+          },
+          // 关键词模糊匹配：空格分词为 AND，匹配页面名与所属分组
+          paletteResults() {
+            const q = this.paletteQuery.trim().toLowerCase()
+            const all = this.flatMenuList
+            if (!q) return all.slice(0, 8)
+            const terms = q.split(/\s+/)
+            return all.filter(function (it) {
+              const hay = (it.name + ' ' + it.group).toLowerCase()
+              return terms.every(function (t) { return hay.indexOf(t) !== -1 })
+            }).slice(0, 8)
+          },
+          breadcrumbs() {
+            const crumbs = ['首页']
+            // 修改点：递归遍历三级菜单树定位当前叶子（兼容订单中心 3-x-y 分组菜单），
+            // 逐级收集父级名称；活动 id 不在叶子时退回原来的「直接子级」匹配逻辑
+            const self = this
+            const walk = function(nodes, prefix) {
+              for (let i = 0; i < nodes.length; i++) {
+                const node = nodes[i]
+                if (node.id === self.menuActived) {
+                  if (node.url) crumbs.push.apply(crumbs, prefix.concat([node.name]))
+                  else crumbs.push.apply(crumbs, prefix)
+                  return true
+                }
+                if (node.children && node.children.length) {
+                  if (walk(node.children, prefix.concat([node.name]))) return true
+                }
+              }
+              return false
+            }
+            if (!walk(this.visibleMenuList, [])) {
+              const currentItem = this.visibleMenuList.find(item =>
+                item.children && item.children.some(sub => sub.id === this.menuActived)
+              )
+              if (currentItem && currentItem.children) {
+                crumbs.push(currentItem.name)
+                const subItem = currentItem.children.find(sub => sub.id === this.menuActived)
+                if (subItem) crumbs.push(subItem.name)
+              }
+            }
+            return crumbs
+          }
+        },
+        created() {
+          // 修改点(2026-08-12)：登录态预检——未登录直接整页跳转登录页，
+          // 从根上避免「未登录直接打开 index.html 时右侧 iframe 嵌套出登录页」的问题
+          const userInfo = window.localStorage.getItem('userInfo')
+          if (!userInfo) {
+            // 未登录立即跳转登录页，不提示不延迟（2026-09-26）
+            window.location.replace('/backend/page/login/login.html')
+            return
+          }
+          try {
+            this.userInfo = JSON.parse(userInfo)
+          } catch (e) {
+            // 本地登录态损坏（脏缓存）：清除并回登录页，避免后续渲染异常
+            window.localStorage.removeItem('userInfo')
+            window.location.replace('/backend/page/login/login.html')
+            return
+          }
+          this.loadCurrentEmployee()
+          this.loadMenuAccess()
+          this.loadShopBrand()
+          this.showLoading()
+        },
+        mounted() {
+          // 修改点：将菜单数据与处理方法暴露到全局，供 iframe 内页面通过 window.parent 调用
+          window.menuList = this.visibleMenuList
+          window.menuHandle = this.menuHandle
+          // 供 iframe 内"店铺设置"保存成功后通知外壳实时刷新侧边栏品牌
+          window.loadShopBrand = this.loadShopBrand.bind(this)
+          // 修改点(2026-08-12)：监听子页面发来的未登录信号，统一由顶层窗口跳转登录页，
+          // 防止登录页被嵌套在 iframe（数据区）内
+          window.addEventListener('message', this.handleChildNotLogin)
+          // Ctrl / Cmd + K 唤起全局菜单检索
+          window.addEventListener('keydown', this.handleGlobalKeydown)
+          // 修改点：监听窗口尺寸变化与 iframe 内容加载完成事件，动态调整 iframe 高度避免内容被裁剪
+          this.initIframeAutoHeight()
+          // 修改点：让侧边栏菜单可被键盘操作（详见 initMenuKeyboard 注释）
+          this.initMenuKeyboard()
+        },
+        methods: {
+          imgUrl(name) {
+            return imgPath(name)
+          },
+          // 修改点(P1-1)：拉取当前员工角色与权限，驱动菜单按角色过滤。
+          // 请求失败时保持 permSet 为空但不过滤失败——visibleMenuList 已做全量回退，
+          // 且菜单过滤仅 UX 收敛，真正的越权拦截由后端注解保证。
+          loadMenuAccess() {
+            const self = this
+            sysApi.menuAccess().then(function (res) {
+              if (res && res.code === 1 && res.data) {
+                const d = res.data
+                self.roleKey = d.roleKey || ''
+                self.isSuperAdmin = !!d.isSuperAdmin
+                self.permSet = new Set(d.permissions || [])
+              }
+            }).catch(function (err) {
+              console.warn('[index] 菜单权限加载失败，菜单不做角色收敛:', err)
+            })
+          },
+          // 拉取当前登录员工最新资料（头像/工号/岗位），失败时静默用 localStorage 兜底
+          loadCurrentEmployee() {
+            const self = this
+            getCurrentEmployee().then(function (res) {
+              if (res && res.code === 1 && res.data) {
+                self.userInfo = Object.assign({}, self.userInfo, {
+                  name: res.data.name,
+                  avatar: res.data.avatar,
+                  jobNumber: res.data.jobNumber,
+                  position: res.data.position
+                })
+                window.localStorage.setItem('userInfo', JSON.stringify(self.userInfo))
+              }
+            }).catch(function (err) {
+              console.warn('[index] 当前员工信息加载失败，使用本地缓存:', err)
+            })
+          },
+          // 拉取店铺品牌（店名/Logo）：侧边栏与浏览器标题实时同步，失败时静默保留默认品牌
+          loadShopBrand() {
+            const self = this
+            getShopSettings().then(function (res) {
+              if (res && res.code === 1 && res.data) {
+                if (res.data.name) {
+                  self.shopName = res.data.name
+                  document.title = res.data.name + '管理端'
+                }
+                // 仅商家自定义 Logo 才替换默认图标；系统默认 logo 不替换登录 Logo
+                if (res.data.logo && res.data.logo !== '/images/common/logo.png') {
+                  self.shopLogo = res.data.logo
+                }
+              }
+            }).catch(function (err) {
+              console.warn('[index] 店铺品牌加载失败，使用默认品牌:', err)
+            })
+          },
+          /* ── 全局菜单检索命令面板 ── */
+          openPalette() {
+            this.paletteOpen = true
+            this.paletteQuery = ''
+            this.paletteIndex = 0
+            const self = this
+            this.$nextTick(function () {
+              const el = self.$refs.paletteInput
+              if (el) el.focus()
+            })
+          },
+          closePalette() {
+            this.paletteOpen = false
+          },
+          // 面板内键盘：↑↓ 选择、Enter 跳转、Esc 关闭
+          onPaletteKeydown(e) {
+            const list = this.paletteResults
+            if (e.key === 'ArrowDown') {
+              e.preventDefault()
+              this.paletteIndex = list.length ? (this.paletteIndex + 1) % list.length : 0
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault()
+              this.paletteIndex = list.length ? (this.paletteIndex - 1 + list.length) % list.length : 0
+            } else if (e.key === 'Enter') {
+              e.preventDefault()
+              if (list[this.paletteIndex]) this.goPalette(list[this.paletteIndex])
+            } else if (e.key === 'Escape') {
+              this.closePalette()
+            }
+          },
+          goPalette(item) {
+            this.closePalette()
+            this.menuHandle(item, false)
+          },
+          // 全局快捷键：Ctrl / Cmd + K 唤起
+          handleGlobalKeydown(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+              e.preventDefault()
+              this.openPalette()
+            }
+          },
+          logout() {
+            logoutApi().then((res)=>{
+              if(res.code === 1){
+                localStorage.removeItem('userInfo')
+                window.location.href = '/backend/page/login/login.html'
+              } else {
+                ReggieUI.error((res && res.msg) || '退出失败，请稍后重试')
+              }
+            }).catch(function () {
+              ReggieUI.error('退出请求失败，请检查网络后重试')
+            })
+          },
+          // 修改点(2026-08-12)：接收子页面（iframe）发来的未登录信号，由顶层窗口统一跳转登录页
+          handleChildNotLogin(event) {
+            if (event && event.data && event.data.type === 'REGGIE_NOTLOGIN') {
+              if (this.notLoginJumping) return  // 防重入：并发 401 只跳转一次
+              this.notLoginJumping = true
+              // 未登录立即跳转登录页，不提示不延迟（2026-09-26）
+              window.location.replace('/backend/page/login/login.html')
+            }
+          },
+          goHome() {
+            this.navHistory = []  // 回到首页清空历史
+            const homeMenu = this.visibleMenuList.find(item => item.id === '1')
+            if (homeMenu) {
+              this.menuActived = homeMenu.id
+              this.iframeUrl = homeMenu.url
+              this.headTitle = homeMenu.name
+              this.goBackFlag = false
+            }
+          },
+          navigateToBreadcrumb(index) {
+            // index 0 = 首页, index >= 1 = 各级父菜单（面包屑共 breadcrumbs.length 级，末级为当前页面不可点击）
+            if (index === 0) {
+              this.goHome()
+              return
+            }
+            const node = this.findBreadcrumbNode(this.menuList, index - 1)
+            // 修改点：仅「分组节点（含 children）」可点击跳转；叶子不可点击（末级由模板控制）
+            if (node && node.children && node.children.length > 0) {
+              // 定位当前活跃子项（递归下钻），而非总是跳 children[0]，避免跳转后菜单激活态错乱
+              const activeLeaf = this.findActiveLeaf(node)
+              if (activeLeaf) {
+                this.menuHandle(activeLeaf, false)
+              } else {
+                this.menuHandle(node.children[0], false)
+              }
+            }
+          },
+          // 递归定位面包屑第 depth 级节点（0 级 = 顶级菜单）
+          findBreadcrumbNode(nodes, depth) {
+            if (depth <= 0) {
+              for (let i = 0; i < nodes.length; i++) {
+                if (nodes[i].id === this.menuActived) return nodes[i]
+                if (nodes[i].children) {
+                  const found = this.findBreadcrumbNode(nodes[i].children, 0)
+                  if (found) return found
+                }
+              }
+              return null
+            }
+            for (let i = 0; i < nodes.length; i++) {
+              const node = nodes[i]
+              if (node.children) {
+                if (node.id === this.menuActived) return node
+                const found = this.findBreadcrumbNode(node.children, depth - 1)
+                if (found) return found
+              }
+            }
+            return null
+          },
+          // 递归下钻定位分组内的当前活跃叶子
+          findActiveLeaf(node) {
+            if (!node.children || !node.children.length) return node.url ? node : null
+            for (let i = 0; i < node.children.length; i++) {
+              const child = node.children[i]
+              if (child.id === this.menuActived && child.url) return child
+              const found = this.findActiveLeaf(child)
+              if (found) return found
+            }
+            return null
+          },
+          goBack() {
+            if (this.navHistory.length > 0) {
+              const prev = this.navHistory.pop()
+              this.showLoading()
+              this.menuActived = prev.id
+              this.iframeUrl = prev.url
+              this.headTitle = prev.name
+              this.goBackFlag = this.navHistory.length > 0
+            }
+          },
+          menuHandle(item, goBackFlag) {
+            // 压入导航历史（当前页面）
+            if (this.iframeUrl && this.menuActived) {
+              this.navHistory.push({
+                id: this.menuActived,
+                name: this.headTitle,
+                url: this.iframeUrl
+              })
+            }
+            this.showLoading()
+            this.menuActived = item.id
+            this.iframeUrl = item.url
+            this.headTitle = item.name
+            this.goBackFlag = this.navHistory.length > 0
+          },
+          /* 显示切页加载遮罩：收起时机交给 iframe load 事件（onIframeLoad），
+             3s 兜底定时器防止 load 异常不触发时遮罩永久卡死。
+             替代原固定 setTimeout(1000)——快页不再白等 1 秒，慢页未加载完
+             也不会提前露出空白 iframe。 */
+          showLoading() {
+            this.loading = true
+            this.loadingSince = Date.now()
+            this.clearLoadingTimer()
+            this.timer = setTimeout(() => {
+              this.loading = false
+              this.timer = null
+            }, 3000)
+          },
+          /* iframe 文档加载完成：同步高度并收起遮罩。
+             遮罩最短展示 200ms，避免页面瞬间加载时遮罩一闪而过的闪烁感。 */
+          onIframeLoad() {
+            this.resizeIframe()
+            if (!this.loading) return
+            const elapsed = Date.now() - this.loadingSince
+            const remain = Math.max(0, 200 - elapsed)
+            this.clearLoadingTimer()
+            this.timer = setTimeout(() => {
+              this.loading = false
+              this.timer = null
+            }, remain)
+          },
+          clearLoadingTimer() {
+            if (this.timer) {
+              clearTimeout(this.timer)
+              this.timer = null
+            }
+          },
+          toggleSidebar() {
+            // 移动端（≤767px）切换抽屉式展开/关闭
+            if (window.innerWidth <= 767) {
+              this.sidebarOpen = !this.sidebarOpen
+              return
+            }
+            // 桌面端切换折叠/展开
+            this.sidebarCollapsed = !this.sidebarCollapsed
+          },
+          closeSidebar() {
+            this.sidebarOpen = false
+          },
+          // ========== iframe 高度自适应（修改点：iframe 高度 = 视口高 - 顶栏，由 iframe 自身滚动） ==========
+          /* 修改点(2026-09-27)：Element UI 2.x 把 el-menu-item / el-submenu__title 渲染成
+             不带 tabindex 的 <li>，整个侧边栏因此不在 Tab 序列里——键盘用户无法进入后台任何
+             一个页面（此前 60 次 Tab 从未停靠到任何菜单项）。这里补 tabindex，并让 Enter /
+             空格触发与鼠标点击等价的行为；菜单是异步渲染的，用 MutationObserver 兜住后到的节点。 */
+          initMenuKeyboard() {
+            var scope = document.querySelector('.sidebar-container') || document
+            var apply = function () {
+              scope.querySelectorAll('.el-menu-item, .el-submenu__title').forEach(function (el) {
+                if (el.tabIndex < 0) el.tabIndex = 0
+                if (el.__kbMenuBound) return
+                el.__kbMenuBound = true
+                el.addEventListener('keydown', function (e) {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    el.click()
+                  }
+                })
+              })
+            }
+            apply()
+            if (!window.__menuKbObserver) {
+              window.__menuKbObserver = new MutationObserver(function () {
+                if (window.__menuKbTimer) clearTimeout(window.__menuKbTimer)
+                window.__menuKbTimer = setTimeout(apply, 200)
+              })
+              window.__menuKbObserver.observe(
+                document.querySelector('.sidebar-container') || document.body,
+                { childList: true, subtree: true }
+              )
+            }
+          },
+          initIframeAutoHeight() {
+            const iframe = document.getElementById('cIframe')
+            if (!iframe) return
+            // iframe 内容加载完成后调整高度并收起切页遮罩
+            iframe.addEventListener('load', () => {
+              this.onIframeLoad()
+            })
+            // 首屏文档若在监听器绑定前已 load 完成（强缓存命中），补一次判定，
+            // 否则遮罩只能等 3s 兜底才消失
+            try {
+              if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') {
+                this.onIframeLoad()
+              }
+            } catch (e) { /* 跨域文档不可读时忽略，等待 load 事件 */ }
+            // 监听窗口大小变化，重新计算
+            window.addEventListener('resize', this.handleWindowResize)
+            // 初始计算一次
+            this.resizeIframe()
+          },
+          resizeIframe() {
+            const iframe = document.getElementById('cIframe')
+            if (!iframe) return
+            // 修改点：iframe 高度固定为视口高 - 顶栏(56px)，内部页面自身 body 负责滚动
+            // 不再取内容 scrollHeight（那会导致 iframe 撑高超高但被外层 overflow:hidden 裁剪）
+            iframe.style.height = (window.innerHeight - 56) + 'px'
+          },
+          // 窗口尺寸变化处理（具名注册，便于 beforeDestroy 精确移除监听）
+          handleWindowResize() {
+            this.resizeIframe()
+          }
+        },
+        beforeDestroy() {
+          this.clearLoadingTimer()
+          window.removeEventListener('message', this.handleChildNotLogin)
+          window.removeEventListener('keydown', this.handleGlobalKeydown)
+          window.removeEventListener('resize', this.handleWindowResize)
+        }
+      })
+    </script>
+  </body>
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  列表页标准模板（企业级设计系统示范）
+  ------------------------------------------------------------
+  本模板体现前端规范（详见 docs/frontend/DESIGN_SYSTEM.md 与 CODE_STANDARDS.md）：
+
+  【样式引入顺序】common → page → components → tokens → design-system（→ stats-card 按需）
+    - tokens.css：全站设计令牌（颜色/间距/字号/圆角/阴影/层级）
+    - design-system.css：基于令牌的 a11y 基础设施、布局原语、卡片、面包屑、品牌按钮
+
+  【语义与无障碍（a11y）】
+    - <a class="skip-link"> 跳转到主内容（WCAG 2.4.1）
+    - <main role="main" aria-labelledby="page-title"> 主内容地标
+    - <h1 class="sr-only" id="page-title"> 页面唯一主标题（页头已移除，视觉隐藏仅供屏幕阅读器）
+    - 弹窗/表格由组件层保证 role/aria（crud-dialog/table-bar/crud-table）
+
+  【组件契约（禁止手写重复实现）】
+    1. 统计卡片 → <stat-cards>
+       - cards 配置项：key/icon/label/value/color/unit/clickable/active/flex/colorClass
+       - colorClass：自定义 CSS 类名（如 'pending'/'cooking'/'alarm'），大屏等特殊场景用
+       - #card-append 插槽：卡片内追加自定义内容（如进度条、实时指标）
+    2. 搜索+操作栏 → <table-bar>（searchItems/actions 配置化）
+       - #search-extra 插槽：搜索区追加自定义控件
+    3. 数据表格+分页 → <crud-table>（columns 配置 + 插槽）
+    4. 增删改弹窗 → <crud-dialog>
+       - size 支持 sm/md/lg/xl/fullscreen（fullscreen 宽度 92%，适合 iframe 嵌入）
+       - #header 插槽：自定义弹窗头部（如标签页切换）
+       - #footer 插槽：自定义底部按钮
+    5. 分页逻辑 → mixins:[window.ReggieListMixin]，实现 fetchData()
+    6. 通用方法 → formatMoney/formatDate/rgStatusText/rgStatusTag/rgPreview
+    7. 状态枚举 → window.ReggieStatus.register('模块', textMap, tagMap)
+    8. 操作列 → #actions 插槽契约：常显主操作 ≤3 个，超出收「更多」el-dropdown；
+       宽度档 2 元素 120 / 3 元素 180 / 4 元素 240（更多触发器算 1 个元素）；
+       语义类 查看/编辑 btn-view、启用 btn-success、停用/暂停 btn-warning、删除/取消 btn-delete
+       （完整契约注释见 js/components.js crud-table 操作列处；落地范本 dining/table-list、platform/order-list）
+
+  【规范检测】
+    提交前运行：node scripts/lint-ui-conventions.js
+    可选参数：--fix（输出修复建议）--quiet（只看 ERROR）
+    规则覆盖：E001 按钮语义/E002 交互反馈/E003 弹窗组件/W001-W006 样式规范
+  ============================================================
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>列表页模板 - 瑞吉外卖管理端</title>
+
+    <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
+  <div class="dashboard-container" id="template-app">
+    <!-- 主内容地标 + 设计系统 page 结构 -->
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <!-- 页面唯一主标题：视觉隐藏（.sr-only），仅供屏幕阅读器播报，配合 main 的 aria-labelledby -->
+      <h1 class="sr-only" id="page-title">页面标题</h1>
+
+      <!-- ① 统计卡片（按需）：cards 配置见 components.js 的 stat-cards -->
+      <!--
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick" />
+      -->
+
+      <!-- ② 搜索 + 操作栏：searchItems / actions 配置化，无需手写表单 -->
+      <table-bar
+        :search-items="searchItems"
+        :actions="actions"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+      />
+
+      <!-- ③ 数据表格：columns 配置 + 插槽自定义 -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="120"
+        empty-hint="暂无数据，点击上方「新增」创建第一条记录"
+        aria-label="数据列表"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <!-- 自定义某列渲染：列配置需 slot: true -->
+        <template #col-status="{ row }">
+          <el-tag :type="rgStatusTag('demo', row.status)" size="small">{{ rgStatusText('demo', row.status) }}</el-tag>
+        </template>
+        <!--
+          操作列契约（固定插槽名 #actions）：
+          - 常显主操作 ≤3 个；删除/取消等低频或否定操作收进「更多」el-dropdown（trigger="click"）
+          - 宽度档：2 元素 120 / 3 元素 180 / 4 元素 240（「更多」触发器算 1 个元素）
+          - 语义类：查看/编辑 btn-view、启用 btn-success、停用/暂停 btn-warning、删除/取消 btn-delete
+          - 按钮统一 type="text" size="small"；更多触发器 class="text-info" + 下拉箭头
+          本例「编辑 + 更多」= 2 元素 → 120；若只有 2~3 个高频操作，也可不收下拉直接常显。
+        -->
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="onEdit(row)">编辑</el-button>
+          <el-dropdown trigger="click" @command="(cmd) => onRowCommand(cmd, row)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <!-- 危险项标红；继续加项时常用在前、删除收尾 -->
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- ④ 增改弹窗：crud-dialog 自带关闭/重置，底部取消/确定（确定触发 submit） -->
+    <crud-dialog
+      :title="form.title"
+      :visible.sync="form.visible"
+      size="lg"
+      :submit-loading="submitLoading"
+      @submit="onSubmit"
+    >
+      <!-- 表单必带 ref + :model + :rules，提交前调 validate() 拦截空值 -->
+      <el-form ref="form" :model="form" :rules="formRules" label-width="100px">
+        <!-- 替换为你的表单字段 -->
+        <el-form-item label="名称：" prop="name">
+          <el-input v-model="form.name" placeholder="请输入名称" ></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <!-- <script src="../../api/xxx.js?v=20260926"></script>  接入你的 API -->
+  <script src="../../js/components.js?v=20261002"></script>
+<script>
+    // ⑤ 状态枚举注册（消除各页重复定义 statusMap/typeMap）
+    window.ReggieStatus.register('demo',
+      { 1: '启用', 0: '禁用' },
+      { 1: 'success', 0: 'info' }
+    )
+
+    new Vue({
+      el: '#template-app',
+      // ⑥ 列表页通用 Mixin：自动提供 page/pageSize/counts/loading 与翻页处理
+      mixins: [window.ReggieListMixin],
+      data() {
+        return {
+          // 搜索项配置（详见 components.js 的 table-bar）
+          searchItems: [
+            { type: 'input', field: 'name', placeholder: '请输入名称' },
+            { type: 'select', field: 'status', placeholder: '状态', options: [
+              { label: '启用', value: 1 }, { label: '禁用', value: 0 }
+            ] }
+          ],
+          // 操作按钮配置（详见 components.js 的 table-bar，文案字段是 text 不是 label）
+          actions: [
+            { key: 'add', text: '新增', type: 'primary', icon: 'ri-add-line' }
+          ],
+          // 页面自有筛选状态：table-bar 内部 searchValues 不双向绑定，需在 onSearch/onReset 桥接回写
+          filters: { name: '', status: '' },
+          // 列配置（详见 components.js 的 crud-table）
+          columns: [
+            { prop: 'id', label: 'ID', width: 80 },
+            { prop: 'name', label: '名称', width: 120 },
+            { prop: 'status', label: '状态', width: 90, align: 'center', slot: true }
+          ],
+          tableData: [],
+          form: { title: '', id: undefined, name: '', visible: false },
+          submitLoading: false,
+          // 表单校验规则：对应 el-form-item 的 prop，提交前会 validate()
+          formRules: {
+            name: [{ required: true, message: '请输入名称', trigger: 'blur' }]
+          }
+        }
+      },
+      created() {
+        this.fetchData()
+      },
+      methods: {
+        // ⑦ 数据请求：直接使用 Mixin 提供的 this.page / this.pageSize
+        //   删除下方 mock，替换为真实接口调用（如 await xxxPage(params)）
+        async fetchData() {
+          this.loading = true
+          // ===== 演示用 mock，上线请删除 =====
+          const self = this
+          setTimeout(function () {
+            const all = []
+            for (let i = 1; i <= 87; i++) {
+              all.push({ id: i, name: '示例项 ' + i, status: i % 2 })
+            }
+            const start = (self.page - 1) * self.pageSize
+            self.tableData = all.slice(start, start + self.pageSize)
+            self.counts = all.length
+            self.loading = false
+          }, 200)
+          // ===== mock 结束 =====
+        },
+        // 注意：table-bar 的内部 searchValues 不与页面 data 双向绑定，
+        // 必须在 @search 回调把 params 桥接回写 this.filters，否则筛选条件丢失
+        onSearch(params) {
+          this.filters.name = params.name || ''
+          this.filters.status = (params.status === undefined || params.status === null) ? '' : params.status
+          this.page = 1
+          this.fetchData()
+        },
+        onReset() {
+          this.filters = { name: '', status: '' }
+          this.page = 1
+          this.fetchData()
+        },
+        onAction(payload) {
+          if (payload.key === 'add') this.onAdd()
+        },
+        // 操作列「更多」下拉命令分发（command 与 el-dropdown-item 的 command 对应）
+        onRowCommand(cmd, row) {
+          if (cmd === 'delete') this.onDelete(row.id)
+        },
+        onAdd() {
+          this.form = { title: '新增', id: undefined, name: '', visible: true }
+        },
+        onEdit(row) {
+          this.form = { title: '编辑', id: row.id, name: row.name, visible: true }
+        },
+        async onSubmit() {
+          // 提交前校验：validate() 不通过则拦截（空值/格式错误）
+          try {
+            await new Promise(function(resolve, reject) {
+              this.$refs.form.validate(function(valid) {
+                if (valid) { resolve() }
+                else { reject(new Error('invalid')) }
+              })
+            }.bind(this))
+          } catch (e) {
+            return
+          }
+          this.submitLoading = true
+          try {
+            // await saveXxx(this.form)
+            ReggieUI.success('保存成功')
+            this.form.visible = false
+            this.fetchData()
+          } finally {
+            this.submitLoading = false
+          }
+        },
+        onDelete(id) {
+          ReggieUI.confirm('确认删除？', '提示', { type: 'warning' }).then(async () => {
+            // await deleteXxx(id)
+            ReggieUI.success('删除成功')
+            this.fetchData()
+          }).catch(function (err) { console.warn('[列表模板] 删除操作取消或失败:', err) })
+        }
+      }
+    })
+  </script>
+</body>
+</html>

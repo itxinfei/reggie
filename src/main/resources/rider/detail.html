@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>任务详情</title>
+  <link rel="stylesheet" href="/front/styles/vant.min.css">
+  <link rel="stylesheet" href="/shared/styles/tokens.css?v=20260930b">
+  <link rel="stylesheet" href="/backend/plugins/remixicon/remixicon.css">
+  <link rel="stylesheet" href="/rider/css/rider.css?v=20260930e">
+</head>
+<body>
+  <div id="app">
+    <main id="rider-main">
+      <h1 class="sr-only">任务详情</h1>
+    <van-nav-bar title="任务详情" left-arrow @click-left="goBack"></van-nav-bar>
+
+    <div class="rider-page" v-if="t">
+
+      <!-- 订单概览 -->
+      <div class="rider-card">
+        <div class="task-head">
+          <span class="task-number">{{ t.number }}</span>
+          <van-tag plain :type="statusTagType(t.status)">{{ RiderUtil.statusTextPickup(t.status, t.pickupTime != null) }}</van-tag>
+        </div>
+        <div class="info-row"><span class="label">订单金额</span>
+          <span class="val amount-val">¥{{ RiderUtil.money(t.amount) }}
+            <small>（含配送费 ¥{{ RiderUtil.money(t.deliveryFee) }}）</small>
+          </span>
+        </div>
+        <div class="info-row"><span class="label">下单时间</span><span class="val">{{ RiderUtil.formatTime(t.orderTime) }}</span></div>
+        <div class="info-row" v-if="t.remark"><span class="label">用户备注</span><span class="val">{{ t.remark }}</span></div>
+      </div>
+
+      <!-- 取餐卡 -->
+      <div class="rider-card">
+        <div class="card-title"><span class="bar"></span>到店取餐</div>
+        <div class="info-row"><span class="label">门店</span><span class="val strong">{{ t.storeName }}</span></div>
+        <div class="info-row"><span class="label">地址</span><span class="val">{{ t.storeAddress }}</span></div>
+        <div class="row-tools">
+          <a v-if="t.storePhone" class="tool-btn" :href="'tel:' + t.storePhone"><i class="ri-phone-line"></i> 联系门店</a>
+          <a v-if="storeNav" class="tool-btn primary" :href="storeNav" target="_blank" rel="noopener">取餐导航</a>
+        </div>
+        <div class="rider-actions" v-if="showPickup">
+          <button class="rider-btn primary" :disabled="busy !== ''" @click="onPickup">确认取餐</button>
+        </div>
+        <!-- 修改点(P0-6)：取餐核销提示 -->
+        <div class="pickup-code-tip" v-if="showPickup">需向店员索取 6 位取餐码完成核销</div>
+      </div>
+
+      <!-- 送餐卡 -->
+      <div class="rider-card">
+        <div class="card-title deliver"><span class="bar"></span>配送给顾客</div>
+        <div class="info-row"><span class="label">收货人</span><span class="val strong">{{ t.consignee }}</span></div>
+        <div class="info-row"><span class="label">电话</span><span class="val">{{ RiderUtil.maskPhone(t.phone) }}</span></div>
+        <div class="info-row"><span class="label">地址</span><span class="val">{{ t.address }}</span></div>
+        <div class="row-tools">
+          <!-- 号码保护：仅已接单(riderId已分配，后端下发真实号)才显示联系顾客；
+               抢单大厅未持单时 t.phone 为脱敏号，不显示拨号，避免拨打 **** 号 -->
+          <a v-if="t.riderId != null && t.phone" class="tool-btn" :href="'tel:' + t.phone"><i class="ri-phone-line"></i> 联系顾客</a>
+          <a v-if="destNav" class="tool-btn primary" :href="destNav" target="_blank" rel="noopener">送餐导航</a>
+        </div>
+        <div class="rider-actions" v-if="showDeliver">
+          <button class="rider-btn primary" :disabled="busy !== ''" @click="onDeliver">确认送达</button>
+        </div>
+        <div class="delivered-note" v-if="t.status === 4 && t.deliverTime">
+          已于 {{ RiderUtil.formatTime(t.deliverTime) }} 送达完成
+        </div>
+      </div>
+
+      <!-- 配送工具：仅本人配送中的订单可上报异常 / 转单（修改点 P0-3） -->
+      <div class="rider-card" v-if="canReport">
+        <div class="card-title"><span class="bar"></span>配送工具</div>
+        <div class="row-tools">
+          <button class="tool-btn" @click="openException">上报异常</button>
+          <button class="tool-btn" @click="openTransfer">转单</button>
+        </div>
+      </div>
+
+      <!-- 大厅单：抢单 -->
+      <div class="rider-actions" v-if="showGrab">
+        <button class="rider-btn primary" :disabled="busy !== ''" @click="onGrab">立即抢单</button>
+      </div>
+
+      <!-- 派给我：确认接单 -->
+      <div class="rider-actions" v-if="showAccept">
+        <button class="rider-btn primary" :disabled="busy !== ''" @click="onAccept">确认接单</button>
+      </div>
+
+      <!-- 上报异常弹窗（修改点 P0-3） -->
+      <van-popup v-model="showException" position="bottom" round>
+        <div class="exc-pop">
+          <div class="exc-title">上报配送异常</div>
+          <div class="exc-types">
+            <span v-for="(label, val) in excTypeMap" :key="val" class="exc-type"
+                  :class="{ on: excType === Number(val) }" role="button" tabindex="0"
+                  :aria-pressed="excType === Number(val)"
+                  @click="excType = Number(val)" @keyup.enter="excType = Number(val)" @keyup.space.prevent="excType = Number(val)">{{ label }}</span>
+          </div>
+          <van-field v-model="excDesc" type="textarea" rows="3" maxlength="200"
+                     show-word-limit placeholder="请描述遇到的问题"></van-field>
+          <div class="exc-actions">
+            <van-button block @click="showException = false">取消</van-button>
+            <van-button block type="primary" :loading="excSubmitting" @click="submitException">提交</van-button>
+          </div>
+        </div>
+      </van-popup>
+
+      <!-- 转单弹窗（修改点 P0-3） -->
+      <van-popup v-model="showTransfer" position="bottom" round>
+        <div class="exc-pop">
+          <div class="exc-title">转单给其他骑手</div>
+          <div class="tr-list" v-if="transferRiders.length">
+            <div v-for="r in transferRiders" :key="r.id" class="tr-item"
+                 :class="{ on: transferRiderId === r.id }" role="button" tabindex="0"
+                 :aria-pressed="transferRiderId === r.id"
+                 @click="transferRiderId = r.id" @keyup.enter="transferRiderId = r.id" @keyup.space.prevent="transferRiderId = r.id">
+              <span>{{ r.name }}</span>
+              <small>在途 {{ r.currentOrderCount || 0 }} 单</small>
+            </div>
+          </div>
+          <div class="rider-empty" v-else>暂无可转单的在线骑手</div>
+          <div class="exc-actions">
+            <van-button block @click="showTransfer = false">取消</van-button>
+            <van-button block type="primary" :disabled="!transferRiderId"
+                        :loading="transferSubmitting" @click="submitTransfer">确认转单</van-button>
+          </div>
+        </div>
+      </van-popup>
+
+      <!-- 取餐码核销弹窗（P0-6：Vant2 已移除 Dialog.prompt，改用 popup + field 输入） -->
+      <van-popup v-model="showPickupCode" position="bottom" round>
+        <div class="exc-pop">
+          <div class="exc-title">取餐核销</div>
+          <div class="pickup-code-tip">请输入门店提供的 6 位取餐码完成核销</div>
+          <van-field class="pickup-code-field" v-model="pickupCodeInput" type="digit" label="取餐码"
+                     maxlength="6" clearable placeholder="6 位取餐码" input-align="center"></van-field>
+          <div class="exc-actions">
+            <van-button block @click="showPickupCode = false">取消</van-button>
+            <van-button block type="primary" :loading="pickupSubmitting"
+                        @click="confirmPickup">确认取餐</van-button>
+          </div>
+        </div>
+      </van-popup>
+
+    </div>
+
+    <div class="rider-empty" v-else-if="loadError">
+      <div>{{ errorMsg }}</div>
+      <button v-if="id" class="rider-btn primary retry-btn" @click="loadDetail">重新加载</button>
+      <button v-else class="rider-btn primary retry-btn" @click="goIndex">返回工作台</button>
+    </div>
+    <div class="rider-empty" v-else>加载中…</div>
+  </main>
+  </div>
+
+  <script src="/backend/plugins/vue/vue.js"></script>
+  <script src="/backend/plugins/axios/axios.min.js"></script>
+  <script src="/front/js/vant.min.js"></script>
+  <script src="/rider/js/request.js?v=20260930"></script>
+  <script src="/rider/js/api.js"></script>
+  <script src="/rider/js/util.js?v=20260930"></script>
+  <script src="/rider/js/location.js"></script>
+  <script>RiderLocation.start();</script>
+  <script>
+    Vue.use(vant);
+    new Vue({
+      data: function () {
+        return {
+          t: null, busy: '', id: '', loadError: false, errorMsg: '', seq: 0, timer: null,
+          // 异常上报与转单（修改点 P0-3）
+          showException: false, excType: 1, excDesc: '', excSubmitting: false,
+          excTypeMap: RiderUtil.excTypeMap,
+          showTransfer: false, transferRiders: [], transferRiderId: null, transferSubmitting: false,
+          // 取餐码核销（Vant2 无 Dialog.prompt，改用 popup 输入）
+          showPickupCode: false, pickupCodeInput: '', pickupSubmitting: false
+        };
+      },
+      computed: {
+        showGrab: function () { return this.t && this.t.status === 2 && this.t.riderId == null; },
+        showAccept: function () { return this.t && this.t.status === 2 && this.t.riderId != null; },
+        showPickup: function () { return this.t && this.t.status === 3 && this.t.pickupTime == null; },
+        showDeliver: function () { return this.t && this.t.status === 3 && this.t.pickupTime != null; },
+        canReport: function () {
+          // 本人订单：派给我待接(2且已指派) 或 配送中(3)
+          return this.t && (this.t.status === 3 || (this.t.status === 2 && this.t.riderId != null));
+        },
+        storeNav: function () {
+          return this.t ? RiderUtil.navUrl(this.t.storeLongitude, this.t.storeLatitude, this.t.storeName) : '';
+        },
+        destNav: function () {
+          return this.t ? RiderUtil.navUrl(this.t.destLongitude, this.t.destLatitude, this.t.address) : '';
+        }
+      },
+      mounted: function () {
+        var vm = this;
+        vm.id = new URLSearchParams(window.location.search).get('id') || '';
+        if (!vm.id) {
+          vm.loadError = true;
+          vm.errorMsg = '缺少订单ID，请从任务列表进入';
+          return;
+        }
+        vm.loadDetail();
+        // 非终态每 15 秒静默同步：顾客取消、后台改派等状态变化可及时感知
+        vm.timer = setInterval(function () {
+          if (document.hidden || !vm.t || vm.t.status === 4 || vm.t.status === 5 || vm.t.status === 6) return;
+          vm.loadDetail();
+        }, 15000);
+        // 从高德导航经 bfcache 返回本页时重新拉取
+        window.addEventListener('pageshow', vm.onPageShow);
+      },
+      beforeDestroy: function () {
+        if (this.timer) { clearInterval(this.timer); this.timer = null; }
+        window.removeEventListener('pageshow', this.onPageShow);
+      },
+      created: function () {
+        // RiderUtil 是工具对象而非方法，挂在实例上供模板调用（不能放进 methods）
+        this.RiderUtil = window.RiderUtil;
+      },
+      methods: {
+        loadDetail: function () {
+          var vm = this;
+          if (!vm.id) { return; }
+          var seq = ++vm.seq;
+          vm.loadError = false;
+          RiderApi.detail(vm.id).then(function (res) {
+            if (seq !== vm.seq) return;  // 丢弃过期响应（轮询/重试乱序）
+            vm.t = res.data;
+          }).catch(function (e) {
+            if (seq !== vm.seq) return;
+            if (e && e.message === 'NOTLOGIN') return;  // 拦截器即将跳登录
+            vm.t = null;
+            vm.loadError = true;
+            vm.errorMsg = '加载失败，请检查网络后重试';
+          });
+        },
+        onPageShow: function (e) {
+          // bfcache 命中（从高德返回）才刷新，首次加载不重复请求
+          if (e.persisted) { this.loadDetail(); }
+        },
+        statusTagType: function (s) {
+          switch (s) {
+            case 3: return 'primary';
+            case 4: return 'success';
+            case 5:
+            case 6: return 'danger';
+            default: return 'warning';
+          }
+        },
+        goIndex: function () {
+          window.location.href = '/rider/index.html';
+        },
+        onGrab: function () {
+          var vm = this;
+          if (vm.busy !== '') return;  // 请求在飞，防重复点击
+          vm.busy = 'grab';
+          RiderApi.grab(vm.t.id).then(function () {
+            vant.Toast.success('抢单成功');
+            vm.loadDetail();
+          }).catch(function () { vm.loadDetail(); }).then(function () { vm.busy = ''; });
+        },
+        onAccept: function () {
+          var vm = this;
+          if (vm.busy !== '') return;
+          vm.busy = 'accept';
+          RiderApi.accept(vm.t.id).then(function () {
+            vant.Toast.success('已接单');
+            vm.loadDetail();
+          }).catch(function () { /* 提示已统一 */ }).then(function () { vm.busy = ''; });
+        },
+        // P0-6：取餐前核销门店取餐码（Vant2 无 Dialog.prompt，打开自定义 popup 输入）
+        onPickup: function () {
+          if (this.busy !== '') return;
+          this.pickupCodeInput = '';
+          this.showPickupCode = true;
+        },
+        // 取餐码校验并提交核销
+        confirmPickup: function () {
+          var vm = this;
+          var code = (vm.pickupCodeInput || '').trim();
+          if (!/^\d{6}$/.test(code)) {
+            vant.Toast.fail('请输入 6 位数字取餐码');
+            return;
+          }
+          vm.pickupSubmitting = true;
+          vm.busy = 'pickup';
+          RiderApi.pickup(vm.t.id, code).then(function (res) {
+            if (res && res.code === 1) {
+              vant.Toast.success('已取餐，请尽快送达');
+              vm.showPickupCode = false;
+              vm.loadDetail();
+            } else {
+              vant.Toast.fail((res && res.msg) || '取餐失败');
+            }
+          }).catch(function () { /* 失败提示已统一 */ }).then(function () {
+            vm.pickupSubmitting = false;
+            vm.busy = '';
+          });
+        },
+        onDeliver: function () {
+          var vm = this;
+          if (vm.busy !== '') return;
+          vant.Dialog.confirm({ title: '确认送达', message: '确认已将订单送达顾客手中？' }).then(function () {
+            vm.busy = 'deliver';
+            return RiderApi.deliver(vm.t.id);
+          }).then(function () {
+            vant.Toast.success('送达完成');
+            vm.loadDetail();
+          }).catch(function () { /* 取消或失败 */ }).then(function () { vm.busy = ''; });
+        },
+        goBack: function () {
+          RiderUtil.back();
+        },
+        // 修改点(P0-3)：上报异常
+        openException: function () {
+          this.excType = 1;
+          this.excDesc = '';
+          this.showException = true;
+        },
+        submitException: function () {
+          var vm = this;
+          if (vm.excSubmitting) return;
+          if (!vm.excDesc || !vm.excDesc.trim()) {
+            vant.Toast.fail('请填写异常描述');
+            return;
+          }
+          vm.excSubmitting = true;
+          RiderApi.submitException(vm.t.id, vm.excType, vm.excDesc.trim()).then(function (res) {
+            if (res && res.code === 1) {
+              vant.Toast.success('已上报，客服将尽快处理');
+              vm.showException = false;
+            } else {
+              vant.Toast.fail((res && res.msg) || '上报失败');
+            }
+          }).catch(function () { /* 提示已统一 */ }).then(function () {
+            vm.excSubmitting = false;
+          });
+        },
+        // 修改点(P0-3)：转单
+        openTransfer: function () {
+          var vm = this;
+          vm.transferRiderId = null;
+          vm.showTransfer = true;
+          RiderApi.availableRiders().then(function (res) {
+            vm.transferRiders = (res && res.code === 1 && res.data) ? res.data : [];
+          }).catch(function () { vm.transferRiders = []; });
+        },
+        submitTransfer: function () {
+          var vm = this;
+          if (vm.transferSubmitting || !vm.transferRiderId) return;
+          var target = null;
+          for (var i = 0; i < vm.transferRiders.length; i++) {
+            if (vm.transferRiders[i].id === vm.transferRiderId) { target = vm.transferRiders[i]; }
+          }
+          var tip = target ? ('确认把本单转给 ' + target.name + '？') : '确认转单？';
+          vant.Dialog.confirm({ title: '转单', message: tip }).then(function () {
+            vm.transferSubmitting = true;
+            return RiderApi.transfer(vm.t.id, vm.transferRiderId);
+          }).then(function (res) {
+            if (res && res.code === 1) {
+              vant.Toast.success('已转单');
+              vm.showTransfer = false;
+              vm.loadDetail();
+            } else {
+              vant.Toast.fail((res && res.msg) || '转单失败');
+            }
+          }).catch(function () { /* 取消或提示已统一 */ }).then(function () {
+            vm.transferSubmitting = false;
+          });
+        }
+      }
+    }).$mount('#app');
+  </script>
+</body>
+</html>

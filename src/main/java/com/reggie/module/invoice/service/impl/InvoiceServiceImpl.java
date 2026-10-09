@@ -1,0 +1,333 @@
+package com.reggie.module.invoice.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.transaction.annotation.Transactional;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
+import com.reggie.module.invoice.mapper.InvoiceRecordMapper;
+import com.reggie.module.invoice.mapper.InvoiceTitleMapper;
+import com.reggie.module.invoice.model.InvoiceRecord;
+import com.reggie.module.invoice.model.InvoiceTitle;
+import com.reggie.module.invoice.service.InvoiceService;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.mapper.OrderMapper;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+/**
+ * 发票服务实现
+ */
+@Slf4j
+@Service
+@Transactional(rollbackFor = Exception.class)
+public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, InvoiceRecord> implements InvoiceService {
+
+    @Autowired
+    private InvoiceTitleMapper invoiceTitleMapper;
+
+    @Autowired
+    private OrderMapper orderMapper;
+
+    /**
+     * 保存 title。
+     * @param title 参数 title
+     */
+    @Override
+    public void saveTitle(InvoiceTitle title) {
+        title.setTenantId(BaseContext.getCurrentTenantId());
+        // 修复(2026-09-23 P1-6)：归属用户以后端会话为准，防止前端伪造及抬头无主
+        title.setUserId(BaseContext.getCurrentId());
+        title.setType(title.getType() == null ? 1 : title.getType());
+        invoiceTitleMapper.insert(title);
+    }
+
+    /**
+     * 查询列表 titles。
+     * @param tenantId 参数 tenantId
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
+    @Override
+    public List<InvoiceTitle> listTitles(Long tenantId, Long userId) {
+        // 修复(2026-09-23 P1-6)：抬头按归属用户隔离，原仅按租户过滤致全店企业名/税号互相可见
+        LambdaQueryWrapper<InvoiceTitle> qw = new LambdaQueryWrapper<>();
+        qw.eq(InvoiceTitle::getTenantId, tenantId);
+        qw.eq(InvoiceTitle::getUserId, userId);
+        qw.orderByDesc(InvoiceTitle::getCreateTime);
+        return invoiceTitleMapper.selectList(qw);
+    }
+
+    /**
+     * 删除 title。
+     * @param id 参数 id
+     * @param tenantId 参数 tenantId
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
+    @Override
+    public boolean deleteTitle(Long id, Long tenantId, Long userId) {
+        InvoiceTitle title = invoiceTitleMapper.selectById(id);
+        // 修复(2026-09-23 P1-6)：除租户外还须归属当前用户，否则可删除他人抬头
+        if (title == null || !tenantId.equals(title.getTenantId())
+                || userId == null || !userId.equals(title.getUserId())) {
+            throw new CustomException("发票抬头不存在");
+        }
+        return invoiceTitleMapper.deleteById(id) > 0;
+    }
+
+    /**
+     * 申请 invoice。
+     * @param orderId 参数 orderId
+     * @param userId 参数 userId
+     * @param tenantId 参数 tenantId
+     * @param titleId 参数 titleId
+     * @param title 参数 title
+     * @param taxNumber 参数 taxNumber
+     * @param type 参数 type
+     * @return 返回结果
+     */
+    @Override
+    public InvoiceRecord applyInvoice(Long orderId, Long userId, Long tenantId, Long titleId, String title,
+            String taxNumber, Integer type) {
+        // 校验订单存在且已完成
+        Orders order = orderMapper.selectById(orderId);
+        if (order == null) {
+            throw new CustomException("订单不存在");
+        }
+        if (order.getStatus() == null || order.getStatus() != Orders.STATUS_COMPLETED) {
+            throw new CustomException("只有已完成的订单才能申请开票");
+        }
+        if (!tenantId.equals(order.getTenantId())) {
+            throw new CustomException("无权操作该订单");
+        }
+        // 修改点(2026-09-05)：IDOR 防护——订单归属校验，防止越权为他人订单申请开票
+        if (userId == null || !Objects.equals(order.getUserId(), userId)) {
+            throw new CustomException("无权操作该订单");
+        }
+        // 检查是否已有有效（非作废）发票：已申请/已开具不允许重复申请；
+        // 仅存在已作废记录时允许重新申请（税务上发票作废/红冲后可重开）
+        LambdaQueryWrapper<InvoiceRecord> existQw = new LambdaQueryWrapper<>();
+        existQw.eq(InvoiceRecord::getOrderId, orderId);
+        existQw.eq(InvoiceRecord::getTenantId, tenantId);
+        List<InvoiceRecord> existRecords = list(existQw);
+        boolean hasActive = false;
+        for (InvoiceRecord r : existRecords) {
+            if (r.getStatus() == null || r.getStatus() != InvoiceRecord.STATUS_VOIDED) {
+                hasActive = true;
+                break;
+            }
+        }
+        if (hasActive) {
+            throw new CustomException("该订单已申请过发票");
+        }
+
+        InvoiceRecord record = new InvoiceRecord();
+        record.setOrderId(orderId);
+        record.setUserId(userId);
+        record.setOrderNo(order.getNumber());
+        record.setTitleId(titleId);
+        record.setTitle(title);
+        record.setTaxNumber(taxNumber);
+        record.setType(type != null ? type : 1);
+        record.setAmount(order.getAmount());
+        // 修改点(2026-09-01)：申请即"已申请"，否则后台开票校验（仅接受 STATUS_APPLIED）永远无法流转
+        record.setStatus(InvoiceRecord.STATUS_APPLIED);
+        record.setTenantId(tenantId);
+        record.setApplyTime(LocalDateTime.now());
+        save(record);
+        return record;
+    }
+
+    /**
+     * 获取 invoice by order。
+     * @param orderId 参数 orderId
+     * @param userId 参数 userId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
+    @Override
+    public InvoiceRecord getInvoiceByOrder(Long orderId, Long userId, Long tenantId) {
+        // 修改点(2026-09-05)：IDOR 防护——先校验订单归属，再查询发票记录，防止越权查看他人订单发票
+        Orders order = orderMapper.selectById(orderId);
+        if (order == null) {
+            throw new CustomException("订单不存在");
+        }
+        if (userId == null || !Objects.equals(order.getUserId(), userId)) {
+            throw new CustomException("无权操作该订单");
+        }
+        LambdaQueryWrapper<InvoiceRecord> qw = new LambdaQueryWrapper<>();
+        qw.eq(InvoiceRecord::getOrderId, orderId);
+        qw.eq(InvoiceRecord::getTenantId, tenantId);
+        // 重申后同一订单可能有多条记录（旧作废 + 新申请）：取最新，且优先返回有效（非作废）发票
+        qw.orderByDesc(InvoiceRecord::getId);
+        List<InvoiceRecord> records = list(qw);
+        if (records == null || records.isEmpty()) {
+            return null;
+        }
+        for (InvoiceRecord r : records) {
+            if (r.getStatus() == null || r.getStatus() != InvoiceRecord.STATUS_VOIDED) {
+                return r;
+            }
+        }
+        return records.get(0);
+    }
+
+    /**
+     * 查询列表 user records。
+     * @param page 参数 page
+     * @param userId 参数 userId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
+    @Override
+    public Page<InvoiceRecord> listUserRecords(Page<InvoiceRecord> page, Long userId, Long tenantId) {
+        LambdaQueryWrapper<InvoiceRecord> qw = new LambdaQueryWrapper<>();
+        qw.eq(InvoiceRecord::getUserId, userId);
+        qw.eq(InvoiceRecord::getTenantId, tenantId);
+        qw.orderByDesc(InvoiceRecord::getCreateTime);
+        return page(page, qw);
+    }
+
+    /**
+     * 更新 title。
+     * @param id 参数 id
+     * @param tenantId 参数 tenantId
+     * @param title 参数 title
+     * @param taxNumber 参数 taxNumber
+     * @param companyName 参数 companyName
+     * @param type 参数 type
+     * @return 返回结果
+     */
+    @Override
+    public boolean updateTitle(Long id, Long tenantId, Long userId, String title, String taxNumber,
+            String companyName, Integer type) {
+        InvoiceTitle titleEntity = invoiceTitleMapper.selectById(id);
+        // 修复(2026-09-23 P1-6)：须归属当前用户，否则可编辑他人抬头
+        if (titleEntity == null || !tenantId.equals(titleEntity.getTenantId())
+                || userId == null || !userId.equals(titleEntity.getUserId())) {
+            throw new CustomException("发票抬头不存在");
+        }
+        String trimmedTitle = title == null ? null : title.trim();
+        if (trimmedTitle == null || trimmedTitle.isEmpty()) {
+            throw new CustomException("请填写抬头名称");
+        }
+        Integer safeType = type != null ? type : titleEntity.getType();
+        if (safeType == null || safeType != 2) {
+            safeType = 1;
+        }
+        if (safeType == 2 && (taxNumber == null || taxNumber.trim().isEmpty())) {
+            throw new CustomException("企业抬头请填写税号");
+        }
+        titleEntity.setTitle(trimmedTitle);
+        titleEntity.setTaxNumber(taxNumber == null ? null : taxNumber.trim());
+        titleEntity.setCompanyName(companyName == null ? null : companyName.trim());
+        titleEntity.setType(safeType);
+        titleEntity.setUpdateTime(LocalDateTime.now());
+        return invoiceTitleMapper.updateById(titleEntity) > 0;
+    }
+
+    /**
+     * 查询列表 records。
+     * @param page 参数 page
+     * @param status 参数 status
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
+    @Override
+    public Page<InvoiceRecord> listRecords(Page<InvoiceRecord> page, Integer status, Long tenantId) {
+        LambdaQueryWrapper<InvoiceRecord> qw = new LambdaQueryWrapper<>();
+        qw.eq(InvoiceRecord::getTenantId, tenantId);
+        if (status != null) {
+            qw.eq(InvoiceRecord::getStatus, status);
+        }
+        qw.orderByDesc(InvoiceRecord::getCreateTime);
+        return page(page, qw);
+    }
+
+    /**
+     * 查询列表 stats。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
+    @Override
+    public Map<String, Integer> listStats(Long tenantId) {
+        // 按状态分别 count（索引命中，避免全量加载行数据），统计卡全量不随分页/筛选变化
+        Map<String, Integer> stats = new HashMap<>();
+        stats.put("total", (int) count(statusQw(tenantId, null)));
+        stats.put("applied", (int) count(statusQw(tenantId, InvoiceRecord.STATUS_APPLIED)));
+        stats.put("issued", (int) count(statusQw(tenantId, InvoiceRecord.STATUS_ISSUED)));
+        stats.put("voided", (int) count(statusQw(tenantId, InvoiceRecord.STATUS_VOIDED)));
+        return stats;
+    }
+
+    /**
+     * 按租户与状态构造统计查询条件
+     *
+     * @param tenantId 租户ID
+     * @param status   开票状态（null 时不加状态条件）
+     * @return 查询条件
+     */
+    private LambdaQueryWrapper<InvoiceRecord> statusQw(Long tenantId, Integer status) {
+        LambdaQueryWrapper<InvoiceRecord> qw = new LambdaQueryWrapper<>();
+        qw.eq(InvoiceRecord::getTenantId, tenantId);
+        if (status != null) {
+            qw.eq(InvoiceRecord::getStatus, status);
+        }
+        return qw;
+    }
+
+    /**
+     * 判断 sue invoice。
+     * @param recordId 参数 recordId
+     * @param invoiceNo 参数 invoiceNo
+     * @param invoiceCode 参数 invoiceCode
+     * @param invoiceUrl 参数 invoiceUrl
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
+    @Override
+    public boolean issueInvoice(Long recordId, String invoiceNo, String invoiceCode, String invoiceUrl, Long tenantId) {
+        InvoiceRecord record = getById(recordId);
+        if (record == null || !tenantId.equals(record.getTenantId())) {
+            throw new CustomException("发票记录不存在");
+        }
+        if (record.getStatus() == null || record.getStatus() != InvoiceRecord.STATUS_APPLIED) {
+            throw new CustomException("只有已申请的发票才能开具");
+        }
+        record.setInvoiceNo(invoiceNo);
+        record.setInvoiceCode(invoiceCode);
+        record.setInvoiceUrl(invoiceUrl);
+        record.setStatus(InvoiceRecord.STATUS_ISSUED);
+        record.setIssueTime(LocalDateTime.now());
+        return updateById(record);
+    }
+
+    /**
+     * 处理 void invoice。
+     * @param recordId 参数 recordId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
+    @Override
+    public boolean voidInvoice(Long recordId, Long tenantId) {
+        InvoiceRecord record = getById(recordId);
+        if (record == null || !tenantId.equals(record.getTenantId())) {
+            throw new CustomException("发票记录不存在");
+        }
+        if (record.getStatus() == null || record.getStatus() != InvoiceRecord.STATUS_ISSUED) {
+            throw new CustomException("只有已开具的发票才能作废");
+        }
+        record.setStatus(InvoiceRecord.STATUS_VOIDED);
+        record.setUpdateTime(LocalDateTime.now());
+        return updateById(record);
+    }
+}

@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>我的评价 - 瑞吉外卖</title>
+    <link rel="icon" href="./../images/favico.ico">
+    <script src="./../js/base.js?v=20260930"></script>
+    <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <link rel="stylesheet" href="../styles/index.css?v=20260930b" />
+    <link rel="stylesheet" href="../styles/skeleton.css?v=20260930" />
+    <!-- 修改点：加载 RemixIcon 真字体（emoji 兜底改由 js/icon-fallback.js 按需注入） -->
+    <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+    <script src="./../js/icon-fallback.js?v=20260917"></script>
+    <link rel="stylesheet" href="./../styles/evaluation.css?v=20260930" />
+</head>
+<body>
+    <div id="eval-app" class="app">
+      <cend-shell title="我的评价" light :show-back="true" :show-home="true">
+        <!-- 修改点：骨架屏替代 loading 遮罩 -->
+        <div v-if="loading" class="skeleton-container">
+            <!-- 评价卡片骨架 -->
+            <div class="skeleton-card" v-for="i in 3" :key="'se'+i">
+                <div class="skeleton-row">
+                    <div class="skeleton-img"></div>
+                    <div class="skeleton-col">
+                        <div class="skeleton-line skeleton-w60"></div>
+                        <div class="skeleton-line skeleton-w40"></div>
+                    </div>
+                </div>
+                <div class="skeleton-line skeleton-w80"></div>
+                <div class="skeleton-line skeleton-w60"></div>
+            </div>
+        </div>
+        <!-- 修改点(2026-09-26)：头部收敛到 cend-shell，旧 .divHead 已移除 -->
+
+        <!-- 写评价入口 -->
+        <div class="write-eval-bar" v-if="canEvaluate && !submitVisible">
+            <div class="write-eval-info">
+                <i class="ri-edit-line"></i>
+                <span>您有未评价的订单，快去写评价吧</span>
+            </div>
+            <van-button type="primary" size="small" round plain @click="openSubmitModal">去评价</van-button>
+        </div>
+
+        <!-- 评价列表 -->
+        <!-- 修改点：van-pull-refresh 包裹列表实现下拉刷新 -->
+        <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
+        <!-- 修改点(2026-09-17 UX)：移动端改用 van-list 上拉加载（原 van-pagination 为 PC 风格页码） -->
+        <van-list v-model="loading" :finished="finished" finished-text="没有更多了" @load="onLoad">
+        <div class="eval-list" v-if="evalList.length > 0">
+            <div v-for="item in evalList" :key="item.id" class="eval-card">
+                <div class="eval-header">
+                    <div class="dish-info">
+                        <img v-if="item.dishImage" :src="imgPath(item.dishImage)" class="dish-img" :alt="item.dishName || '菜品'" loading="lazy" @error="imgFallback($event)" />
+                        <div class="dish-text">
+                            <div class="dish-name">{{ item.dishName || '未知菜品' }}</div>
+                            <div class="eval-meta">
+                                <span class="eval-stars" role="img" :aria-label="'评分 ' + (item.starRating || 0) + ' 星'">
+                                    <i v-for="i in 5" :key="i" class="star" :class="{ filled: i <= (item.starRating || 0) }">★</i>
+                                </span>
+                                <span class="eval-date">{{ formatDate(item.createTime) }}</span>
+                                <span v-if="Number(item.anonymous) === 1" class="eval-anony-flag">匿名</span>
+                            </div>
+                        </div>
+                    </div>
+                    <span :class="['status-tag', statusClass(item.status)]">{{ statusText(item.status) }}</span>
+                </div>
+
+                <div class="eval-content">{{ item.content || '（无文字评价）' }}</div>
+
+                <!-- 评价图片 -->
+                <div class="eval-imgs" v-if="item.images && item.images.length > 0">
+                    <img v-for="(img, idx) in getImageList(item.images)" :key="idx"
+                         :src="imgPath(img)" :alt="'评价图片' + (idx + 1)" @click="previewImage(imgPath(img))" loading="lazy" @error="imgFallback($event)" />
+                </div>
+
+                <!-- 商家回复 -->
+                <div class="reply-section" v-if="item.replyContent">
+                    <div class="reply-label">商家回复：</div>
+                    <div class="reply-text">{{ item.replyContent }}</div>
+                    <div class="reply-time">{{ formatDate(item.replyTime) }}</div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="eval-actions" v-if="item.status === 0">
+                    <!-- 修改点：el-button 替换为原生button -->
+                    <button class="btn-text" @click="editEvaluation(item)">修改</button>
+                    <button class="btn-text btn-text-danger" @click="deleteEvaluation(item)">删除</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 错误态：自动加载已停止，仅支持手动重试 -->
+        <div class="empty-state" v-else-if="loadError">
+            <i class="ri-wifi-line"></i>
+            <p class="empty-text">加载失败，请稍后重试</p>
+            <button class="btn-primary" @click="loadData">重新加载</button>
+        </div>
+        <!-- 空状态 -->
+        <div class="empty-state" v-else-if="!loading">
+            <i class="ri-star-line"></i>
+            <p class="empty-text">暂无评价记录</p>
+            <!-- 修改点：el-button 替换为原生button -->
+            <button class="btn-primary" @click="goToOrder">去下单</button>
+        </div>
+        </van-list>
+        </van-pull-refresh>
+        <!-- 修改点(2026-09-17 UX)：移除 van-pagination（PC 风格页码），分页改由 van-list 上拉加载承担 -->
+
+        <!-- 提交评价弹窗——el-dialog 替换为纯CSS模态框 -->
+        <!-- 修改点(2026-09-17)：可访问性——自定义弹窗补充 dialog 语义（role/aria-modal/aria-label）
+             并支持 ESC 关闭；tabindex="-1" 使容器可被脚本聚焦承接键盘事件 -->
+        <div v-if="submitVisible" class="submit-modal" role="dialog" aria-modal="true"
+             aria-label="评价菜品" tabindex="-1" @keydown.esc="submitVisible = false">
+            <div class="submit-dialog">
+                <div class="submit-modal-header">
+                    <h3>评价菜品</h3>
+                    <span class="modal-close" @click="submitVisible = false">✕</span>
+                </div>
+                <div class="submit-modal-body">
+                    <div v-if="submitData.orderId">
+                        <div class="submit-order-info">
+                            <div class="submit-order-id">订单 {{ submitData.orderNo || submitData.orderId }}</div>
+                            <div class="submit-order-tip">请为您购买的菜品评分</div>
+                        </div>
+                        <!-- 修改点(2026-09-18)：已成功提交的菜标记 is-submitted，部分失败重试时跳过，避免重复提交 -->
+                        <div class="submit-eval-item" :class="{'is-submitted': dish._submitted}" v-for="(dish, idx) in submitData.dishes" :key="idx">
+                            <div class="submit-dish-row">
+                                <span class="submit-dish-name">{{ dish.dishName }}<span class="submitted-flag" v-if="dish._submitted">已评价 ✓</span></span>
+                                <!-- 修改点：el-rate 替换为自定义星级评分组件 -->
+                                <span class="star-rating" role="radiogroup" :aria-label="dish.dishName + ' 评分'">
+                                    <span v-for="s in 5" :key="s"
+                                          :class="['star-item', { active: s <= dish.starRating }]"
+                                          role="radio" :aria-checked="s === dish.starRating"
+                                          :aria-label="s + ' 星'" tabindex="0"
+                                          @click="!dish._submitted && (dish.starRating = s)"
+                                          @keydown.enter.prevent="!dish._submitted && (dish.starRating = s)">★</span>
+                                </span>
+                            </div>
+                            <!-- 快捷评价标签（对齐美团） -->
+                            <div class="quick-tags">
+                                <span class="quick-tag" v-for="tag in quickTags" :key="tag"
+                                      :class="{active: dish.content && dish.content.includes(tag)}"
+                                      role="button" :aria-pressed="!!(dish.content && dish.content.includes(tag))"
+                                      tabindex="0" @keydown.enter.prevent="toggleQuickTag(dish, tag)"
+                                      @click="toggleQuickTag(dish, tag)">{{tag}}</span>
+                            </div>
+                            <!-- 修改点：el-input textarea 替换为原生textarea -->
+                            <textarea v-model="dish.content" rows="2" class="eval-textarea"
+                                      :disabled="dish._submitted"
+                                      placeholder="分享您的用餐体验（选填）" maxlength="200"></textarea>
+                            <span class="eval-word-count" v-if="dish.content">{{ dish.content.length }}/200</span>
+                            <!-- 评价传图（每道菜最多3张）：上传到 /common/upload，提交时随评价写入 images -->
+                            <van-uploader
+                                v-if="!dish._submitted"
+                                class="eval-uploader"
+                                :file-list="dish._fileList"
+                                :max-count="3"
+                                :max-size="5 * 1024 * 1024"
+                                accept="image/*"
+                                multiple
+                                :after-read="function(file){ afterEvalRead(dish, file) }"
+                                :delete-image="function(file, detail){ afterEvalDelete(dish, file, detail) }"
+                                @oversize="onEvalOversize"
+                            ></van-uploader>
+                        </div>
+                        <!-- 匿名评价：整单一个开关，勾选后公开列表显示“匿名用户” -->
+                        <div class="eval-anony-row" @click="submitData.anonymous = !submitData.anonymous">
+                            <span class="eval-anony-box" :class="{checked: submitData.anonymous}">
+                                <i v-if="submitData.anonymous" class="ri-check-line"></i>
+                            </span>
+                            <span class="eval-anony-label">匿名评价<em>公开后隐藏你的昵称</em></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="submit-modal-footer">
+                    <!-- 修改点：el-button 替换为原生button -->
+                    <button class="btn-cancel" @click="submitVisible = false">取 消</button>
+                    <button class="btn-submit" @click="doSubmit" :disabled="submitLoading">
+                        {{ submitLoading ? '提交中...' : '提交评价' }}
+                    </button>
+                </div>
+            </div>
+            <div class="modal-overlay" @click="submitVisible = false"></div>
+        </div>
+
+        <!-- 图片预览 -->
+        <!-- 修改点(2026-09-01)：v-model:show 是 Vue3 语法（Vue2 无效）；van-* 禁自闭合 -->
+        <van-image-preview :show.sync="previewShow" :images="previewImages" :start-position="previewIndex"></van-image-preview>
+      </cend-shell>
+    </div>
+
+    <script src="../../backend/plugins/vue/vue.js"></script>
+    <script src="./../js/vant.min.js"></script>
+    <script src="../../backend/plugins/axios/axios.min.js"></script>
+    <script src="./../js/request.js?v=20260930"></script>
+    <script src="./../js/common.js?v=20260930b"></script>
+    <script src="../api/evaluation.js?v=20260917"></script>
+    <script src="./../api/order.js?v=20260917"></script>
+    <script src="./../js/components-cend.js?v=20260922"></script>
+    <script>
+        new Vue({
+            el: '#eval-app',
+            data() {
+                return {
+                    loading: false,
+                    finished: false, // 修改点(2026-09-17 UX)：van-list 上拉加载结束标记
+                    // 加载失败标志：失败即结束自动加载，展示手动重试，杜绝 van-list 无限重试风暴
+                    loadError: false,
+                    evalList: [],
+                    total: 0,
+                    page: 1,
+                    pageSize: 10,
+                    canEvaluate: false,
+                    // 最近一条可评价订单（供"去评价"入口回填）
+                    pendingOrder: null,
+                    // 提交评价
+                    submitVisible: false,
+                    submitLoading: false,
+                    submitData: { orderId: null, dishes: [], anonymous: false },
+                    // 快捷评价标签
+                    quickTags: ['味道好', '分量足', '配送快', '包装好', '食材新鲜', '性价比高'],
+                    // 下拉刷新状态
+                    refreshing: false,
+                    // 图片预览
+                    previewShow: false,
+                    previewImages: [],
+                    previewIndex: 0
+                }
+            },
+            created() {
+                // 修改点(2026-09-17 UX)：首屏数据交由 van-list 的 @load 驱动，避免与 created 重复请求第一页
+                this.checkPendingEvaluation()
+                // 修改点：从 order.html「评价」入口跳转时携带 ?orderId=xxx，此时自动打开提交弹窗
+                // （此前仅由用户手动点击"去评价"触发，入口跳转后评价流断裂）
+                if (this.getUrlParam('orderId')) {
+                    this.openSubmitModal()
+                }
+            },
+            // 修改点：弹窗打开时锁定 body 滚动，关闭时还原，修复弹窗背景滚动穿透
+            watch: {
+                submitVisible: function (visible) {
+                    if (visible) {
+                        this._savedBodyOverflow = document.body.style.overflow
+                        document.body.style.overflow = 'hidden'
+                    } else {
+                        document.body.style.overflow = this._savedBodyOverflow || ''
+                    }
+                }
+            },
+            beforeDestroy() {
+                // 组件卸载时兜底还原，避免异常路径下弹窗销毁后背景仍无法滚动
+                document.body.style.overflow = this._savedBodyOverflow || ''
+            },
+            methods: {
+                // 快捷标签切换（追加/移除到评价内容）
+                toggleQuickTag(dish, tag){
+                    // 修改点(2026-09-18)：已成功提交的菜锁定，不允许再改标签
+                    if(dish._submitted) return
+                    var content = dish.content || ''
+                    if(content.includes(tag)){
+                        dish.content = content.replace(tag, '').replace(/  +/g, ' ').trim()
+                    }else{
+                        dish.content = (content + ' ' + tag).trim()
+                    }
+                },
+                // 修改点：下拉刷新（refreshing 由 loadEvaluations.finally 复位）
+                onRefresh(){
+                    this.page = 1
+                    this.loadData()
+                },
+                // 修改点(2026-09-17 UX)：分页由 PC 风格 van-pagination 改为移动端 van-list 上拉加载，
+                // 加载逻辑抽出为 loadEvaluations(isRefresh)：isRefresh=true 重置列表，false 追加下一页
+                async loadEvaluations(isRefresh){
+                    // 防重只用独立标志，不能用 this.loading 守卫：van-list 触发 @load 前会先经
+                    // v-model 把 loading 置为 true，若此处再判 this.loading 必然拦截首屏，导致永久骨架。
+                    // onLoad 的单飞由 van-list 内部保证；该标志额外防止程序化 loadData/onRefresh 重入。
+                    if(this._loadingData){
+                        return
+                    }
+                    if(isRefresh){
+                        this.evalList = []
+                        this.finished = false
+                        this.loadError = false
+                    } else if(this.finished){
+                        // 已加载完（理论上 van-list 不会再触发 load），复位 loading 避免卡在加载态
+                        this.loading = false
+                        return
+                    }
+                    this._loadingData = true
+                    this.loading = true
+                    try {
+                        const res = await getMyEvaluations({ page: this.page, pageSize: this.pageSize })
+                        if (res.code === 1) {
+                            const records = res.data.records || []
+                            this.total = res.data.total || 0
+                            this.evalList = isRefresh ? records : this.evalList.concat(records)
+                            this.page = this.page + 1
+                            if(this.evalList.length >= this.total || records.length === 0){
+                                this.finished = true
+                            }
+                        } else {
+                            // 失败即结束自动加载，否则 loading 复位后 van-list 会再次触发 @load 形成重试风暴
+                            this.loadError = true
+                            this.finished = true
+                            vant.Toast.fail(res.msg || '加载失败')
+                        }
+                    } catch (err) {
+                        // 修改点(2026-09-17 UX)：技术错误细节进 console，用户只见友好文案
+                        console.error('[my-evaluations] 加载评价失败:', err)
+                        this.loadError = true
+                        this.finished = true
+                        vant.Toast.fail('加载失败，请稍后重试')
+                    } finally {
+                        this._loadingData = false
+                        this.loading = false
+                        // 修改点：下拉刷新与实际加载同步
+                        this.refreshing = false
+                    }
+                },
+                // van-list 上拉加载回调（追加下一页）
+                onLoad(){
+                    this.loadEvaluations(false)
+                },
+                // 下拉刷新 / 删除或提交后刷新：重置分页重新加载第一页
+                loadData(){
+                    this.page = 1
+                    this.loadEvaluations(true)
+                },
+                // 修改点(2026-09-17)：移除 onPageChange（van-pagination 已改为 van-list 上拉加载）
+                // 修改评价（删除后自动引导用户到订单页重新评价）
+                editEvaluation(item) {
+                    var self = this;
+                    vant.Dialog.confirm({
+                        title: '修改评价',
+                        message: '修改评价需要先删除当前评价，确认继续吗？',
+                        confirmButtonText: '继续修改',
+                        cancelButtonText: '取消',
+                        confirmButtonColor: cssVar('--color-primary')
+                    }).then(function() {
+                        return deleteMyEvaluation({ id: item.id });
+                    }).then(function(res) {
+                        if (res && res.code === 1) {
+                            self.loadData();
+                            // 修改点(2026-09-18)：原仅 toast 一句"请到订单页重新评价"却不导航，成为死胡同；
+                            // 删除成功后主动询问并可一键跳转到订单页
+                            vant.Dialog.confirm({
+                                title: '原评价已删除',
+                                message: '是否立即前往订单页重新评价？',
+                                confirmButtonText: '去评价',
+                                cancelButtonText: '留在本页'
+                            }).then(function() {
+                                window.location.href = '/front/page/order.html';
+                            }).catch(function() { /* 用户选择留在本页 */ });
+                        } else {
+                            vant.Toast.fail((res && res.msg) || '删除失败');
+                        }
+                    }).catch(function(e) {
+                        // 修改点：用户取消或删除失败——删除失败时给出明确提示，避免静默无反馈
+                        if (e && e !== 'cancel' && e !== 'close' && e !== '取消') {
+                            vant.Toast.fail((e && e.msg) || '操作失败，请重试');
+                        }
+                    });
+                },
+                // 删除评价
+                async deleteEvaluation(item) {
+                    try {
+                        await vant.Dialog.confirm({
+                            title: '删除评价',
+                            message: '确认删除该评价吗？删除后不可恢复。',
+                            confirmButtonText: '确认删除',
+                            confirmButtonColor: cssVar('--color-danger'),
+                            cancelButtonText: '取消'
+                        })
+                        try {
+                            const res = await deleteMyEvaluation({ id: item.id })
+                            if (res.code === 1) {
+                                vant.Toast.success('删除成功')
+                                this.loadData()
+                            } else {
+                                vant.Toast.fail(res.msg || '删除失败')
+                            }
+                        } catch (err) {
+                            // 修改点(2026-09-17 UX)：技术错误细节进 console，用户只见友好文案
+                            console.error('[my-evaluations] 删除评价失败:', err)
+                            vant.Toast.fail('删除失败，请稍后重试')
+                        }
+                    } catch (e) { /* 用户取消 */ }
+                },
+                // 工具方法
+                // ====== 评价图片上传（复用全站 /common/upload，最多3张、单张≤5MB） ======
+                afterEvalRead(dish, file) {
+                    // 多选时个别 Vant 版本以数组回调，逐个处理
+                    if (Array.isArray(file)) {
+                        for (let i = 0; i < file.length; i++) { this.afterEvalRead(dish, file[i]) }
+                        return
+                    }
+                    var item = { content: file.content || '', status: 'uploading', message: '上传中' }
+                    dish._fileList.push(item)
+                    var raw = file.file
+                    if (!raw) { item.status = 'failed'; item.message = '读取失败'; return }
+                    var fd = new FormData()
+                    fd.append('file', raw)
+                    fd.append('bizType', 'evaluation')
+                    $axios({ url: '/common/upload', method: 'post', data: fd }).then(function (up) {
+                        if (up && up.code === 1 && up.data) {
+                            dish.images.push(up.data)
+                            item.path = up.data
+                            item.status = 'done'
+                            item.message = ''
+                        } else {
+                            item.status = 'failed'
+                            item.message = (up && up.msg) || '上传失败'
+                        }
+                    }).catch(function () {
+                        item.status = 'failed'
+                        item.message = '网络异常'
+                    })
+                },
+                afterEvalDelete(dish, file, detail) {
+                    var item = file
+                    var fi = dish._fileList.indexOf(item)
+                    if (fi < 0 && detail && typeof detail.index === 'number') { fi = detail.index }
+                    if (fi >= 0) { dish._fileList.splice(fi, 1) }
+                    // 同步移除已提交路径，保证展示列表与 images 始终一致
+                    if (item.path) {
+                        var pi = dish.images.indexOf(item.path)
+                        if (pi >= 0) { dish.images.splice(pi, 1) }
+                    }
+                },
+                onEvalOversize() {
+                    vant.Toast.fail('图片大小不能超过5MB')
+                },
+                getImageList(images) {
+                    if (!images) return []
+                    if (Array.isArray(images)) return images
+                    try { return JSON.parse(images) } catch (e) { return images ? [images] : [] }
+                },
+                statusClass(status) {
+                    if (status === 0) return 'pending'
+                    if (status === 1) return 'approved'
+                    if (status === 2) return 'rejected'
+                    return ''
+                },
+                statusText(status) {
+                    const map = { 0: '待审核', 1: '已通过', 2: '已拒绝' }
+                    return map[status] || '未知'
+                },
+                formatDate(dateStr) {
+                    if (!dateStr) return '-'
+                    var d = new Date(dateStr)
+                    if (isNaN(d.getTime())) return dateStr.substring(0, 10)
+                    var now = new Date()
+                    var pad = function(n) { return String(n).padStart(2, '0') }
+                    var dateFmt = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+                    var todayFmt = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate())
+                    var time = pad(d.getHours()) + ':' + pad(d.getMinutes())
+                    if (dateFmt === todayFmt) return '今天 ' + time
+                    var yesterday = new Date(now.getTime() - 86400000)
+                    var yestFmt = yesterday.getFullYear() + '-' + pad(yesterday.getMonth()+1) + '-' + pad(yesterday.getDate())
+                    if (dateFmt === yestFmt) return '昨天 ' + time
+                    return dateFmt + ' ' + time
+                },
+                previewImage(url) {
+                    this.previewImages = [url]
+                    this.previewIndex = 0
+                    this.previewShow = true
+                },
+                goBack() {
+                    // 深链直接进入无历史记录时 history.back() 无反应，兜底回首页
+                    if (window.history.length > 1) { window.history.back() }
+                    else { window.location.href = '/front/index.html' }
+                },
+                goHome() {
+                    window.location.href = '/front/index.html'
+                },
+                goToOrder() {
+                    window.location.href = '/front/page/order.html'
+                },
+                // 提取订单中可评价的纯菜品条目（后端按 dishId 校验，套餐不可评价）
+                // 评价去重 key：菜品保持 orderId_dishId 旧格式（兼容历史评价），
+                // 套餐用 orderId_s_setmealId 前缀避免与菜品ID冲突
+                evalKey: function(orderId, d) {
+                    return d.dishId ? (orderId + '_' + d.dishId) : (orderId + '_s_' + d.setmealId)
+                },
+                extractEvaluableDishes(order) {
+                    if (!order || !order.orderDetails) return []
+                    var self = this
+                    return order.orderDetails
+                        // 套餐明细只有 setmealId，dish/setmeal 任一即可评价
+                        .filter(d => d && (d.dishId || d.setmealId))
+                        .map(function(d){
+                            // 修改点(P1-2)：后端已存在的评价标记 _submitted，显示"已评价"且提交时自动跳过
+                            var evaluated = !!(self._evaluatedKeys &&
+                                self._evaluatedKeys.has(self.evalKey(order.id, d)))
+                            return {
+                                dishId: d.dishId || null,
+                                setmealId: d.setmealId || null,
+                                dishName: d.name || '未知商品',
+                                starRating: 0,
+                                content: '',
+                                images: [],       // 已上传成功的服务器图片路径
+                                _fileList: [],    // van-uploader 受控展示列表
+                                _submitted: evaluated
+                            }
+                        })
+                },
+                // 校验订单是否含可评价商品（菜品/套餐）
+                hasEvaluableDishes(order) {
+                    if (!order || !order.orderDetails) return false
+                    var keys = this._evaluatedKeys
+                    var self = this
+                    // 修改点(P1-2)：订单里至少一件"未评价"的商品才算待评价，已评项不再触发提示
+                    return order.orderDetails.some(function(d){
+                        return d && (d.dishId || d.setmealId) &&
+                            !(keys && keys.has(self.evalKey(order.id, d)))
+                    })
+                },
+                // 解析 URL 参数（如 order.html 跳转 my-evaluations.html?orderId=xxx）
+                getUrlParam(name) {
+                    var match = location.search.match(new RegExp('[?&]' + name + '=([^&]+)'))
+                    return match ? decodeURIComponent(match[1]) : ''
+                },
+                // 修改点(P1-2)：拉取我的历史评价，构建 orderId_dishId 已评集合（in-flight 去重，并发调用复用同一 Promise）
+                ensureEvaluatedSet(force) {
+                    if (!force && this._evaluatedKeys) return Promise.resolve(this._evaluatedKeys)
+                    if (this._evaluatedPromise) return this._evaluatedPromise
+                    var self = this
+                    this._evaluatedPromise = (async function(){
+                        var set = new Set()
+                        try {
+                            // 一次拉取较多历史评价：待评价判定仅针对最近完成订单，200 条足以覆盖
+                            const res = await getMyEvaluations({ page: 1, pageSize: 200 })
+                            if (res.code === 1 && res.data && res.data.records) {
+                                res.data.records.forEach(function(r){
+                                    if (r.orderId && r.dishId) {
+                                        set.add(r.orderId + '_' + r.dishId)
+                                    } else if (r.orderId && r.setmealId) {
+                                        set.add(r.orderId + '_s_' + r.setmealId)
+                                    }
+                                })
+                            }
+                        } catch (e) {
+                            // fail-open：拉取失败则集合为空，退化为"有菜即可评价"，不阻断用户评价
+                            console.warn('[my-evaluations] 加载已评集合失败，降级不滤除:', e)
+                        }
+                        self._evaluatedKeys = set
+                        self._evaluatedPromise = null
+                        return set
+                    })()
+                    return this._evaluatedPromise
+                },
+                // 检查是否有待评价订单（同时记录最近可评价订单，供"去评价"入口回填）
+                async checkPendingEvaluation() {
+                    try {
+                        // 修改点(P1-2)：先构建已评集合，hasEvaluableDishes 才能过滤掉整单已评的订单
+                        await this.ensureEvaluatedSet()
+                        // 原仅查近 5 单：最近 5 单都已评时，更早的未评价单永远检测不到。
+                        // 逐页向后找，最多覆盖 60 单，找到即停
+                        var page = 1
+                        var pendingOrder = null
+                        while (!pendingOrder && page <= 3) {
+                            const res = await orderPagingApi({ page: page, pageSize: 20, status: 4 })
+                            if (res.code !== 1 || !res.data || !res.data.records
+                                || res.data.records.length === 0) { break }
+                            pendingOrder = res.data.records.find(o => this.hasEvaluableDishes(o)) || null
+                            if (page >= (res.data.pages || 1)) { break }
+                            page++
+                        }
+                        this.canEvaluate = !!pendingOrder
+                        this.pendingOrder = pendingOrder
+                    } catch (e) {
+                        // 不影响页面展示
+                    }
+                },
+                // 打开评价提交弹窗
+                // 优先使用 URL 携带的 orderId（order.html 评价入口），其次用最近可评价订单兜底
+                async openSubmitModal() {
+                    // 修改点(P1-2)：确保已评集合就绪，已评菜将被标记 _submitted 跳过
+                    await this.ensureEvaluatedSet()
+                    const orderId = this.getUrlParam('orderId') || ''
+                    let dishes = []
+                    let orderNo = ''
+                    if (orderId) {
+                        const order = await this.findOrderById(orderId)
+                        if (order && this.hasEvaluableDishes(order)) {
+                            dishes = this.extractEvaluableDishes(order)
+                            orderNo = order.number || ''
+                        } else {
+                            vant.Toast.fail('该订单暂无可评价的菜品')
+                            return
+                        }
+                    } else if (this.pendingOrder) {
+                        dishes = this.extractEvaluableDishes(this.pendingOrder)
+                        orderNo = this.pendingOrder.number || ''
+                    } else {
+                        // 兜底：实时拉最近一条已完成订单
+                        try {
+                            const res = await orderPagingApi({ page: 1, pageSize: 1, status: 4 })
+                            const latest = res && res.code === 1 && res.data && res.data.records ? res.data.records[0] : null
+                            if (latest && this.hasEvaluableDishes(latest)) {
+                                dishes = this.extractEvaluableDishes(latest)
+                                orderNo = latest.number || ''
+                            }
+                        } catch (e) { /* 保持空 dishes，由 doSubmit 提示 */ }
+                    }
+                    if (!dishes.length) {
+                        vant.Toast.fail('暂无可评价的菜品')
+                        return
+                    }
+                    this.submitData = { orderId: orderId || this.pendingOrder.id || '', orderNo: orderNo, dishes: dishes, anonymous: false }
+                    this.submitVisible = true
+                },
+                // 在用户已完成订单列表中定位指定订单
+                async findOrderById(orderId) {
+                    try {
+                        const res = await orderPagingApi({ page: 1, pageSize: 50 })
+                        if (res && res.code === 1 && res.data && res.data.records) {
+                            const orders = res.data.records || []
+                            return orders.find(o => String(o.id) === String(orderId)) || null
+                        }
+                    } catch (e) { /* 忽略 */ }
+                    return null
+                },
+                // 提交评价（逐菜提交）
+                async doSubmit() {
+                    if (this.submitLoading) return // 防重守卫：防止连点重复提交
+                    const orderId = this.submitData.orderId
+                    const dishes = this.submitData.dishes || []
+                    if (!orderId) {
+                        vant.Toast.fail('订单信息缺失，请重新进入评价页')
+                        return
+                    }
+                    // 校验每个待提交菜品的评分（已成功提交的无需再评）
+                    for (let i = 0; i < dishes.length; i++) {
+                        if (!dishes[i]._submitted && (!dishes[i].starRating || dishes[i].starRating < 1)) {
+                            vant.Toast.fail('请为「' + (dishes[i].dishName || '菜品') + '」评分')
+                            return
+                        }
+                    }
+                    // 图片仍在上传时不可提交，避免评价丢失图片
+                    for (let j = 0; j < dishes.length; j++) {
+                        var fl = dishes[j]._fileList || []
+                        for (let k = 0; k < fl.length; k++) {
+                            if (fl[k].status === 'uploading') {
+                                vant.Toast.fail('图片还在上传，请稍候')
+                                return
+                            }
+                        }
+                    }
+                    this.submitLoading = true
+                    // 修改点(2026-09-18)：原实现逐菜提交，任一失败即整体中断，已成功的菜与未提交的菜
+                    // 混在一起，用户重试会把已成功的菜重复提交。现成功一道即响应式标记 _submitted 并跳过，
+                    // 失败项保留在弹窗内可单独重试；全部成功才关闭，部分失败给出剩余数量提示。
+                    var failNames = []
+                    try {
+                        for (let i = 0; i < dishes.length; i++) {
+                            const dish = dishes[i]
+                            if (dish._submitted) continue
+                            const payload = {
+                                orderId: orderId,
+                                dishId: dish.dishId,
+                                setmealId: dish.setmealId,
+                                starRating: dish.starRating,
+                                content: (dish.content || '').trim(),
+                                anonymous: this.submitData.anonymous ? 1 : 0
+                            }
+                            if (dish.dishName) payload.dishName = dish.dishName
+                            // images 后端为 String（存 JSON 数组），有序图片路径
+                            if (dish.images && dish.images.length) payload.images = JSON.stringify(dish.images)
+                            try {
+                                const res = await submitEvaluation(payload)
+                                if (res && res.code === 1) {
+                                    this.$set(dish, '_submitted', true)
+                                } else {
+                                    failNames.push(dish.dishName || '菜品')
+                                }
+                            } catch (singleErr) {
+                                console.error('[my-evaluations] 单条评价提交失败:', singleErr)
+                                failNames.push(dish.dishName || '菜品')
+                            }
+                        }
+                        var remain = dishes.filter(d => !d._submitted).length
+                        if (remain === 0) {
+                            vant.Toast.success('评价提交成功，感谢您的反馈')
+                            this.submitVisible = false
+                            this.submitData = { orderId: null, dishes: [], anonymous: false }
+                            this.loadData()
+                            // 修改点(P1-2)：强制刷新已评集合（含刚提交项），再重算待评价提示
+                            await this.ensureEvaluatedSet(true)
+                            this.checkPendingEvaluation()
+                        } else {
+                            var shown = failNames.slice(0, 3).join('、') + (failNames.length > 3 ? ' 等' : '')
+                            vant.Toast.fail('「' + shown + '」提交失败，其余已保存，请重试剩余项')
+                        }
+                    } finally {
+                        this.submitLoading = false
+                    }
+                }
+            }
+        })
+    </script>
+</body>
+</html>

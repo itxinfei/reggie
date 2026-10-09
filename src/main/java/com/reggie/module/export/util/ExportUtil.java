@@ -1,0 +1,472 @@
+package com.reggie.module.export.util;
+
+import com.itextpdf.text.BaseColor;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.Element;
+import com.itextpdf.text.PageSize;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.Phrase;
+import com.itextpdf.text.pdf.BaseFont;
+import com.itextpdf.text.pdf.PdfPCell;
+import com.itextpdf.text.pdf.PdfPTable;
+import com.itextpdf.text.pdf.PdfWriter;
+import lombok.extern.slf4j.Slf4j;
+import com.reggie.common.CustomException;
+import org.apache.poi.ss.usermodel.BorderStyle;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.VerticalAlignment;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+
+import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URLEncoder;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * <p>
+ * 数据导出工具类，提供统一的Excel和PDF文件生成能力。
+ * </p>
+ *
+ * @author 心飞为你飞
+ * @since 2026-07-09
+ */
+@Slf4j
+public final class ExportUtil {
+
+    private ExportUtil() {
+        throw new AssertionError("工具类不允许实例化");
+    }
+
+    /** 日期格式化 */
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter FILE_DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+
+    // ==================== Excel 导出 ====================
+
+    /**
+     * 导出Excel文件到Response
+     *
+     * @param response  HttpServletResponse
+     * @param fileName 文件名（不含扩展名）
+     * @param columns  列定义: LinkedHashMap<表头, 数据key>
+     * @param dataList 数据列表
+     */
+    public static void exportExcel(HttpServletResponse response, String fileName,
+                                   LinkedHashMap<String, String> columns,
+                                   List<Map<String, Object>> dataList) {
+        try {
+            byte[] bytes = generateExcel(columns, dataList);
+            setExcelResponse(response, fileName);
+            try (OutputStream os = response.getOutputStream()) {
+                os.write(bytes);
+                os.flush();
+            }
+            log.info("Excel导出成功: {}, 数据行数: {}", fileName, dataList.size());
+        } catch (IOException e) {
+            log.error("Excel导出失败: {}", fileName, e);
+            throw new CustomException("Excel导出失败");
+        }
+    }
+
+    /**
+     * 导出Excel文件到字节数组（供Controller缓存或异步处理）
+     *
+     * @param columns  列定义: LinkedHashMap<表头, 数据key>
+     * @param dataList 数据列表
+     * @return Excel文件字节数组
+     */
+    public static byte[] generateExcelBytes(LinkedHashMap<String, String> columns,
+                                            List<Map<String, Object>> dataList) {
+        return generateExcel(columns, dataList);
+    }
+
+    /**
+     * 生成Excel字节数组
+     * #12 改用 SXSSFWorkbook 流式写入（滑动窗口100行），避免全量数据驻留内存导致 OOM
+     */
+    private static byte[] generateExcel(LinkedHashMap<String, String> columns,
+                                        List<Map<String, Object>> dataList) {
+        // SXSSFWorkbook(100): 滑动窗口保留100行在内存，超出部分刷新到磁盘临时文件
+        SXSSFWorkbook workbook = new SXSSFWorkbook(100);
+        try {
+            Sheet sheet = workbook.createSheet("导出数据");
+
+            // 创建样式
+            CellStyle headerStyle = createHeaderStyle(workbook);
+            CellStyle dataStyle = createDataStyle(workbook);
+
+            // 写入表头
+            Row headerRow = sheet.createRow(0);
+            List<String> headerKeys = new ArrayList<>(columns.keySet());
+            for (int i = 0; i < headerKeys.size(); i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(columns.get(headerKeys.get(i)));
+                cell.setCellStyle(headerStyle);
+            }
+
+            // 写入数据行
+            for (int rowIdx = 0; rowIdx < dataList.size(); rowIdx++) {
+                Row row = sheet.createRow(rowIdx + 1);
+                Map<String, Object> rowData = dataList.get(rowIdx);
+                for (int colIdx = 0; colIdx < headerKeys.size(); colIdx++) {
+                    Cell cell = row.createCell(colIdx);
+                    Object value = rowData.get(headerKeys.get(colIdx));
+                    setCellValue(cell, value);
+                    cell.setCellStyle(dataStyle);
+                }
+            }
+
+            // SXSSF 流式模式下 autoSizeColumn 无法访问已刷新的行，改用按表头长度估算固定列宽
+            for (int i = 0; i < headerKeys.size(); i++) {
+                String headerName = columns.get(headerKeys.get(i));
+                int charLen = headerName != null ? headerName.length() : 10;
+                // 每中文字符约2个字符宽度，最小10、最大40个字符宽度（1单位=1/256字符宽）
+                int width = Math.min(Math.max(charLen * 2 + 4, 12), 40) * 256;
+                sheet.setColumnWidth(i, width);
+            }
+
+            // 冻结首行
+            sheet.createFreezePane(0, 1);
+
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            workbook.write(bos);
+            return bos.toByteArray();
+
+        } catch (IOException e) {
+            log.error("生成Excel失败", e);
+            throw new CustomException("Excel导出失败");
+        } finally {
+            // 清理磁盘临时文件，防止泄漏
+            workbook.dispose();
+            try {
+                workbook.close();
+            } catch (IOException e) {
+                log.warn("关闭SXSSFWorkbook失败", e);
+            }
+        }
+    }
+
+    /**
+     * 创建表头样式
+     */
+    private static CellStyle createHeaderStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        style.setFillForegroundColor(IndexedColors.ROYAL_BLUE.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+
+        Font font = workbook.createFont();
+        font.setColor(IndexedColors.WHITE.getIndex());
+        font.setBold(true);
+        font.setFontHeightInPoints((short) 11);
+        style.setFont(font);
+
+        return style;
+    }
+
+    /**
+     * 创建数据行样式
+     */
+    private static CellStyle createDataStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+        style.setWrapText(true);
+
+        Font font = workbook.createFont();
+        font.setFontHeightInPoints((short) 10);
+        style.setFont(font);
+
+        return style;
+    }
+
+    /**
+     * 设置单元格值
+     */
+    private static void setCellValue(Cell cell, Object value) {
+        if (value == null) {
+            cell.setCellValue("");
+        } else if (value instanceof Number) {
+            cell.setCellValue(((Number) value).doubleValue());
+        } else if (value instanceof Boolean) {
+            cell.setCellValue((Boolean) value);
+        } else if (value instanceof LocalDateTime) {
+            cell.setCellValue(((LocalDateTime) value).format(DATE_FMT));
+        } else {
+            cell.setCellValue(value.toString());
+        }
+    }
+
+    // ==================== PDF 导出 ====================
+
+    /**
+     * 导出PDF文件到Response
+     *
+     * @param response  HttpServletResponse
+     * @param fileName  文件名（不含扩展名）
+     * @param title     文档标题
+     * @param columns   列定义
+     * @param dataList  数据列表
+     * @param summary   汇总信息（可选），如 {"总订单数": "150", "总金额": "¥12,800.00"}
+     */
+    public static void exportPdf(HttpServletResponse response, String fileName, String title,
+                                 LinkedHashMap<String, String> columns,
+                                 List<Map<String, Object>> dataList,
+                                 Map<String, String> summary) {
+        try {
+            byte[] bytes = generatePdf(title, columns, dataList, summary);
+            setPdfResponse(response, fileName);
+            try (OutputStream os = response.getOutputStream()) {
+                os.write(bytes);
+                os.flush();
+            }
+            log.info("PDF导出成功: {}, 数据行数: {}", fileName, dataList.size());
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.error("PDF导出失败: {}", fileName, e);
+            throw new CustomException("PDF导出失败");
+        }
+    }
+
+    /**
+     * 生成PDF字节数组
+     *
+     * @param title     文档标题
+     * @param columns   列定义
+     * @param dataList  数据列表
+     * @param summary   汇总信息（可选）
+     * @return PDF文件字节数组
+     */
+    public static byte[] generatePdfBytes(String title, LinkedHashMap<String, String> columns,
+                                          List<Map<String, Object>> dataList,
+                                          Map<String, String> summary) {
+        return generatePdf(title, columns, dataList, summary);
+    }
+
+    /**
+     * 生成PDF
+     * PDF中文字体多级fallback，解决Linux/Docker环境无STSong-Light字体的问题
+     */
+    private static byte[] generatePdf(String title, LinkedHashMap<String, String> columns,
+                                      List<Map<String, Object>> dataList,
+                                      Map<String, String> summary) {
+        try {
+            Document document = new Document(PageSize.A4.rotate()); // 横向A4，容纳更多列
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            PdfWriter.getInstance(document, bos);
+
+            BaseFont baseFont = loadChineseBaseFont();
+            com.itextpdf.text.Font titleFont = new com.itextpdf.text.Font(baseFont, 18, com.itextpdf.text.Font.BOLD);
+            com.itextpdf.text.Font headerFont = new com.itextpdf.text.Font(baseFont, 10, com.itextpdf.text.Font.BOLD);
+            com.itextpdf.text.Font dataFont = new com.itextpdf.text.Font(baseFont, 9, com.itextpdf.text.Font.NORMAL);
+            com.itextpdf.text.Font summaryFont = new com.itextpdf.text.Font(baseFont, 10, com.itextpdf.text.Font.BOLD);
+
+            document.open();
+
+            // 标题
+            Paragraph titlePara = new Paragraph(title, titleFont);
+            titlePara.setAlignment(Element.ALIGN_CENTER);
+            titlePara.setSpacingAfter(8);
+            document.add(titlePara);
+
+            // 导出时间
+            Paragraph timePara = new Paragraph("导出时间: " + LocalDateTime.now().format(DATE_FMT), dataFont);
+            timePara.setAlignment(Element.ALIGN_CENTER);
+            timePara.setSpacingAfter(12);
+            document.add(timePara);
+
+            // 汇总信息
+            if (summary != null && !summary.isEmpty()) {
+                for (Map.Entry<String, String> entry : summary.entrySet()) {
+                    Paragraph sumPara = new Paragraph(entry.getKey() + ": " + entry.getValue(), summaryFont);
+                    sumPara.setSpacingAfter(4);
+                    document.add(sumPara);
+                }
+                document.add(new Paragraph(" "));
+            }
+
+            // 创建并填充表格（等价抽取）
+            document.add(buildPdfTable(columns, dataList, baseFont, headerFont, dataFont));
+
+            // 页脚
+            document.add(new Paragraph(" "));
+            Paragraph footer = new Paragraph("— 瑞吉外卖数据报表 —", dataFont);
+            footer.setAlignment(Element.ALIGN_CENTER);
+            document.add(footer);
+
+            document.close();
+            return bos.toByteArray();
+
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.error("生成PDF失败", e);
+            throw new CustomException("PDF导出失败");
+        }
+    }
+
+    /**
+     * 构建 PDF 数据表格（等价抽取，降低方法长度）。
+     *
+     * @param columns 列 key->显示名
+     * @param dataList 数据行
+     * @param baseFont 基础字体
+     * @param headerFont 表头字体
+     * @param dataFont 数据字体
+     * @return 已填充的表格
+     */
+    private static PdfPTable buildPdfTable(LinkedHashMap<String, String> columns,
+                                           List<Map<String, Object>> dataList,
+                                           BaseFont baseFont, com.itextpdf.text.Font headerFont,
+                                           com.itextpdf.text.Font dataFont) throws com.itextpdf.text.DocumentException {
+        List<String> headers = new ArrayList<>(columns.keySet());
+        List<String> headerNames = new ArrayList<>(columns.values());
+        int colCount = headers.size();
+        PdfPTable table = new PdfPTable(colCount);
+        table.setWidthPercentage(100);
+        table.setSpacingBefore(5);
+
+        // 设置列宽（平均分配）
+        float[] widths = new float[colCount];
+        for (int i = 0; i < colCount; i++) {
+            widths[i] = 1f;
+        }
+        table.setWidths(widths);
+
+        // 表头
+        for (String headerName : headerNames) {
+            PdfPCell headerCell = new PdfPCell(new Phrase(headerName, headerFont));
+            headerCell.setBackgroundColor(new BaseColor(65, 105, 225)); // 皇家蓝
+            headerCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            headerCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            headerCell.setPadding(5);
+            headerCell.setPhrase(new Phrase(headerName,
+                    new com.itextpdf.text.Font(baseFont, 10, com.itextpdf.text.Font.BOLD, BaseColor.WHITE)));
+            table.addCell(headerCell);
+        }
+
+        // 数据行
+        for (int rowIdx = 0; rowIdx < dataList.size(); rowIdx++) {
+            Map<String, Object> row = dataList.get(rowIdx);
+            for (String header : headers) {
+                Object value = row.get(header);
+                String cellValue = formatCellValue(value);
+                PdfPCell dataCell = new PdfPCell(new Phrase(cellValue, dataFont));
+                dataCell.setPadding(4);
+                dataCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                // 交替行颜色
+                if (rowIdx % 2 == 1) {
+                    dataCell.setBackgroundColor(new BaseColor(245, 245, 250));
+                }
+                table.addCell(dataCell);
+            }
+        }
+        return table;
+    }
+
+    // ==================== 响应头设置 ====================
+
+    /**
+     * 设置Excel响应头
+     */
+    private static void setExcelResponse(HttpServletResponse response, String fileName) {
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setCharacterEncoding("UTF-8");
+        try {
+            String encodedName = URLEncoder.encode(fileName + "_" + LocalDateTime.now().format(FILE_DATE_FMT) + ".xlsx",
+                    "UTF-8");
+            response.setHeader("Content-Disposition", "attachment; filename=" + encodedName);
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            response.setHeader("Content-Disposition", "attachment; filename=export.xlsx");
+        }
+    }
+
+    /**
+     * 设置PDF响应头
+     */
+    private static void setPdfResponse(HttpServletResponse response, String fileName) {
+        response.setContentType("application/pdf");
+        response.setCharacterEncoding("UTF-8");
+        try {
+            String encodedName = URLEncoder.encode(fileName + "_" + LocalDateTime.now().format(FILE_DATE_FMT) + ".pdf",
+                    "UTF-8");
+            response.setHeader("Content-Disposition", "attachment; filename=" + encodedName);
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            response.setHeader("Content-Disposition", "attachment; filename=export.pdf");
+        }
+    }
+
+    /**
+     * 格式化单元格值
+     */
+    private static String formatCellValue(Object value) {
+        if (value == null) {
+            return "";
+        }
+        if (value instanceof LocalDateTime) {
+            return ((LocalDateTime) value).format(DATE_FMT);
+        }
+        return value.toString();
+    }
+
+    /**
+     * 加载PDF中文字体，多级fallback
+     * 依次尝试常见中文字体，解决非中文环境无指定字体的问题
+     *
+     * 尝试顺序: STSong-Light → SimSun → SimHei → STSong → 系统默认Helvetica
+     */
+    private static BaseFont loadChineseBaseFont() {
+        // 候选字体列表: (字体名, 编码)
+        String[][] fontCandidates = {
+                {"STSong-Light", "UniGB-UCS2-H"},
+                {"SimSun", "UniGB-UCS2-H"},
+                {"SimHei", "UniGB-UCS2-H"},
+                {"STSong", "UniGB-UCS2-H"},
+                {"SimSun", "GBK"},
+        };
+
+        for (String[] candidate : fontCandidates) {
+            try {
+                BaseFont font = BaseFont.createFont(candidate[0], candidate[1], BaseFont.NOT_EMBEDDED);
+                log.info("PDF中文字体加载成功: {}-{}", candidate[0], candidate[1]);
+                return font;
+            } catch (Exception ignored) {
+                // 尝试下一个候选字体
+            }
+        }
+
+        // 最终fallback：使用Helvetica（不支持中文，但至少不会崩溃）
+        try {
+            log.warn("未找到任何中文字体，PDF中文内容可能无法正常显示");
+            return BaseFont.createFont("Helvetica", BaseFont.WINANSI, BaseFont.NOT_EMBEDDED);
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.error("无法加载任何PDF字体", e);
+            throw new CustomException("PDF导出失败：字体加载异常");
+        }
+    }
+}

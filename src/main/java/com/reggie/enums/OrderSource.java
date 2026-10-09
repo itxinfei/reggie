@@ -1,0 +1,34 @@
+package com.reggie.enums;
+
+import lombok.Getter;
+
+/**
+ * <p>
+ * 订单来源枚举
+ * </p>
+ *
+ * @author 心飞为你飞
+ * @since 2026-07-09
+ */
+@Getter
+public enum OrderSource {
+
+    /** 外卖配送 */
+    TAKEOUT("TAKEOUT", "外卖配送"),
+    /** 堂食扫码 */
+    EAT_IN("EAT_IN", "堂食扫码"),
+    /** 排队取号 */
+    QUEUE("QUEUE", "排队"),
+    /** 预订到店 */
+    RESERVATION("RESERVATION", "预订"),
+    /** 到店自提 */
+    SELF_PICKUP("SELF_PICKUP", "到店自提");
+
+    private final String value;
+    private final String desc;
+
+    OrderSource(String value, String desc) {
+        this.value = value;
+        this.desc = desc;
+    }
+}

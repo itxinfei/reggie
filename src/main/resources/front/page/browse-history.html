@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>我的足迹 - 瑞吉外卖</title>
+    <link rel="icon" href="./../images/favico.ico">
+    <script src="./../js/base.js?v=20260930"></script>
+    <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <link rel="stylesheet" href="../styles/index.css?v=20260930b" />
+    <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+    <script src="../js/icon-fallback.js?v=20260917"></script>
+    <style>
+        /* 仅本页足迹卡片布局，不另建文件 */
+        .bh-item { display:flex; align-items:center; background:var(--color-text-white); border-radius:8px;
+            margin:0 10px 10px; padding:12px; }
+        .bh-icon { width:40px; height:40px; border-radius:50%; background:var(--c-gray-1); flex:none;
+            display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--c-red); }
+        .bh-mid { flex:1; min-width:0; margin:0 10px; }
+        .bh-name { font-size:14px; color:var(--c-text); overflow:hidden; white-space:nowrap;
+            text-overflow:ellipsis; }
+        .bh-time { font-size:11px; color:var(--c-gray-4); margin-top:4px; }
+        .bh-empty { text-align:center; color:var(--c-gray-5); padding:60px 0; font-size:13px; }
+        .bh-empty i { font-size:40px; display:block; margin-bottom:10px; color:var(--c-gray-3); }
+    </style>
+</head>
+<body>
+    <div id="app" class="app">
+        <cend-shell title="我的足迹" light :show-back="true" :show-home="true">
+            <div v-if="list.length===0" class="bh-empty">
+                <i class="ri-history-line"></i>
+                暂无浏览足迹，去首页看看好吃的吧
+            </div>
+            <div style="height:10px"></div>
+            <div class="bh-item" v-for="h in list" :key="h.id" @click="toHome">
+                <div class="bh-icon">
+                    <i :class="h.targetType===2 ? 'ri-book-open-line' : 'ri-restaurant-line'"></i>
+                </div>
+                <div class="bh-mid">
+                    <div class="bh-name">{{ h.targetName || (h.targetType===2?'套餐':'菜品') }}</div>
+                    <div class="bh-time">{{ fmtTime(h.createTime) }}</div>
+                </div>
+                <van-tag plain :type="actionType(h.actionType)">{{ actionText(h.actionType) }}</van-tag>
+            </div>
+        </cend-shell>
+    </div>
+
+    <script src="../../backend/plugins/vue/vue.js"></script>
+    <script src="./../js/vant.min.js"></script>
+    <script src="./../js/components-cend.js?v=20260922"></script>
+    <script src="../../backend/plugins/axios/axios.min.js"></script>
+    <script src="./../js/request.js?v=20260930"></script>
+    <script src="./../api/recommend.js?v=20260929"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            data: function () {
+                return { list: [] };
+            },
+            mounted: function () {
+                this.load();
+            },
+            methods: {
+                load: function () {
+                    var self = this;
+                    recommendApi.getBrowseHistory(30).then(function (res) {
+                        // 后端统一响应 R：{code,data}；data 为足迹数组
+                        var data = res && res.code === 1 ? res.data : (res && res.data);
+                        self.list = Array.isArray(data) ? data : [];
+                    }).catch(function () {});
+                },
+                fmtTime: function (s) {
+                    if (!s) return '';
+                    return String(s).replace('T', ' ').substring(0, 16);
+                },
+                actionText: function (a) {
+                    if (a === 2) return '收藏';
+                    if (a === 3) return '加购';
+                    if (a === 4) return '分享';
+                    return '浏览';
+                },
+                actionType: function (a) {
+                    if (a === 2) return 'danger';
+                    if (a === 3) return 'warning';
+                    if (a === 4) return 'primary';
+                    return 'default';
+                },
+                toHome: function () {
+                    // 无独立菜品详情页，回到首页可重新浏览/下单
+                    window.location.href = '/front/index.html';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

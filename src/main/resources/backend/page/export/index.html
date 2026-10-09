@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据导出 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: var(--bg-page); color: var(--text-primary); font-family: var(--font-family-base); }
+
+        /* 卡片网格 */
+        .export-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+
+        .export-card {
+            background: var(--bg-surface); border-radius: var(--radius-md); padding: 24px;
+            box-shadow: var(--shadow-xs); border: 1px solid var(--border-subtle);
+            transition: box-shadow 0.2s;
+        }
+        .export-card:hover { box-shadow: var(--shadow-md); }
+
+        .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .card-icon {
+            width: 40px; height: 40px; border-radius: var(--radius-md);
+            display: flex; align-items: center; justify-content: center;
+            font-size:var(--font-size-2xl); flex-shrink: 0;
+        }
+        .icon-order { background: var(--el-color-primary-lighter); color: var(--el-color-primary); }
+        .icon-dish  { background: var(--orange-50b); color: var(--color-warning); }
+        .icon-emp   { background: var(--color-success-light); color: var(--color-success); }
+        .icon-report{ background: var(--purple-50); color: var(--purple-legacy2); }
+
+        .card-title { font-size:var(--font-size-md); font-weight: 600; }
+        .card-desc  { font-size:var(--font-size-xs); color: var(--text-muted); margin-top: 2px; }
+
+        /* 筛选区 */
+        .filter-section { margin-bottom: 16px; padding: 12px; background: var(--el-bg-ghost); border-radius: var(--radius-md); }
+        .filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+        .filter-row:last-child { margin-bottom: 0; }
+        .filter-label { font-size:var(--font-size-sm); color: var(--el-text-regular); white-space: nowrap; min-width: 50px; }
+        .filter-hint { font-size: var(--font-size-sm); color: var(--text-muted); }
+
+        /* 按钮行（与营业日报 table-bar 一致：Excel=success / PDF=warning 的 el-button） */
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        /* ========== 导出记录折叠面板（与营业日报同款样式与布局） ========== */
+        .export-records-panel {
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--el-border-light);
+            margin-top: 24px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        .export-records-panel:hover { box-shadow: var(--shadow-xl); }
+        .export-records-panel .panel-header {
+            display: flex; align-items: center;
+            padding: 18px 24px; cursor: pointer;
+            transition: background 0.2s; user-select: none;
+        }
+        .export-records-panel .panel-header:hover { background: var(--el-bg-ghost); }
+        .export-records-panel .panel-title {
+            font-size: var(--font-size-md); font-weight: 600; color: var(--el-text-primary);
+            flex: 1; display: flex; align-items: center; gap: 8px;
+        }
+        .export-records-panel .record-count-badge {
+            background: var(--el-color-primary); color: var(--bg-surface);
+            font-size: var(--font-size-xs); padding: 2px 10px;
+            border-radius: var(--radius-md); font-weight: 600;
+        }
+        .export-records-panel .expand-icon {
+            transition: transform 0.3s; color: var(--text-muted); font-size: var(--font-size-base);
+        }
+        .export-records-panel .expand-icon.is-expanded { transform: rotate(180deg); }
+        .export-records-panel .panel-body { padding: 0 24px 20px; }
+
+        /* ========== 导出记录表格（与营业日报同款） ========== */
+        .record-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); }
+        .record-table thead th {
+            background: var(--el-bg-ghost); color: var(--color-info);
+            font-weight: 600; font-size: var(--font-size-xs);
+            text-transform: uppercase; letter-spacing: 0.5px;
+            padding: 12px 16px; text-align: center;
+            border-bottom: 2px solid var(--el-bg-page);
+        }
+        .record-table tbody td {
+            padding: 14px 16px; text-align: center;
+            border-bottom: 1px solid var(--el-bg-light);
+            color: var(--el-text-regular); vertical-align: middle;
+        }
+        .record-table tbody tr { transition: all 0.2s; }
+        .record-table tbody tr:hover { background: var(--el-bg-ghost); }
+        .record-table tbody tr:last-child td { border-bottom: none; }
+        .format-tag {
+            display: inline-flex; align-items: center;
+            padding: 3px 10px; border-radius: var(--radius-md);
+            font-size: var(--font-size-xs); font-weight: 600;
+        }
+        .format-tag.excel { background: var(--el-color-primary-lighter); color: var(--el-color-primary); }
+        .format-tag.pdf { background: var(--color-danger-light); color: var(--color-danger); }
+        .status-tag {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: var(--radius-md);
+            font-size: var(--font-size-xs); font-weight: 600;
+        }
+        .status-tag.success { background: var(--color-success-light); color: var(--color-success); }
+        .status-tag.failed { background: var(--color-danger-light); color: var(--color-danger); }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+        .status-dot.success { background: var(--color-success); }
+        .status-dot.failed { background: var(--color-danger); }
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+        .empty-state .empty-icon { font-size: var(--font-size-4xl); margin-bottom: 12px; opacity: 0.4; }
+        .empty-state .empty-text { font-size: var(--font-size-base); }
+
+        .empty-icon-large { font-size: var(--font-size-4xl); margin-bottom: var(--space-2); }
+
+        @media (max-width: 1200px) {
+            .export-cards { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+    <a href="#main-content" class="skip-link">跳转到主内容</a>
+    <div class="dashboard-container" id="export-app">
+      <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title"
+            v-loading="anyExporting" element-loading-text="正在导出..." element-loading-background="rgba(0,0,0,0.5)">
+        <h1 class="sr-only" id="page-title">数据导出中心</h1>
+
+        <div class="export-cards">
+            <!-- 订单导出 -->
+            <div class="export-card">
+                <div class="card-header">
+                    <div class="card-icon icon-order"><i class="ri-file-list-3-line" aria-hidden="true"></i></div>
+                    <div>
+                        <div class="card-title">订单数据导出</div>
+                        <div class="card-desc">导出订单号、用户、金额、状态、时间等信息</div>
+                    </div>
+                </div>
+                <div class="filter-section">
+                    <!-- 修改点(2026-09-15)：与营业日报统一为 el-date-picker（含今天/近7天/近30天快捷项），替换原生 input type=date -->
+                    <div class="filter-row">
+                        <span class="filter-label">日期范围</span>
+                        <el-date-picker
+                            v-model="orderFilter.dateRange"
+                            type="daterange"
+                            range-separator="至"
+                            start-placeholder="开始日期"
+                            end-placeholder="结束日期"
+                            value-format="yyyy-MM-dd"
+                            :picker-options="{ shortcuts: dateShortcuts }"
+                            size="small"
+                            @change="onOrderRangeChange"
+                        ></el-date-picker>
+                    </div>
+                    <div class="filter-row">
+                        <span class="filter-label">订单状态</span>
+                        <!-- 修改点(2026-09-15)：与全站统一为 el-select，替换原生 select -->
+                        <el-select v-model="orderFilter.status" size="small" clearable placeholder="全部状态" style="width:160px">
+                            <!-- 与后端 OrderStatus 严格一致（1 基）：1待付款/2待接单/3配送中/4已完成/5已取消/6已退款 -->
+                            <el-option label="全部状态" value=""></el-option>
+                            <el-option label="待付款" value="1"></el-option>
+                            <el-option label="待接单" value="2"></el-option>
+                            <el-option label="配送中" value="3"></el-option>
+                            <el-option label="已完成" value="4"></el-option>
+                            <el-option label="已取消" value="5"></el-option>
+                            <el-option label="已退款" value="6"></el-option>
+                        </el-select>
+                    </div>
+                </div>
+                <div class="btn-row">
+                    <el-button type="success" size="small" icon="ri-download-line" :loading="orderExport.loading" @click="exportOrder('excel')">导出 Excel</el-button>
+                    <el-button type="warning" size="small" icon="ri-download-line" :loading="orderExport.loading" @click="exportOrder('pdf')">导出 PDF</el-button>
+                </div>
+            </div>
+
+            <!-- 菜品导出 -->
+            <div class="export-card">
+                <div class="card-header">
+                    <div class="card-icon icon-dish"><i class="ri-restaurant-line" aria-hidden="true"></i></div>
+                    <div>
+                        <div class="card-title">菜品数据导出</div>
+                        <div class="card-desc">导出菜品名称、分类、价格、售卖状态等信息</div>
+                    </div>
+                </div>
+                <div class="filter-section">
+                    <div class="filter-row">
+                        <span class="filter-label">数据范围</span>
+                        <span class="filter-hint">全部在售菜品（含停售）</span>
+                    </div>
+                </div>
+                <div class="btn-row">
+                    <el-button type="success" size="small" icon="ri-download-line" :loading="dishExport.loading" @click="exportDish('excel')">导出 Excel</el-button>
+                    <el-button type="warning" size="small" icon="ri-download-line" :loading="dishExport.loading" @click="exportDish('pdf')">导出 PDF</el-button>
+                </div>
+            </div>
+
+            <!-- 员工导出 -->
+            <div class="export-card">
+                <div class="card-header">
+                    <div class="card-icon icon-emp"><i class="ri-user-line" aria-hidden="true"></i></div>
+                    <div>
+                        <div class="card-title">员工数据导出</div>
+                        <div class="card-desc">导出员工姓名、账号、手机号、性别、状态、入职时间</div>
+                    </div>
+                </div>
+                <div class="filter-section">
+                    <div class="filter-row">
+                        <span class="filter-label">数据范围</span>
+                        <span class="filter-hint">全部员工数据</span>
+                    </div>
+                </div>
+                <div class="btn-row">
+                    <el-button type="success" size="small" icon="ri-download-line" :loading="empExport.loading" @click="exportEmp('excel')">导出 Excel</el-button>
+                    <el-button type="warning" size="small" icon="ri-download-line" :loading="empExport.loading" @click="exportEmp('pdf')">导出 PDF</el-button>
+                </div>
+            </div>
+
+            <!-- 经营报表导出 -->
+            <div class="export-card">
+                <div class="card-header">
+                    <div class="card-icon icon-report"><i class="ri-bar-chart-line" aria-hidden="true"></i></div>
+                    <div>
+                        <div class="card-title">经营报表导出</div>
+                        <div class="card-desc">导出每日经营汇总，含营业额、订单量、客单价等核心指标</div>
+                    </div>
+                </div>
+                <div class="filter-section">
+                    <!-- 修改点(2026-09-15)：与营业日报统一为 el-date-picker + 快捷项 -->
+                    <div class="filter-row">
+                        <span class="filter-label">日期范围</span>
+                        <el-date-picker
+                            v-model="reportFilter.dateRange"
+                            type="daterange"
+                            range-separator="至"
+                            start-placeholder="开始日期"
+                            end-placeholder="结束日期"
+                            value-format="yyyy-MM-dd"
+                            :picker-options="{ shortcuts: dateShortcuts }"
+                            size="small"
+                        ></el-date-picker>
+                    </div>
+                </div>
+                <div class="btn-row">
+                    <el-button type="success" size="small" icon="ri-download-line" :loading="reportExport.loading" @click="exportReport('excel')">导出 Excel</el-button>
+                    <el-button type="warning" size="small" icon="ri-download-line" :loading="reportExport.loading" @click="exportReport('pdf')">导出 PDF</el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 导出记录折叠面板（与营业日报同款样式与布局） ========== -->
+        <div class="export-records-panel">
+            <div class="panel-header" role="button" tabindex="0" @click="toggleRecords" @keydown.enter="toggleRecords" :aria-expanded="recordsExpanded" aria-label="导出记录面板">
+                <div class="panel-title">
+                    <i class="ri-file-list-line" style="color:var(--color-success);"></i>
+                    导出记录
+                    <span class="record-count-badge" v-if="history.length > 0">{{ history.length }}</span>
+                </div>
+                <el-button v-if="history.length > 0" type="danger" size="small" plain @click.stop="clearHistory">清空记录</el-button>
+                <i :class="['ri-arrow-down-s-line expand-icon', { 'is-expanded': recordsExpanded }]"></i>
+            </div>
+            <div class="panel-body" v-show="recordsExpanded">
+                <div v-if="history.length === 0" class="empty-state">
+                    <div class="empty-icon"><i class="ri-inbox-line" aria-hidden="true"></i></div>
+                    <div class="empty-text">暂无导出记录，点击上方按钮开始导出</div>
+                </div>
+                <div v-else style="overflow-x:auto;">
+                    <table class="record-table">
+                        <thead>
+                            <tr>
+                                <th>序号</th>
+                                <th>导出时间</th>
+                                <th>数据类型</th>
+                                <th>日期范围</th>
+                                <th>格式</th>
+                                <th>文件大小</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(item, index) in history" :key="item.id">
+                                <td>{{ index + 1 }}</td>
+                                <td>{{ item.exportTime }}</td>
+                                <td>{{ item.dataType }}</td>
+                                <td>{{ item.dateRange }}</td>
+                                <td>
+                                    <span :class="['format-tag', item.format]">{{ item.format.toUpperCase() }}</span>
+                                </td>
+                                <td>{{ item.fileSize }}</td>
+                                <td>
+                                    <span :class="['status-tag', item.status]">
+                                        <span :class="['status-dot', item.status]"></span>
+                                        {{ item.status === 'success' ? '成功' : '失败' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <template v-if="item.status === 'success'">
+                                        <el-button type="text" size="small" icon="ri-download-line" @click="reDownload(item)">重新下载</el-button>
+                                        <el-button type="text" size="small" icon="ri-delete-bin-line" style="color:var(--color-danger);" @click="deleteRecord(index)">删除</el-button>
+                                    </template>
+                                    <span v-else style="color:var(--text-muted);font-size:var(--font-size-xs);">--</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="../../plugins/vue/vue.js"></script>
+    <!-- 修改点(2026-09-15)：补引 element-ui，与全站统一控件（此前页面用原生 input/select + 自写按钮/toast，风格割裂） -->
+    <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+    <script src="../../plugins/axios/axios.min.js"></script>
+    <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+    <script src="../../api/export.js?v=20260926"></script>
+    <script>
+        new Vue({
+            el: '#main-content',
+            data: {
+                orderFilter: { dateRange: [], status: '' },
+                orderExport: { loading: false },
+
+                dishExport: { loading: false },
+
+                empExport: { loading: false },
+
+                reportFilter: { dateRange: [] },
+                reportExport: { loading: false },
+
+                recordsExpanded: false,
+                // 成功导出的 Blob 缓存（用于"重新下载"，与营业日报同机制）
+                blobCache: {},
+                history: [],
+                // 日期快捷项（与营业日报一致）
+                dateShortcuts: [
+                    { text: '今天', onClick: function(picker) { var d = new Date(); picker.$emit('pick', [d, d]); } },
+                    { text: '近7天', onClick: function(picker) { var end = new Date(); var start = new Date(); start.setDate(start.getDate() - 6); picker.$emit('pick', [start, end]); } },
+                    { text: '近30天', onClick: function(picker) { var end = new Date(); var start = new Date(); start.setDate(start.getDate() - 29); picker.$emit('pick', [start, end]); } }
+                ]
+            },
+            computed: {
+                // 任一导出进行中即展示全屏遮罩
+                anyExporting: function() {
+                    return this.orderExport.loading || this.dishExport.loading
+                        || this.empExport.loading || this.reportExport.loading;
+                }
+            },
+            mounted: function() {
+                // 修改点(2026-09-15)：默认范围改为近7天（原页面无默认值，日期控件为空）
+                this.orderFilter.dateRange = this.rangeDays(6);
+                this.reportFilter.dateRange = this.rangeDays(6);
+            },
+            methods: {
+                // ========== 日期工具（与营业日报同口径） ==========
+                formatDate: function(d) {
+                    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                },
+                rangeDays: function(offset) {
+                    var end = new Date();
+                    var start = new Date();
+                    start.setDate(start.getDate() - offset);
+                    return [this.formatDate(start), this.formatDate(end)];
+                },
+                getNowStr: function() {
+                    var now = new Date();
+                    var pad = function(n) { return String(n).padStart(2, '0'); };
+                    return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate())
+                        + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+                },
+                formatFileSize: function(bytes) {
+                    if (!bytes) return '0 B';
+                    var k = 1024;
+                    var sizes = ['B', 'KB', 'MB', 'GB'];
+                    var i = Math.floor(Math.log(bytes) / Math.log(k));
+                    var idx = Math.min(i, sizes.length - 1);
+                    return (bytes / Math.pow(k, idx)).toFixed(idx > 0 ? 2 : 0) + ' ' + sizes[idx];
+                },
+                genId: function() {
+                    return Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+                },
+                onOrderRangeChange: function() { /* 选择即生效，无需额外处理 */ },
+                toggleRecords: function() { this.recordsExpanded = !this.recordsExpanded; },
+
+                // ==================== 导出操作 ====================
+                /**
+                 * 通用导出执行器：发起请求 → 下载 → 记录历史 → 右上角富文本通知（与营业日报一致）
+                 * @param {Promise} apiCall 导出接口调用（responseType=blob）
+                 * @param {String} dataType 数据类型名称（订单数据/菜品数据/员工数据/经营报表）
+                 * @param {String} dateRange 日期范围文案
+                 * @param {Object} stateRef 对应的 loading 状态对象
+                 * @param {String} icon 记录图标类名
+                 */
+                doExport: function(apiCall, dataType, dateRange, stateRef, icon) {
+                    var self = this;
+                    stateRef.loading = true;
+                    return apiCall.then(function(res) {
+                        var blob = res.data instanceof Blob ? res.data : new Blob([res.data]);
+                        // 交给 downloadFile 下载（传入已解析的 response，避免重复请求）
+                        return exportApi.downloadFile(Promise.resolve(res), dataType).then(function() {
+                            return blob;
+                        });
+                    }).then(function(blob) {
+                        var now = self.getNowStr();
+                        var ext = (blob && blob.type && blob.type.indexOf('pdf') !== -1) ? 'pdf' : 'xlsx';
+                        var record = {
+                            id: self.genId(),
+                            exportTime: now,
+                            dataType: dataType,
+                            dateRange: dateRange || '全部',
+                            format: ext,
+                            fileSize: self.formatFileSize(blob ? blob.size : 0),
+                            status: 'success'
+                        };
+                        self.history.unshift(record);
+                        self.blobCache[record.id] = { blob: blob, fileName: dataType + '.' + ext };
+                        if (self.history.length > 50) {
+                            var removed = self.history.pop();
+                            delete self.blobCache[removed.id];
+                        }
+                        self.recordsExpanded = true;
+                        ReggieUI.notify({
+                            title: '导出成功',
+                            dangerouslyUseHTMLString: true,
+                            message: '<div style="line-height:1.8;">'
+                                + '<div><i class="ri-file-text-line" style="margin-right:6px;color:var(--el-color-primary);"></i>文件：' + dataType + '.' + ext + '</div>'
+                                + '<div><i class="ri-coin-line" style="margin-right:6px;color:var(--color-success);"></i>大小：' + record.fileSize + '</div>'
+                                + '<div><i class="ri-time-line" style="margin-right:6px;color:var(--color-warning);"></i>时间：' + now + '</div>'
+                                + '</div>',
+                            type: 'success', duration: 5000, position: 'top-right'
+                        });
+                    }).catch(function(err) {
+                        var now = self.getNowStr();
+                        self.history.unshift({
+                            id: self.genId(), exportTime: now, dataType: dataType,
+                            dateRange: dateRange || '全部', format: 'excel', fileSize: '--', status: 'failed'
+                        });
+                        self.recordsExpanded = true;
+                        ReggieUI.notify({
+                            title: '导出失败',
+                            dangerouslyUseHTMLString: true,
+                            message: '<div style="line-height:1.8;">'
+                                + '<div><i class="ri-information-line" style="margin-right:6px;color:var(--color-info);"></i>原因：' + (err.message || String(err)) + '</div>'
+                                + '<div style="color:var(--text-muted);font-size:var(--font-size-xs);">时间：' + now + '</div>'
+                                + '</div>',
+                            type: 'error', duration: 8000, position: 'top-right'
+                        });
+                    }).finally(function() { stateRef.loading = false; });
+                },
+
+                exportOrder: function(format) {
+                    var range = this.orderFilter.dateRange || [];
+                    var params = {};
+                    if (range[0]) params.startDate = range[0];
+                    if (range[1]) params.endDate = range[1];
+                    if (this.orderFilter.status) params.status = this.orderFilter.status;
+                    var call = format === 'excel' ? exportApi.exportOrdersExcel(params) : exportApi.exportOrdersPdf(params);
+                    this.doExport(call, '订单数据', range.length === 2 ? range[0] + ' ~ ' + range[1] : '全部', this.orderExport, 'ri-file-list-3-line');
+                },
+
+                exportDish: function(format) {
+                    var call = format === 'excel' ? exportApi.exportDishesExcel({}) : exportApi.exportDishesPdf({});
+                    this.doExport(call, '菜品数据', '全部', this.dishExport, 'ri-restaurant-line');
+                },
+
+                exportEmp: function(format) {
+                    var call = format === 'excel' ? exportApi.exportEmployeesExcel({}) : exportApi.exportEmployeesPdf({});
+                    this.doExport(call, '员工数据', '全部', this.empExport, 'ri-user-line');
+                },
+
+                exportReport: function(format) {
+                    var range = this.reportFilter.dateRange || [];
+                    var params = {};
+                    if (range[0]) params.startDate = range[0];
+                    if (range[1]) params.endDate = range[1];
+                    var call = format === 'excel' ? exportApi.exportReportExcel(params) : exportApi.exportReportPdf(params);
+                    this.doExport(call, '经营报表', range.length === 2 ? range[0] + ' ~ ' + range[1] : '全部', this.reportExport, 'ri-bar-chart-line');
+                },
+
+                // ==================== 导出记录操作 ====================
+                reDownload: function(item) {
+                    var cached = this.blobCache[item.id];
+                    if (!cached || !cached.blob) {
+                        ReggieUI.warning('文件数据已过期，请重新导出');
+                        return;
+                    }
+                    try {
+                        var url = window.URL.createObjectURL(cached.blob);
+                        var a = document.createElement('a');
+                        a.href = url;
+                        a.download = cached.fileName;
+                        a.style.display = 'none';
+                        document.body.appendChild(a);
+                        a.click();
+                        setTimeout(function() {
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(url);
+                        }, 200);
+                        ReggieUI.success('正在下载：' + cached.fileName);
+                    } catch (err) {
+                        ReggieUI.error('下载失败：' + err.message);
+                    }
+                },
+                deleteRecord: function(index) {
+                    var self = this;
+                    ReggieUI.confirm('确认删除该导出记录？', '提示', {
+                        confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
+                    }).then(function() {
+                        var item = self.history[index];
+                        if (item && item.id) { delete self.blobCache[item.id]; }
+                        self.history.splice(index, 1);
+                        ReggieUI.success('记录已删除');
+                    }).catch(function() { /* 用户取消 */ });
+                },
+                clearHistory: function() {
+                    if (!this.history || this.history.length === 0) return;
+                    var self = this;
+                    ReggieUI.confirm('确定清空全部导出记录吗？', '清空导出记录', {
+                        confirmButtonText: '清空', type: 'warning'
+                    }).then(function() {
+                        self.history = [];
+                        self.blobCache = {};
+                        ReggieUI.success('导出记录已清空');
+                    }).catch(function() { /* 用户取消 */ });
+                }
+            }
+        });
+    </script>
+</body>
+</html>

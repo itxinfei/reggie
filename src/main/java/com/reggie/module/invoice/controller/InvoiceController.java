@@ -1,0 +1,250 @@
+package com.reggie.module.invoice.controller;
+
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
+import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.common.utils.PageUtils;
+import com.reggie.module.invoice.model.InvoiceRecord;
+import com.reggie.module.invoice.model.InvoiceTitle;
+import com.reggie.module.invoice.service.InvoiceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 发票管理控制器
+ * 后台管理端：发票列表、开具、作废；用户端：申请开票
+ */
+@Slf4j
+@RestController
+@RequestMapping("/invoice")
+@Tag(name = "发票管理")
+public class InvoiceController {
+
+    @Autowired
+    private InvoiceService invoiceService;
+
+    // ==================== 发票抬头管理（用户端） ====================
+
+    /**
+     * 查询列表 titles。
+     * @return 返回结果
+     */
+    @GetMapping("/title/list")
+    @Operation(summary = "获取发票抬头列表")
+    public R<List<InvoiceTitle>> listTitles() {
+        // 修改点(2026-09-01)：userId/tenantId 从登录会话获取，不再由前端显式传参，防止跨租户越权
+        return R.success(invoiceService.listTitles(currentTenantId(), currentUserId()));
+    }
+
+    /**
+     * 保存 title。
+     * @param title 参数 title
+     * @return 返回结果
+     */
+    @PostMapping("/title/save")
+    @Operation(summary = "保存发票抬头")
+    public R<Void> saveTitle(@Parameter(description = "发票抬头信息", required = true) @RequestBody InvoiceTitle title) {
+        invoiceService.saveTitle(title);
+        return R.success(null);
+    }
+
+    /**
+     * 删除 title。
+     * @param id 参数 id
+     * @return 返回结果
+     */
+    @DeleteMapping("/title/{id}")
+    @Operation(summary = "删除发票抬头")
+    public R<Void> deleteTitle(@Parameter(description = "发票抬头ID", required = true) @PathVariable Long id) {
+        invoiceService.deleteTitle(id, currentTenantId(), currentUserId());
+        return R.success(null);
+    }
+
+    /**
+     * 更新 title。
+     * @param id 参数 id
+     * @param title 参数 title
+     * @return 返回结果
+     */
+    @PutMapping("/title/{id}")
+    @Operation(summary = "编辑发票抬头")
+    public R<Void> updateTitle(@Parameter(description = "发票抬头ID", required = true) @PathVariable Long id,
+                               @Parameter(description = "发票抬头信息", required = true) @RequestBody InvoiceTitle title) {
+        invoiceService.updateTitle(id, currentTenantId(), currentUserId(),
+                title.getTitle(), title.getTaxNumber(), title.getCompanyName(), title.getType());
+        return R.success(null);
+    }
+
+    // ==================== 我的发票（用户端） ====================
+
+    /**
+     * 处理 my invoice page。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @return 返回结果
+     */
+    @GetMapping("/my/page")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "C端-我的发票记录", description = "获取当前登录用户的发票记录分页，按登录态自动定位用户，防止越权查询")
+    public R<Map<String, Object>> myInvoicePage(@Parameter(description = "页码，从1开始", required =
+            true) @RequestParam(defaultValue = "1") @Min(1) int page,
+                                                @Parameter(description = "每页条数，最大50", required =
+                                                        true) @RequestParam(defaultValue =
+                                                        "10") @Min(1) @Max(50) int pageSize) {
+        Long tenantId = currentTenantId();
+        Long userId = currentUserId();
+        Page<InvoiceRecord> pageInfo = PageUtils.of(page, pageSize);
+        Page<InvoiceRecord> result = invoiceService.listUserRecords(pageInfo, userId, tenantId);
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("records", result.getRecords());
+        resp.put("total", result.getTotal());
+        resp.put("size", result.getSize());
+        resp.put("current", result.getCurrent());
+        return R.success(resp);
+    }
+
+    // ==================== 发票申请（用户端） ====================
+
+    /**
+     * 申请 invoice。
+     * @param orderId 参数 orderId
+     * @param applyDTO 参数 applyDTO
+     * @return 返回结果
+     */
+    @PostMapping("/apply/{orderId}")
+    @Operation(summary = "申请开票")
+    public R<InvoiceRecord> applyInvoice(@Parameter(description = "订单ID", required = true) @PathVariable Long orderId,
+                                         @Parameter(description = "开票申请信息（抬头/税号/类型）", required =
+                                                 true) @RequestBody InvoiceRecord applyDTO) {
+        Long tenantId = currentTenantId();
+        Long userId = currentUserId();
+        InvoiceRecord record = invoiceService.applyInvoice(
+                orderId, userId, tenantId,
+                applyDTO.getTitleId(), applyDTO.getTitle(),
+                applyDTO.getTaxNumber(), applyDTO.getType());
+        return R.success(record);
+    }
+
+    /**
+     * 获取 invoice by order。
+     * @param orderId 参数 orderId
+     * @return 返回结果
+     */
+    @GetMapping("/order/{orderId}")
+    @Operation(summary = "查询订单发票记录")
+    public R<InvoiceRecord> getInvoiceByOrder(@Parameter(description = "订单ID", required =
+            true) @PathVariable Long orderId) {
+        return R.success(invoiceService.getInvoiceByOrder(orderId, currentUserId(), currentTenantId()));
+    }
+
+    // ==================== 后台管理 ====================
+
+    /**
+     * 查询列表 records。
+     * @param status 参数 status
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @return 返回结果
+     */
+    @GetMapping("/list")
+    @RequireEmployee
+    @Operation(summary = "发票列表（后台，分页）")
+    public R<Page<InvoiceRecord>> listRecords(@Parameter(description =
+            "发票状态（可选，如 PENDING/ISSUED/VOID）") @RequestParam(required = false) Integer status,
+                                              @Parameter(description = "页码，从1开始", required =
+                                                      true) @RequestParam(defaultValue = "1") Integer page,
+                                              @Parameter(description = "每页条数，最大100", required =
+                                                      true) @RequestParam(defaultValue = "10") Integer pageSize) {
+        // 修改点(2026-09-01)：租户从员工会话获取，防止跨租户越权查询；分页上限由 PageUtils.cap 收敛
+        Long tenantId = currentTenantId();
+        Page<InvoiceRecord> pageInfo = PageUtils.of(page, PageUtils.cap(pageSize));
+        return R.success(invoiceService.listRecords(pageInfo, status, tenantId));
+    }
+
+    /**
+     * 查询列表 stats。
+     * @return 返回结果
+     */
+    @GetMapping("/stats")
+    @RequireEmployee
+    @Operation(summary = "发票状态统计（后台统计卡）")
+    public R<Map<String, Integer>> listStats() {
+        // 修改点(2026-09-01)：租户从员工会话获取；统计卡全量统计，不随分页/状态筛选变化
+        Long tenantId = currentTenantId();
+        return R.success(invoiceService.listStats(tenantId));
+    }
+
+    /**
+     * 判断 sue invoice。
+     * @param recordId 参数 recordId
+     * @param invoiceNo 参数 invoiceNo
+     * @param invoiceCode 参数 invoiceCode
+     * @param invoiceUrl 参数 invoiceUrl
+     * @return 返回结果
+     */
+    @PostMapping("/issue/{recordId}")
+    @RequireEmployee
+    @Operation(summary = "开具发票")
+    public R<Void> issueInvoice(@Parameter(description = "发票申请记录ID", required = true) @PathVariable Long recordId,
+                                @Parameter(description = "发票号码", required = true) @RequestParam String invoiceNo,
+                                @Parameter(description = "发票代码", required = true) @RequestParam String invoiceCode,
+                                @Parameter(description = "发票PDF/图片地址", required =
+                                        true) @RequestParam String invoiceUrl) {
+        Long tenantId = currentTenantId();
+        invoiceService.issueInvoice(recordId, invoiceNo, invoiceCode, invoiceUrl, tenantId);
+        return R.success(null);
+    }
+
+    /**
+     * 处理 void invoice。
+     * @param recordId 参数 recordId
+     * @return 返回结果
+     */
+    @PostMapping("/void/{recordId}")
+    @RequireEmployee
+    @Operation(summary = "作废发票")
+    public R<Void> voidInvoice(@Parameter(description = "发票申请记录ID", required = true) @PathVariable Long recordId) {
+        Long tenantId = currentTenantId();
+        invoiceService.voidInvoice(recordId, tenantId);
+        return R.success(null);
+    }
+
+    /**
+     * 从登录会话中获取当前租户ID（后台接口统一入口）
+     *
+     * @return 租户ID
+     */
+    private Long currentTenantId() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("未获取到租户信息，请重新登录");
+        }
+        return tenantId;
+    }
+
+    /**
+     * 从登录会话中获取当前用户ID（用户端接口统一入口）
+     *
+     * @return 用户ID
+     */
+    private Long currentUserId() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            throw new CustomException("未获取到用户信息，请重新登录");
+        }
+        return userId;
+    }
+}

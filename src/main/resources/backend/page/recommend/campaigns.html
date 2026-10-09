@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>营销活动管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+    <script src="../../plugins/echarts/echarts.min.js"></script>
+    <style>
+        /* ========== 概览图表 ========== */
+        .overview-charts {
+            display: grid;
+            /* minmax(0,1fr) 而非 1fr：否则 canvas 的最小内容宽度会把整列撑开，窄屏整页横向溢出 */
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .chart-panel {
+            background: var(--bg-surface); border-radius: var(--radius-lg); padding: 18px;
+            box-shadow: var(--shadow-sm); border: 1px solid var(--el-bg-page);
+        }
+        .chart-panel .chart-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--el-border-light);
+        }
+        .chart-panel .chart-title { font-size:var(--font-size-base); font-weight: 600; color: var(--el-text-primary); }
+        .chart-panel .chart-subtitle { font-size:var(--font-size-xs); color: var(--color-info-text); }
+        .chart-box { width: 100%; height: 260px; }
+
+        /* ========== 表格区域 ========== */
+        .status-progress { width: 60px; display: inline-block; vertical-align: middle; margin-left: 4px; }
+
+        /* ========== 推送预览列表 ========== */
+        .push-preview {
+            max-height: 200px; overflow-y: auto;
+            border: 1px solid var(--el-border-light); border-radius: var(--radius-md); padding: 8px; margin-top: 8px;
+        }
+        .push-preview .preview-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 7px 10px; font-size:var(--font-size-sm); border-bottom: 1px solid var(--el-bg-light);
+        }
+        .push-preview .preview-item:last-child { border-bottom: none; }
+
+        /* ========== 统计弹窗 ========== */
+        .stats-overview {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+            margin-bottom: 16px; text-align: center;
+        }
+        .stats-overview .stat-item {
+            background: var(--el-bg-base); border-radius: var(--radius-md); padding: 14px 8px;
+        }
+        .stats-overview .stat-item .num { font-size: var(--font-size-2xl); font-weight: 700; color: var(--el-text-primary); }
+        .stats-overview .stat-item .lbl { font-size:var(--font-size-xs); color: var(--color-info-text); margin-top: 4px; }
+
+        /* ========== 批量操作栏（选中行后显示，紧贴表格上方） ========== */
+        .batch-bar {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 16px; padding: 10px 14px;
+            background: var(--color-brand-50);
+            border: 1px solid var(--color-brand-300);
+            border-radius: var(--radius-md);
+        }
+        .batch-bar__count { font-size: var(--font-size-sm); color: var(--el-text-regular); font-weight: 500; }
+        .batch-bar .el-button { margin-left: 0; }
+
+        @media (max-width: 1400px) {
+            .overview-charts { grid-template-columns: minmax(0, 1fr); }
+        }
+    </style>
+</head>
+<body>
+<!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+<a href="#main-content" class="skip-link">跳转到主内容</a>
+<div class="dashboard-container" id="app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">营销活动管理</h1>
+
+        <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
+        <stat-cards :cards="statsCards" :active-key.sync="searchStatus" @card-click="onCardClick"></stat-cards>
+
+        <!-- ========== 概览图表 ========== -->
+        <div class="overview-charts">
+            <div class="chart-panel">
+                <div class="chart-header">
+                    <span class="chart-title">活动状态分布</span>
+                    <span class="chart-subtitle">实时</span>
+                </div>
+                <div class="chart-box" id="statusPieChart"></div>
+            </div>
+            <div class="chart-panel">
+                <div class="chart-header">
+                    <span class="chart-title">活动参与统计</span>
+                    <span class="chart-subtitle">活动累计概览（全部活动汇总）</span>
+                </div>
+                <div class="chart-box" id="overviewBarChart"></div>
+            </div>
+        </div>
+
+        <!-- 修改点：使用 <table-bar> 统一组件 -->
+        <table-bar
+          :search-items="tableSearchItems"
+          :actions="tableActions"
+          :show-refresh="true"
+          @search="loadData"
+          @reset="resetSearch"
+          @refresh="loadData()"
+          @action="onTableAction">
+          <template slot="search-extra">
+            <el-select v-model="searchName" placeholder="选择活动名称" size="small" clearable filterable
+              style="width:200px;"
+              :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @change="loadData" @visible-change="onFilterDropdownVisible">
+              <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+            </el-select>
+            <el-select v-model="searchStatus" placeholder="状态筛选" size="small" clearable @change="loadData" style="width:120px;">
+                <el-option label="草稿" :value="0" ></el-option>
+                <el-option label="进行中" :value="1" ></el-option>
+                <el-option label="已结束" :value="2" ></el-option>
+                <el-option label="已暂停" :value="3" ></el-option>
+            </el-select>
+            <el-select v-model="searchType" placeholder="活动类型" size="small" clearable @change="loadData" style="width:120px;">
+                <el-option v-for="(label, val) in typeMap" :key="val" :label="label" :value="Number(val)" ></el-option>
+            </el-select>
+          </template>
+        </table-bar>
+
+        <!-- 批量操作栏：选中行后显示在表格上方，避免滚动到表格底部才能操作 -->
+        <div class="batch-bar" v-show="selectedRows.length > 0">
+          <span class="batch-bar__count">已选 {{ selectedRows.length }} 项</span>
+          <el-button type="text" size="small" class="btn-delete" @click="batchDelete">批量删除</el-button>
+          <el-button size="small" type="warning" plain @click="batchPause">批量暂停</el-button>
+          <el-button size="small" type="text" @click="clearSelection">清空选择</el-button>
+        </div>
+
+        <!-- ========== 表格（统一 crud-table 组件，替代手写 el-table + 独立分页） ========== -->
+        <crud-table
+          ref="campaignTable"
+            :data="tableData"
+            :columns="campaignColumns"
+            :page="currentPage"
+            :page-size="pageSize"
+            :total="total"
+            :loading="loading"
+            :stripe="true"
+            :border="true"
+            :selection="true"
+            :selection-width="45"
+            :show-actions="true"
+            :actions-width="180"
+            :actions-align="'center'"
+            aria-label="营销活动列表"
+            @page-change="onPageChange"
+            @selection-change="onSelectionChange"
+        >
+            <template #col-name="{ row }"><span style="font-weight:500;">{{ row.name }}</span></template>
+            <template #col-type="{ row }">{{ typeMap[row.campaignType] || '-' }}</template>
+            <template #col-target="{ row }">{{ targetMap[row.targetType] || '-' }}</template>
+            <template #col-status="{ row }">
+                <el-tag :type="statusTagType(row.status)" size="small">{{ statusMap[row.status] }}</el-tag>
+            </template>
+            <template #col-time="{ row }">
+                <span style="font-size:var(--font-size-xs);color:var(--el-text-regular);">{{ row.startTime || '-' }}</span><br/>
+                <span style="font-size:var(--font-size-xs);color:var(--color-info-text);">{{ row.endTime || '-' }}</span>
+            </template>
+            <template #col-participants="{ row }">
+                <span style="color:var(--el-text-primary);">{{ row.currentParticipants || 0 }}</span>
+                <span style="color:var(--text-muted);"> / </span>
+                <span>{{ row.maxParticipants || '∞' }}</span>
+                <el-progress v-if="row.maxParticipants"
+                    :percentage="Math.min(100, Math.round((row.currentParticipants || 0) / row.maxParticipants * 100))"
+                    :show-text="false" :stroke-width="4" class="status-progress" />
+            </template>
+            <!-- 操作列契约：编辑+主状态流转常显（≤3 元素含「更多」，宽 180），推送/统计/删除收「更多」 -->
+            <template #actions="{ row }">
+                <el-button type="text" size="small" class="btn-view" @click="openDialog('edit', row)">编辑</el-button>
+                <el-button type="text" size="small" class="btn-success" v-if="row.status === 0" @click="publishCampaign(row)">发布</el-button>
+                <el-button type="text" size="small" class="btn-warning" v-if="row.status === 1" @click="pauseCampaign(row)">暂停</el-button>
+                <el-dropdown trigger="click" @command="(cmd) => handleRowCommand(cmd, row)" @click.native.stop>
+                    <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+                    <el-dropdown-menu slot="dropdown">
+                        <el-dropdown-item v-if="row.status === 1" command="push" icon="ri-send-plane-line">推送</el-dropdown-item>
+                        <el-dropdown-item command="stats" icon="ri-bar-chart-line">活动统计</el-dropdown-item>
+                        <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+                    </el-dropdown-menu>
+                </el-dropdown>
+            </template>
+        </crud-table>
+
+    </main>
+
+    <!-- ========== 新建/编辑对话框 ========== -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :title="dialogTitle"
+      :visible.sync="dialogVisible"
+      size="lg"
+      :submit-loading="submitting"
+      :close-on-click-modal="false"
+      @submit="submitForm"
+      @close="resetForm"
+    >
+        <el-form :model="form" :rules="rules" ref="campaignForm" label-width="100px" size="small">
+            <el-row :gutter="16">
+                <el-col :span="14">
+                    <el-form-item label="活动名称" prop="name">
+                        <el-input v-model="form.name" placeholder="请输入活动名称" maxlength="50" show-word-limit ></el-input>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="10">
+                    <el-form-item label="优先级" prop="priority">
+                        <el-input-number v-model="form.priority" :min="0" :max="100" style="width:100%;" ></el-input-number>
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="活动类型" prop="campaignType">
+                        <el-select v-model="form.campaignType" placeholder="请选择" style="width:100%;">
+                            <el-option v-for="(label, val) in typeMap" :key="val" :label="label" :value="Number(val)" ></el-option>
+                        </el-select>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="目标人群" prop="targetType">
+                        <el-select v-model="form.targetType" placeholder="请选择" style="width:100%;">
+                            <el-option v-for="(label, val) in targetMap" :key="val" :label="label" :value="Number(val)" ></el-option>
+                        </el-select>
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <el-form-item label="活动描述" prop="description">
+                <el-input v-model="form.description" type="textarea" :rows="2" placeholder="活动描述说明" maxlength="500" show-word-limit ></el-input>
+            </el-form-item>
+            <!-- 修改点：规则输入改为结构化选项 + JSON 校验 -->
+            <el-form-item label="活动规则" prop="ruleJson">
+                <el-radio-group v-model="rulePreset" size="small" style="margin-bottom:8px;" @change="onRulePresetChange">
+                    <el-radio-button label="">自定义</el-radio-button>
+                    <el-radio-button label="满减">满减</el-radio-button>
+                    <el-radio-button label="折扣">折扣</el-radio-button>
+                    <el-radio-button label="秒杀">秒杀</el-radio-button>
+                </el-radio-group>
+                <el-input v-model="form.ruleJson" type="textarea" :rows="3"
+                    :placeholder="rulePreset ? '' : 'JSON格式，如：{"minAmount":50,"discountRate":0.8}'"></el-input>
+                <div v-if="ruleError" style="font-size:var(--font-size-xs);color:var(--color-danger);margin-top:4px;">{{ ruleError }}</div>
+                <span v-else style="font-size:var(--font-size-xs);color:var(--color-info-text);">格式: {"minAmount":80,"reduceAmount":10} | {"discountRate":0.85} | {"flashPrice":9.9,"flashStock":100}</span>
+            </el-form-item>
+            <el-form-item label="活动时间">
+                <!-- 修改点：添加快捷选项 + unlink-panels，优化时间选择体验 -->
+                <el-date-picker v-model="dateRange" type="datetimerange"
+                    range-separator="至" start-placeholder="开始" end-placeholder="结束"
+                    value-format="yyyy-MM-dd HH:mm:ss" format="yyyy-MM-dd HH:mm"
+                    unlink-panels :editable="false"
+                    :picker-options="datePickerOptions" style="width:100%" />
+            </el-form-item>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="参与上限">
+                        <el-input-number v-model="form.maxParticipants" :min="0" placeholder="0=不限" style="width:100%;" ></el-input-number>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="关联优惠券">
+                        <el-select v-model="form.couponTemplateId" placeholder="可选优惠券" clearable filterable style="width:100%;">
+                            <el-option v-for="ct in couponTemplates" :key="ct.id" :label="ct.name" :value="ct.id" ></el-option>
+                        </el-select>
+                    </el-form-item>
+                </el-col>
+            </el-row>
+        </el-form>
+    </crud-dialog>
+
+    <!-- ========== 推送消息对话框 ========== -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      title="推送营销消息"
+      :visible.sync="pushDialogVisible"
+      size="md"
+      :submit-loading="pushing"
+      :close-on-click-modal="false"
+      @submit="doPush"
+      @close="pushDialogVisible = false"
+    >
+        <el-form label-width="100px" size="small">
+            <el-form-item label="活动名称">
+                <el-tag type="info">{{ pushTargetCampaign ? pushTargetCampaign.name : '' }}</el-tag>
+            </el-form-item>
+            <el-form-item label="目标人群">
+                <el-tag type="warning">{{ targetMap[pushTargetCampaign ? pushTargetCampaign.targetType : 1] }}</el-tag>
+            </el-form-item>
+            <el-form-item label="推送方式">
+                <el-radio-group v-model="pushForm.pushType">
+                    <el-radio :label="1">弹窗通知</el-radio>
+                    <el-radio :label="2">站内消息</el-radio>
+                    <el-radio :label="3">短信推送</el-radio>
+                    <el-radio :label="4">优惠券发放</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <el-form-item label="预计触达">
+                <el-tag type="info" size="small">{{ pushEstimate }} 位用户</el-tag>
+                <span style="font-size:var(--font-size-xs);color:var(--color-info-text);margin-left:8px;">系统自动匹配目标用户</span>
+            </el-form-item>
+            <el-form-item label="推送预览" v-if="pushPreview.length > 0">
+                <div class="push-preview">
+                    <div class="preview-item" v-for="(u, i) in pushPreview" :key="i">
+                        <span>{{ u.name || ('用户' + u.userId) }}</span>
+                        <el-tag size="small" type="info">{{ u.matchReason || '' }}</el-tag>
+                    </div>
+                </div>
+            </el-form-item>
+        </el-form>
+    </crud-dialog>
+
+    <!-- ========== 活动统计对话框（只读，仅有关闭按钮） ========== -->
+    <crud-dialog
+      title="活动效果统计"
+      :visible.sync="statsDialogVisible"
+      size="lg"
+      :show-submit="false"
+      :show-cancel="true"
+      cancel-text="关 闭"
+      :close-on-click-modal="false"
+      @close="statsDialogVisible = false"
+    >
+        <div v-if="statsCampaign">
+            <!-- 修改点：使用数字卡片替代 descriptions -->
+            <div class="stats-overview">
+                <div class="stat-item">
+                    <div class="num">{{ statsCampaign.currentParticipants || 0 }}</div>
+                    <div class="lbl">参与人数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="num">{{ statsCampaign.pushCount || 0 }}</div>
+                    <div class="lbl">推送次数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="num">
+                        {{ statsCampaign.maxParticipants ? Math.round((statsCampaign.currentParticipants || 0) / statsCampaign.maxParticipants * 100) + '%' : '不限' }}
+                    </div>
+                    <div class="lbl">参与率</div>
+                </div>
+            </div>
+            <div class="info-box" style="border:1px solid var(--el-border-lighter2);border-radius:var(--radius-sm);margin-bottom:16px;">
+                <div class="item-box"><span class="label">活动名称：</span><span class="des">{{ statsCampaign.name }}</span></div>
+                <div class="item-box"><span class="label">活动类型：</span><span class="des">{{ typeMap[statsCampaign.campaignType] }}</span></div>
+                <div class="item-box"><span class="label">参与上限：</span><span class="des">{{ statsCampaign.maxParticipants || '不限' }}</span></div>
+                <div class="item-box"><span class="label">活动状态：</span><span class="des"><el-tag :type="statusTagType(statsCampaign.status)" size="small">{{ statusMap[statsCampaign.status] }}</el-tag></span></div>
+            </div>
+            <div class="chart-box" id="campaignStatsChart" style="height:280px;"></div>
+        </div>
+    </crud-dialog>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js?v=20260915"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js?v=20260930"></script>
+<script src="../../js/accessibility-utils.js?v=20260927"></script>
+<script src="../../js/performance-utils.js?v=20260926"></script>
+<script src="../../api/recommend.js?v=20260926"></script>
+<script src="../../api/member-center.js?v=20260926"></script>
+<script src="../../api/marketing.js?v=20260926"></script>
+<script src="../../js/components.js?v=20261002"></script>
+<script>
+  // 图表语义色统一引用全局 window.RgPalette（components.js 从 tokens.css 运行时解析，
+  // canvas 无法使用 CSS 变量，RgPalette 为 JS 侧唯一颜色来源）；多色系列数据色保留图表调色板
+  new Vue({
+    el: '#app',
+    data: function() {
+        return {
+            loading: false, submitting: false, pushing: false,
+            tableData: [], total: 0, currentPage: 1, pageSize: 10,
+            searchName: '', searchStatus: null, searchType: null,
+            // 修改点：<table-bar> 统一组件配置
+            tableSearchItems: [],
+            // 修复(2026-09-23)：原页面支持新建活动却无入口，补“新建活动”操作按钮（沿用全站 table-bar 模式）
+            tableActions: [
+                { key: 'add', text: '+ 新建活动', type: 'primary' }
+            ],
+            // 修改点：搜索下拉框动态选项
+            filterOptions: { names: [] },
+            optionsLoading: false,
+            optionsLoadError: false,
+            selectedRows: [],
+            // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
+            campaignColumns: [
+                { prop: 'id', label: 'ID', width: 60, align: 'center' },
+                { prop: 'name', label: '活动名称', width: 120, slot: true },
+                // 修改点：prop 改为实际数据字段名（原 type/target 与 campaignType/targetType 不匹配）
+                { prop: 'campaignType', label: '类型', width: 90, align: 'center', slot: true },
+                { prop: 'targetType', label: '目标', width: 100, align: 'center', slot: true },
+                { prop: 'status', label: '状态', width: 100, align: 'center', slot: true },
+                { prop: 'time', label: '活动时间', width: 190, slot: true },
+                { prop: 'participants', label: '参与/上限', width: 120, align: 'center', slot: true }
+            ],
+            // 修改点：summary 包含4种状态 + 推送总数，全部来自后端真实统计
+            summary: { total: 0, active: 0, draft: 0, ended: 0, paused: 0, totalParticipants: 0, totalPushed: 0 },
+            dialogVisible: false, dialogTitle: '新建营销活动', dialogMode: 'create', editId: null, dateRange: [],
+            rulePreset: '', ruleError: '',
+            // 修改点：活动时间选择器快捷选项，与通用组件保持一致
+            datePickerOptions: {
+                shortcuts: [{
+                    text: '今天',
+                    onClick: function (picker) {
+                        const s = new Date(); s.setHours(0,0,0,0); const e = new Date(); e.setHours(23,59,59,999)
+                        picker.$emit('pick', [s, e])
+                    }
+                }, {
+                    text: '最近7天',
+                    onClick: function (picker) {
+                        const e = new Date(); e.setHours(23,59,59,999); const s = new Date(); s.setDate(s.getDate()-6); s.setHours(0,0,0,0)
+                        picker.$emit('pick', [s, e])
+                    }
+                }, {
+                    text: '最近30天',
+                    onClick: function (picker) {
+                        const e = new Date(); e.setHours(23,59,59,999); const s = new Date(); s.setDate(s.getDate()-29); s.setHours(0,0,0,0)
+                        picker.$emit('pick', [s, e])
+                    }
+                }, {
+                    text: '本月',
+                    onClick: function (picker) {
+                        const n = new Date(); const s = new Date(n.getFullYear(), n.getMonth(), 1)
+                        const e = new Date(n.getFullYear(), n.getMonth()+1, 0); e.setHours(23,59,59,999)
+                        picker.$emit('pick', [s, e])
+                    }
+                }]
+            },
+            pushDialogVisible: false, pushTargetCampaign: null,
+            pushForm: { pushType: 1 }, pushPreview: [], pushEstimate: 0,
+            couponTemplates: [],
+            statsDialogVisible: false, statsCampaign: null,
+            statusPieChart: null, overviewBarChart: null, statsChart: null,
+            form: {
+                name: '', campaignType: 1, targetType: 1, description: '',
+                ruleJson: '', priority: 0, startTime: '', endTime: '',
+                maxParticipants: null, couponTemplateId: null
+            },
+            typeMap: { 1:'满减', 2:'折扣', 3:'赠品', 4:'首单优惠', 5:'会员专享', 6:'限时秒杀' },
+            targetMap: { 1:'全部用户', 2:'新用户', 3:'高频用户', 4:'流失预警', 5:'指定等级' },
+            statusMap: { 0:'草稿', 1:'进行中', 2:'已结束', 3:'已暂停' }
+        };
+    },
+    created: function() {
+        this.loadFilterOptions();
+        this.loadData();
+        this.loadSummary();
+        this.loadCouponTemplates();
+    },
+    computed: {
+        // 修改点：表单校验规则（computed 中 this 指向 Vue 实例，可引用 methods）
+        rules: function() {
+            const self = this;
+            return {
+                name: [
+                    { required: true, message: '请输入活动名称', trigger: 'blur' },
+                    { min: 2, max: 100, message: '活动名称长度 2-100', trigger: 'blur' }
+                ],
+                campaignType: [{ required: true, message: '请选择活动类型', trigger: 'change' }],
+                targetType: [{ required: true, message: '请选择目标人群', trigger: 'change' }],
+                ruleJson: [{ validator: function (rule, value, callback) {
+                    return self.validateRuleJson(rule, value, callback);
+                }, trigger: 'blur' }]
+            };
+        },
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+        statsCards: function() {
+            const self = this;
+            // 高亮统一由 searchStatus 映射：原先读恒为 '' 的 activeKey，导致「活动总数」永久高亮、
+            // 点其他卡片高亮不动（searchStatus 在 onCardClick 中被置为数字，故用 String 归一比较）
+            const ss = self.searchStatus;
+            const noFilter = ss === null || ss === '' || ss === undefined;
+            return [
+                { key: '', icon: 'ri-file-list-3-line', label: '活动总数', value: self.summary.total, color: 'primary', clickable: true, active: noFilter },
+                { key: '1', icon: 'ri-play-circle-line', label: '进行中', value: self.summary.active, color: 'success', clickable:true, active: String(ss) === '1' },
+                { key: '0', icon: 'ri-edit-2-line', label: '草稿', value: self.summary.draft, color: 'warning', clickable: true, active: String(ss) === '0' },
+                { key: 'pushed', icon: 'ri-mail-send-line', label: '推送消息数', value: self.summary.totalPushed, color: 'info' }
+            ]
+        }
+    },
+    mounted: function() {
+        this.initOverviewCharts();
+        window.addEventListener('resize', this.handleResize);
+    },
+    beforeDestroy: function() {
+        window.removeEventListener('resize', this.handleResize);
+        if (this.statusPieChart) this.statusPieChart.dispose();
+        if (this.overviewBarChart) this.overviewBarChart.dispose();
+        if (this.statsChart) this.statsChart.dispose();
+    },
+    methods: {
+        /* ====== 筛选选项加载 ====== */
+        loadFilterOptions: function() {
+            const self = this;
+            self.optionsLoading = true;
+            self.optionsLoadError = false;
+            recommendBackendApi.campaignOptions().then(function(res) {
+                if (String(res.code) === '1' && res.data) {
+                    self.filterOptions.names = res.data.names || [];
+                } else {
+                    self.optionsLoadError = true;
+                    ReggieUI.warning('加载活动选项失败：' + (res.msg || '接口返回异常'));
+                }
+            }).catch(function(err) {
+                // 修改点：NOTLOGIN 错误已在全局拦截器处理（跳转登录页），无需重复提示
+                if (err.message === 'NOTLOGIN') {
+                    return;
+                }
+                self.optionsLoadError = true;
+                ReggieUI.error('加载筛选选项失败，请刷新页面重试');
+            }).finally(function() {
+                self.optionsLoading = false;
+            });
+        },
+        // 修改点：下拉框打开时若之前加载失败，自动重试
+        onFilterDropdownVisible: function(visible) {
+            if (visible && this.optionsLoadError) {
+                this.loadFilterOptions();
+            }
+        },
+        /* ====== 图表初始化 ====== */
+        initOverviewCharts: function() {
+            const self = this;
+            this.$nextTick(function() {
+                const pieDom = document.getElementById('statusPieChart');
+                const barDom = document.getElementById('overviewBarChart');
+                if (pieDom) self.statusPieChart = echarts.init(pieDom);
+                if (barDom) self.overviewBarChart = echarts.init(barDom);
+                self.renderOverviewCharts();
+            });
+        },
+        handleResize: function() {
+            if (this.statusPieChart) this.statusPieChart.resize();
+            if (this.overviewBarChart) this.overviewBarChart.resize();
+            if (this.statsChart) this.statsChart.resize();
+        },
+        renderOverviewCharts: function() {
+            const self = this;
+            // 状态分布饼图 — 修改点：展示全部4种状态；全 0（初始/加载失败）时显示空态而非只剩 legend 的白图
+            if (this.statusPieChart) {
+                const pieData = [
+                    { value: self.summary.active || 0, name: '进行中', itemStyle: { color: RgPalette.success } },
+                    { value: self.summary.draft || 0, name: '草稿', itemStyle: { color: RgPalette.info } },
+                    { value: self.summary.ended || 0, name: '已结束', itemStyle: { color: RgPalette.warning } },
+                    { value: self.summary.paused || 0, name: '已暂停', itemStyle: { color: RgPalette.danger } }
+                ];
+                const pieEmpty = pieData.every(function(d) { return !d.value; });
+                this.statusPieChart.setOption(pieEmpty ? {
+                    title: { text: '暂无活动数据', left: 'center', top: 'center',
+                        textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+                } : {
+                    title: { show: false },
+                    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+                    legend: { orient: 'vertical', right: 10, top: 'center', textStyle: { fontSize: 12 } },
+                    series: [{
+                        type: 'pie', radius: ['45%', '70%'], center: ['35%', '50%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: { borderRadius: RgPalette.radiusSm, borderColor: RgPalette.white, borderWidth: 2 },
+                        label: { show: false },
+                        emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
+                        data: pieData
+                    }]
+                }, true);
+            }
+            // 推送与参与柱状图 — 单系列两根柱（推送统计/参与统计各一根）。
+            // 旧实现两个系列各带 1 个值，柱体全部堆到第一个类目下，第二个类目恒空
+            if (this.overviewBarChart) {
+                this.overviewBarChart.setOption({
+                    tooltip: {
+                        trigger: 'axis',
+                        formatter: function(params) {
+                            const p = params[0];
+                            const d = (p && p.data) || {};
+                            return p.name + '<br/>' + p.marker + ' ' + (d.name || '') + '：<b>' + p.value + '</b>';
+                        }
+                    },
+                    grid: { left: 55, right: 30, top: 20, bottom: 40 },
+                    xAxis: { type: 'category', data: ['推送统计', '参与统计'], axisLabel: { fontSize: 13 } },
+                    yAxis: { type: 'value', minInterval: 1 },
+                    series: [
+                        {
+                            type: 'bar',
+                            data: [
+                                { value: self.summary.totalPushed || 0, name: '推送消息数', itemStyle: { color: RgPalette.brand } },
+                                { value: self.summary.totalParticipants || 0, name: '参与总人数', itemStyle: { color: RgPalette.seriesBlue } }
+                            ],
+                            barWidth: 50,
+                            itemStyle: { borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0] },
+                            label: { show: true, position: 'top', fontSize: 14, fontWeight: 'bold',
+                                color: RgPalette.textRegular, formatter: '{c}' }
+                        }
+                    ]
+                }, true);
+            }
+        },
+
+        /* ====== 数据加载 ====== */
+        loadCouponTemplates: function() {
+            const self = this;
+            couponTemplatePage({ page: 1, pageSize: 100 })
+                .then(function(res) {
+                    if (res.code === 1 && res.data) self.couponTemplates = res.data.records || [];
+                }).catch(function(err) { console.warn('[campaigns] 加载优惠券模板失败:', err) });
+        },
+        loadData: function() {
+            const self = this;
+            self.loading = true;
+            recommendBackendApi.getCampaignsPage({
+                page: self.currentPage,
+                pageSize: self.pageSize,
+                name: self.searchName || undefined,
+                status: self.searchStatus !== null ? self.searchStatus : undefined,
+                campaignType: self.searchType || undefined
+            }).then(function(res) {
+                if (res.code === 1) {
+                    const data = res.data;
+                    self.tableData = data.records || [];
+                    self.total = data.total || 0;
+                }
+            }).catch(function(err) {
+                ReggieUI.error('加载失败: ' + (err.response && err.response.data && err.response.data.msg || err.message));
+            }).finally(function() { self.loading = false; });
+        },
+        // 修改点：调用后端 stats API 获取真实统计数据（替代 pageSize=1000 前端聚合）
+        loadSummary: function() {
+            const self = this;
+            recommendBackendApi.getCampaignStats().then(function(res) {
+                if (res.code === 1 && res.data) {
+                    const s = res.data;
+                    self.summary.total = s.total || 0;
+                    self.summary.active = s.active || 0;
+                    self.summary.draft = s.draft || 0;
+                    self.summary.ended = s.ended || 0;
+                    self.summary.paused = s.paused || 0;
+                    self.summary.totalParticipants = s.total_participants || 0;
+                    self.summary.totalPushed = s.total_pushed || 0;
+                    self.renderOverviewCharts();
+                }
+            }).catch(function(err) {
+                // 加载失败也要重绘：饼图进入「暂无活动数据」空态，避免图区永久留白
+                console.warn('[campaigns] 加载统计数据失败:', err);
+                self.renderOverviewCharts();
+            });
+        },
+
+        /* ====== 表单与规则 ====== */
+        validateRuleJson: function(rule, value, callback) {
+            this.ruleError = '';
+            if (!value || value.trim() === '') {
+                callback(); return;
+            }
+            try {
+                JSON.parse(value);
+                callback();
+            } catch (e) {
+                this.ruleError = 'JSON 格式错误: ' + e.message;
+                callback(new Error('JSON 格式不正确'));
+            }
+        },
+        onRulePresetChange: function(type) {
+            var presets = {
+                '满减': '{"minAmount":80,"reduceAmount":10}',
+                '折扣': '{"discountRate":0.85}',
+                '秒杀': '{"flashPrice":9.9,"flashStock":100}'
+            };
+            this.form.ruleJson = presets[type] || '';
+            this.ruleError = '';
+            // 清除规则字段的验证状态
+            if (this.$refs.campaignForm) {
+                this.$refs.campaignForm.clearValidate('ruleJson');
+            }
+        },
+
+        // 修改点：<stat-cards> 组件统一卡片点击分发（payload.activeKey 为 .sync 更新后的值）
+        onCardClick: function(payload) {
+            const key = payload.activeKey
+            if (key === '') {
+                this.searchStatus = null
+            } else if (key === '1') {
+                this.searchStatus = 1
+            } else if (key === '0') {
+                this.searchStatus = 0
+            }
+            this.currentPage = 1
+            this.loadData()
+            this.loadSummary()
+        },
+        // 清空表格多选（批量操作栏“清空选择”按钮）
+        clearSelection: function() {
+            if (this.$refs.campaignTable) { this.$refs.campaignTable.clearSelection(); }
+            this.selectedRows = [];
+        },
+        resetSearch: function() {
+          this.searchName = ''
+          this.searchStatus = null
+          this.searchType = null
+          this.currentPage = 1
+          this.loadData()
+          this.loadSummary()
+        },
+        // 修改点：点击统计卡片快速筛选状态
+        quickFilter: function(status) {
+            if (this.searchStatus === status) {
+                this.searchStatus = null;
+            } else {
+                this.searchStatus = status;
+            }
+            this.currentPage = 1;
+            this.loadData();
+            this.loadSummary();
+        },
+        // 修改点：crud-table 的 selection-change 透传 {rows,ids,count}，兼容数组入参
+        onSelectionChange: function(payload) { this.selectedRows = payload.rows || payload; },
+        // 修改点：分页统一交由 crud-table 组件管理（@page-change 同时携带页码与每页条数）
+        onPageChange: function(p) {
+            this.currentPage = p.page;
+            if (p.pageSize) this.pageSize = p.pageSize;
+            this.loadData();
+        },
+        batchDelete: function() {
+            const self = this;
+            if (self.selectedRows.length === 0) return;
+            ReggieUI.confirm('确认删除选中的 ' + self.selectedRows.length + ' 个活动？', '批量删除', { type: 'warning' }).then(function() {
+                var ids = self.selectedRows.map(function(r) { return r.id; });
+                // 修改点(2026-07-10)：使用批量删除接口，单次网络请求
+                recommendBackendApi.batchDeleteCampaigns({ ids: ids }).then(function(res) {
+                    if (res.code === 1) {
+                        ReggieUI.success(res.data || '批量删除成功');
+                        self.selectedRows = [];
+                        self.loadData();
+                    } else {
+                        ReggieUI.error(res.msg || '批量删除失败');
+                    }
+                }).catch(function() { ReggieUI.error('批量删除失败'); });
+            }).catch(function(err) { console.warn('[campaigns] 批量删除操作取消或失败:', err) });
+        },
+        batchPause: function() {
+            const self = this;
+            var toPause = self.selectedRows.filter(function(r) { return r.status === 1; });
+            if (toPause.length === 0) { ReggieUI.warning('请选择进行中的活动'); return; }
+            ReggieUI.confirm('确认暂停选中的 ' + toPause.length + ' 个活动？', '批量暂停', { type: 'warning' }).then(function() {
+                var promises = toPause.map(function(r) { return recommendBackendApi.pauseCampaign(r.id); });
+                Promise.all(promises).then(function() {
+                    ReggieUI.success('批量暂停成功');
+                    self.loadData();
+                }).catch(function() { ReggieUI.error('部分暂停失败'); });
+            }).catch(function(err) { console.warn('[campaigns] 批量暂停操作取消或失败:', err) });
+        },
+
+        /* ====== 对话框 ====== */
+        // table-bar 操作按钮：新建活动
+        onTableAction: function(payload) {
+            if (payload && payload.key === 'add') {
+                this.openDialog('create');
+            }
+        },
+        openDialog: function(mode, row) {
+            this.dialogMode = mode;
+            this.dialogTitle = mode === 'create' ? '新建营销活动' : ('编辑活动 - ' + (row ? row.name : ''));
+            this.rulePreset = '';
+            this.ruleError = '';
+            if (mode === 'edit' && row) {
+                this.editId = row.id;
+                this.form = {
+                    name: row.name, campaignType: row.campaignType, targetType: row.targetType,
+                    description: row.description || '', ruleJson: row.ruleJson || '',
+                    priority: row.priority || 0, maxParticipants: row.maxParticipants,
+                    couponTemplateId: row.couponTemplateId || null
+                };
+                this.dateRange = [row.startTime || null, row.endTime || null];
+            } else {
+                this.editId = null;
+                this.resetForm();
+            }
+            this.dialogVisible = true;
+        },
+        resetForm: function() {
+            this.form = {
+                name: '', campaignType: 1, targetType: 1, description: '',
+                ruleJson: '', priority: 0, maxParticipants: null, couponTemplateId: null
+            };
+            this.dateRange = [];
+            this.rulePreset = '';
+            this.ruleError = '';
+            if (this.$refs.campaignForm) this.$refs.campaignForm.clearValidate();
+        },
+        submitForm: function() {
+            const self = this;
+            self.$refs.campaignForm.validate(function(valid) {
+                if (!valid) return;
+                if (!self.dateRange || self.dateRange.length < 2) {
+                    ReggieUI.warning('请选择活动时间'); return;
+                }
+                self.form.startTime = self.dateRange[0];
+                self.form.endTime = self.dateRange[1];
+                self.submitting = true;
+                const api = self.dialogMode === 'create'
+                    ? recommendBackendApi.createCampaign(self.form)
+                    : recommendBackendApi.updateCampaign(Object.assign({ id: self.editId }, self.form));
+
+                api.then(function(res) {
+                    if (res.code === 1) {
+                        ReggieUI.success(self.dialogMode === 'create' ? '创建成功' : '更新成功');
+                        self.dialogVisible = false;
+                        self.loadData();
+                    } else {
+                        ReggieUI.error(res.msg || '操作失败');
+                    }
+                }).catch(function() {
+                    ReggieUI.error('操作失败，请稍后重试');
+                }).finally(function() { self.submitting = false; });
+            });
+        },
+
+        /* ====== 行操作 ====== */
+        // 修改点：统一处理统计和删除（从更多下拉菜单触发）
+        handleRowCommand: function(cmd, row) {
+            if (cmd === 'push') {
+                this.openPushDialog(row);
+            } else if (cmd === 'stats') {
+                this.viewStats(row);
+            } else if (cmd === 'delete') {
+                this.deleteCampaign(row);
+            }
+        },
+        publishCampaign: function(row) {
+            const self = this;
+            ReggieUI.confirm('确认发布【' + row.name + '】？发布后将对目标用户可见。', '提示', { type: 'info' }).then(function() {
+                recommendBackendApi.publishCampaign(row.id).then(function(res) {
+                    if (res.code === 1) { ReggieUI.success('发布成功'); self.loadData(); }
+                    else { ReggieUI.error(res.msg || '发布失败'); }
+                });
+            }).catch(function(err) { console.warn('[campaigns] 发布活动取消或失败:', err) });
+        },
+        pauseCampaign: function(row) {
+            const self = this;
+            ReggieUI.confirm('确认暂停【' + row.name + '】？暂停后用户将无法参与。', '提示', { type: 'warning' }).then(function() {
+                recommendBackendApi.pauseCampaign(row.id).then(function(res) {
+                    if (res.code === 1) { ReggieUI.success('已暂停'); self.loadData(); }
+                    else { ReggieUI.error(res.msg || '暂停失败'); }
+                });
+            }).catch(function(err) { console.warn('[campaigns] 暂停活动取消或失败:', err) });
+        },
+        deleteCampaign: function(row) {
+            const self = this;
+            ReggieUI.confirm('确认删除【' + row.name + '】？此操作不可恢复！', '警告', {
+                type: 'warning', confirmButtonText: '确认删除'
+            }).then(function() {
+                recommendBackendApi.deleteCampaign(row.id).then(function(res) {
+                    if (res.code === 1) { ReggieUI.success('删除成功'); self.loadData(); }
+                    else { ReggieUI.error(res.msg || '删除失败'); }
+                });
+            }).catch(function(err) { console.warn('[campaigns] 删除活动取消或失败:', err) });
+        },
+
+        /* ====== 推送 ====== */
+        openPushDialog: function(row) {
+            this.pushTargetCampaign = row;
+            this.pushForm = { pushType: 1 };
+            this.pushPreview = [];
+            this.pushEstimate = 0;
+            this.pushDialogVisible = true;
+            this.fetchPushPreview(row.id);
+        },
+        fetchPushPreview: function(campaignId) {
+            const self = this;
+            getPushPreview(campaignId, { limit: 10 }).then(function(res) {
+                if (res.code === 1 && res.data) {
+                    self.pushPreview = res.data.preview || [];
+                    self.pushEstimate = res.data.estimate || self.pushPreview.length;
+                }
+            }).catch(function() {
+                self.pushEstimate = 0;
+            });
+        },
+        doPush: function() {
+            if (!this.pushTargetCampaign) return;
+            const self = this;
+            self.pushing = true;
+            const campaignId = self.pushTargetCampaign.id;
+            recommendBackendApi.batchPush(campaignId, { pushType: self.pushForm.pushType }).then(function(res) {
+                if (res.code === 1) {
+                    ReggieUI.success(res.msg || '推送成功，共触达 ' + (res.data || 0) + ' 位用户');
+                    self.pushDialogVisible = false;
+                    self.loadData();
+                } else {
+                    ReggieUI.error(res.msg || '推送失败');
+                }
+            }).catch(function(err) {
+                ReggieUI.error('推送失败: ' + (err.response && err.response.data && err.response.data.msg || err.message));
+            }).finally(function() { self.pushing = false; });
+        },
+
+        /* ====== 统计 ====== */
+        viewStats: function(row) {
+            // 修改点：确保 pushCount 有值，没有则从服务端查询
+            if (row.pushCount == null || row.pushCount === undefined) {
+                const self = this;
+                recommendBackendApi.getPushCount(row.id).then(function(res) {
+                    if (res.code === 1) {
+                        row.pushCount = res.data || 0;
+                    } else {
+                        row.pushCount = 0;
+                    }
+                    self.statsCampaign = row;
+                    self.statsDialogVisible = true;
+                    // crud-dialog 不转发 el-dialog 的 @open，且 destroy-on-close 每次打开容器都是新 DOM，
+                    // 必须在这里显式触发图表初始化，否则弹窗内图表恒为空白
+                    self.onStatsDialogOpen();
+                }).catch(function() {
+                    row.pushCount = 0;
+                    self.statsCampaign = row;
+                    self.statsDialogVisible = true;
+                    self.onStatsDialogOpen();
+                });
+            } else {
+                this.statsCampaign = row;
+                this.statsDialogVisible = true;
+                this.onStatsDialogOpen();
+            }
+        },
+        onStatsDialogOpen: function() {
+            const self = this;
+            this.$nextTick(function() {
+                const dom = document.getElementById('campaignStatsChart');
+                if (dom) {
+                    if (self.statsChart) self.statsChart.dispose();
+                    self.statsChart = echarts.init(dom);
+                    self.renderStatsChart();
+                }
+            });
+        },
+        renderStatsChart: function() {
+            if (!this.statsChart || !this.statsCampaign) return;
+            const c = this.statsCampaign;
+            // 修改点(2026-07-10)：使用真实数据，不再模拟
+            const pushCount = c.pushCount || 0;
+            const participants = c.currentParticipants || 0;
+            // 单系列两根柱：旧实现两个系列各 1 个值，柱体都堆在「推送统计」类目下
+            this.statsChart.setOption({
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: function(params) {
+                        const p = params[0];
+                        const d = (p && p.data) || {};
+                        return p.name + '<br/>' + p.marker + ' ' + (d.name || '') + '：<b>' + p.value + '</b>';
+                    }
+                },
+                grid: { left: 50, right: 20, top: 30, bottom: 30 },
+                xAxis: { type: 'category', data: ['推送统计', '参与统计'] },
+                yAxis: { type: 'value', minInterval: 1 },
+                series: [
+                    {
+                        type: 'bar',
+                        data: [
+                            { value: pushCount, name: '推送数', itemStyle: { color: RgPalette.brand } },
+                            { value: participants, name: '参与数', itemStyle: { color: RgPalette.seriesBlue } }
+                        ],
+                        barWidth: 50,
+                        itemStyle: { borderRadius: [RgPalette.radiusSm, RgPalette.radiusSm, 0, 0] },
+                        label: { show: true, position: 'top', fontSize: 13, fontWeight: 'bold',
+                            color: RgPalette.textRegular, formatter: '{c}' }
+                    }
+                ]
+            }, true);
+            this.handleResize();
+        },
+        statusTagType: function(status) {
+            return { 0: 'info', 1: 'success', 2: 'warning', 3: 'danger' }[status] || 'info';
+        }
+    }
+});
+</script>
+</body>
+</html>
+
+
+
+
+

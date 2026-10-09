@@ -1,0 +1,91 @@
+package com.reggie.module.dining.service;
+
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.reggie.module.dining.model.Reservation;
+import java.time.LocalDateTime;
+
+/**
+ * <p>
+ * 预订服务接口
+ * </p>
+ * <p>提供桌台预订、确认、取消、到店签到等功能</p>
+ *
+ * @author 心飞为你飞
+ * @since 2024-01-01
+ */
+public interface ReservationService extends IService<Reservation> {
+
+    /**
+     * 创建预订记录
+     *
+     * @param customerName 客户姓名
+     * @param phone        客户手机号
+     * @param reservedTime 预订时间
+     * @param seatCount    就座人数
+     * @param tableId      指定桌台ID（可为null）
+     * @param remark       备注
+     * @return 预订记录
+     */
+    Reservation createReservation(String customerName, String phone, LocalDateTime reservedTime, Integer seatCount,
+            Long tableId, String remark);
+
+    /**
+     * C 端顾客自助创建预订（携带用户ID，便于查询/取消归属校验）
+     *
+     * @param userId 顾客用户ID，其余参数同 {@link #createReservation}
+     * @return 预订记录
+     */
+    Reservation createReservation(String customerName, String phone, LocalDateTime reservedTime, Integer seatCount,
+            Long tableId, String remark, Long userId);
+
+    /**
+     * 顾客取消自己的预订，非本人记录抛业务异常；CONFIRMED 取消会释放所占桌台
+     *
+     * @param id     预订记录ID
+     * @param userId 顾客用户ID
+     */
+    void cancelMyReservation(Long id, Long userId);
+
+    /**
+     * 确认预订
+     *
+     * @param id 预订记录ID
+     */
+    void confirmReservation(Long id);
+
+    /**
+     * 取消预订
+     *
+     * @param id 预订记录ID
+     */
+    void cancelReservation(Long id);
+
+    /**
+     * 到店签到
+     *
+     * @param id 预订记录ID
+     */
+    void arrive(Long id);
+
+    /**
+     * 更新预订记录（仅允许待确认和已确认状态修改）
+     *
+     * @param id           预订记录ID
+     * @param customerName 客户姓名
+     * @param phone        客户手机号
+     * @param reservedTime 预订时间
+     * @param seatCount    就座人数
+     * @param tableId      指定桌台ID（可为null）
+     * @param remark       备注
+     * @return 更新后的预订记录
+     */
+    Reservation updateReservation(Long id, String customerName, String phone,
+            LocalDateTime reservedTime, Integer seatCount, Long tableId, String remark);
+
+    /**
+     * 删除预订记录（仅允许取消状态删除）
+     *
+     * @param id 预订记录ID
+     */
+    void deleteReservation(Long id);
+}

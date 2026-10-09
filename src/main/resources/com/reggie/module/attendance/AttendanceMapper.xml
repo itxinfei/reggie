@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.reggie.module.attendance.mapper.AttendanceMapper">
+
+    <resultMap id="AttendanceResultMap" type="com.reggie.module.attendance.model.Attendance">
+        <id property="id" column="id"/>
+        <result property="employeeId" column="employee_id"/>
+        <result property="employeeName" column="employee_name"/>
+        <result property="date" column="date"/>
+        <result property="checkInTime" column="check_in_time"/>
+        <result property="checkOutTime" column="check_out_time"/>
+        <result property="status" column="status"/>
+        <result property="workHours" column="work_hours"/>
+        <result property="remark" column="remark"/>
+        <result property="tenantId" column="tenant_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <select id="countByStatusInWeek" resultType="java.util.Map">
+        SELECT status, COUNT(*) AS cnt
+        FROM attendance
+        WHERE tenant_id = #{tenantId}
+          AND date BETWEEN #{weekStart} AND #{weekEnd}
+        GROUP BY status
+    </select>
+
+    <select id="avgWorkHoursInWeek" resultType="java.math.BigDecimal">
+        SELECT AVG(work_hours)
+        FROM attendance
+        WHERE tenant_id = #{tenantId}
+          AND date BETWEEN #{weekStart} AND #{weekEnd}
+          AND work_hours IS NOT NULL
+    </select>
+
+    <select id="countDistinctEmployeesInWeek" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT employee_id)
+        FROM attendance
+        WHERE tenant_id = #{tenantId}
+          AND date BETWEEN #{weekStart} AND #{weekEnd}
+    </select>
+
+    <select id="listByEmployeeAndMonth" resultMap="AttendanceResultMap">
+        SELECT a.*
+        FROM attendance a
+        INNER JOIN (
+            SELECT employee_id, date, MAX(update_time) AS max_update
+            FROM attendance
+            WHERE employee_id = #{employeeId}
+              AND tenant_id = #{tenantId}
+              AND date BETWEEN #{monthStart} AND #{monthEnd}
+            GROUP BY employee_id, date
+        ) latest ON a.employee_id = latest.employee_id
+                 AND a.date = latest.date
+                 AND a.update_time = latest.max_update
+        ORDER BY a.date ASC
+    </select>
+
+    <select id="listByDate" resultMap="AttendanceResultMap">
+        SELECT *
+        FROM attendance
+        WHERE tenant_id = #{tenantId}
+          AND date = #{date}
+        ORDER BY employee_id ASC
+    </select>
+
+    <select id="listAbnormalInWeek" resultMap="AttendanceResultMap">
+        SELECT *
+        FROM attendance
+        WHERE tenant_id = #{tenantId}
+          AND date BETWEEN #{weekStart} AND #{weekEnd}
+          AND status IN (0, 2, 3)
+        ORDER BY date DESC, employee_id ASC
+    </select>
+
+</mapper>

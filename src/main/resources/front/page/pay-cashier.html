@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+        <title>在线支付 - 瑞吉外卖</title>
+        <link rel="icon" href="./../images/favico.ico">
+        <script src="./../js/base.js?v=20260930"></script>
+        <link rel="stylesheet" href="../styles/vant.min.css" />
+        <link rel="stylesheet" href="../styles/index.css?v=20260930b" />
+        <link rel="stylesheet" href="../styles/skeleton.css?v=20260930" />
+        <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+        <script src="../js/icon-fallback.js?v=20260917"></script>
+        <style>
+            /* 收银台页样式（2026-09-21：px→rem、硬编码色→index.css 令牌） */
+            .cashier-wrap { min-height: 100vh; min-height: 100dvh; background: var(--bg-page); padding-bottom: calc(88rem + env(safe-area-inset-bottom)); }
+            .cashier-head {
+                height: 46rem; display: flex; align-items: center; justify-content: center;
+                /* 默认 content-box：内容区 46，padding-top 叠加刘海安全区，总高 = 46 + safe */
+                padding-top: constant(safe-area-inset-top);
+                padding-top: env(safe-area-inset-top, 0px);
+                position: sticky; top: 0; z-index: 10;
+                background: var(--bg-card); border-bottom: var(--separator);
+            }
+            .cashier-head .back, .cashier-head .home {
+                position: absolute; top: 0; height: 46rem; min-width: 44rem;
+                /* 图标对齐安全区下方的 46rem 内容区 */
+                top: constant(safe-area-inset-top);
+                top: env(safe-area-inset-top, 0px);
+                display: flex; align-items: center; justify-content: center;
+                font-size: 22rem; color: var(--color-text-primary); text-decoration: none;
+            }
+            .cashier-head .back { left: 4rem; }
+            .cashier-head .home { right: 4rem; font-size: 20rem; }
+            .cashier-head .title { font-size: 17rem; font-weight: 600; color: var(--color-text-primary); }
+            .amount-card {
+                background: var(--bg-card); margin: 12rem; border-radius: var(--radius-lg);
+                padding: 28rem 20rem 24rem; text-align: center; box-shadow: var(--shadow-sm);
+            }
+            .amount-card .label { font-size: 13rem; color: var(--color-text-hint); margin-bottom: 8rem; }
+            .amount-card .amount { font-size: 40rem; font-weight: 700; color: var(--color-text-primary); line-height: 1.1; font-variant-numeric: tabular-nums; }
+            .amount-card .amount .sym { font-size: 20rem; font-weight: 600; margin-right: 2rem; }
+            .amount-card .order-no { margin-top: 12rem; font-size: 12rem; color: var(--color-text-hint); word-break: break-all; }
+            .pay-card { background: var(--bg-card); margin: 12rem; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
+            .pay-item { display: flex; align-items: center; padding: 16rem; min-height: 56rem; box-sizing: border-box; }
+            .pay-item + .pay-item { border-top: var(--separator); }
+            .pay-item .pay-icon { width: 32rem; height: 32rem; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 22rem; color: var(--color-text-white); margin-right: 12rem; }
+            .pay-icon.wechat { background: var(--color-success); }
+            .pay-icon.alipay { background: var(--platform-alipay); } /* 支付宝品牌蓝令牌 */
+            .pay-icon.subsidy { background: var(--color-brand-500, #ffc200); }
+            .pay-item .pay-name { flex: 1; font-size: 15rem; color: var(--color-text-primary); }
+            .pay-item .pay-check { font-size: 20rem; color: var(--color-primary); }
+            .pay-item .pay-check:not([class*="fill"]) { color: var(--border-light); }
+            .pay-item:active { background: var(--bg-hover); }
+            /* 修改点(2026-09-27 审查P1对比度族)：金底#ffd54f上橙字仅1.51:1 → 深金字#4a3500 8.27:1 */
+            .mock-tip {
+                margin: 4rem 12rem 0; padding: 12rem; border-radius: var(--radius-md);
+                background: var(--color-primary-light); color: var(--color-primary-text);
+                font-size: 12rem; line-height: 1.6; display: flex; align-items: flex-start;
+            }
+            .mock-tip i { margin-right: 6rem; font-size: 15rem; line-height: 1.5; }
+            .pay-bar {
+                position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+                /* 修改点(2026-09-27 审查P2桌面居中族)：桌面收敛到 750px 居中列，防 fixed 底栏逃逸 */
+                max-width: 750px; margin: 0 auto;
+                padding: 10rem 16rem calc(10rem + env(safe-area-inset-bottom));
+                background: var(--bg-card); border-top: var(--separator);
+                display: flex; align-items: center; gap: 12rem;
+            }
+            .pay-bar .bar-amount { flex-shrink: 0; font-size: 13rem; color: var(--color-text-secondary); }
+            .pay-bar .bar-amount b { font-size: 20rem; color: var(--color-price); font-weight: 700; }
+            .pay-bar .confirm-btn {
+                flex: 1; height: var(--btn-h); border: none; border-radius: var(--btn-radius);
+                background: var(--color-primary); color: var(--color-primary-text); font-size: var(--btn-font); font-weight: 600;
+                box-shadow: var(--shadow-cta);
+            }
+            .pay-bar .confirm-btn:active { opacity: 0.85; }
+            .pay-bar .confirm-btn[disabled] { background: var(--border-light); color: var(--color-text-hint); }
+            .cashier-state { padding: 80rem 24rem; text-align: center; color: var(--color-text-hint); }
+            .cashier-state i { font-size: 48rem; display: block; margin-bottom: 12rem; }
+            /* 错误态出口按钮（修死胡同） */
+            .state-actions { display: flex; gap: 12rem; justify-content: center; margin-top: 20rem; }
+            .state-btn { display: inline-flex; align-items: center; justify-content: center; height: 40rem;
+                padding: 0 24rem; border-radius: var(--btn-radius); font-size: 14rem; text-decoration: none;
+                box-sizing: border-box; border: 1px solid var(--border-light);
+                color: var(--color-text-secondary); background: var(--bg-card); }
+            .state-btn-primary { background: var(--color-primary); border-color: var(--color-primary);
+                color: var(--color-primary-text); font-weight: 600; }
+            /* 真实支付扫码弹窗（NATIVE） */
+            .qr-pay-popup { width: 280rem; border-radius: var(--radius-lg); overflow: hidden; }
+            .qr-pay-box { padding: 24rem 20rem 20rem; text-align: center; }
+            .qr-pay-title { font-size: 16rem; font-weight: 600; color: var(--color-text-primary); }
+            .qr-pay-img { width: 200rem; height: 200rem; margin: 16rem auto 0; display: block; }
+            .qr-pay-amount { font-size: 22rem; font-weight: 700; color: var(--color-price);
+                margin-top: 12rem; font-variant-numeric: tabular-nums; }
+            .qr-pay-tip { font-size: 12rem; color: var(--color-text-hint);
+                margin-top: 8rem; line-height: 1.6; }
+            .qr-pay-cancel { margin-top: 16rem; width: 100%; height: 44rem; border: none;
+                border-radius: 22rem; background: var(--color-primary-light);
+                color: var(--color-primary-text); font-size: 15rem; }
+        </style>
+    </head>
+    <body>
+        <div id="cashier">
+            <div class="cashier-wrap" v-if="loaded">
+                <div class="cashier-head">
+                    <a class="back" href="javascript:;" @click="goBack" aria-label="返回"><i class="ri-arrow-left-s-line"></i></a>
+                    <span class="title">在线支付</span>
+                    <a class="home" href="/front/index.html" aria-label="返回首页"><i class="ri-home-4-line"></i></a>
+                </div>
+
+                <div class="amount-card">
+                    <div class="label">应付金额</div>
+                    <div class="amount"><span class="sym">¥</span>{{ amountText }}</div>
+                    <div class="order-no" v-if="orderNo">订单号：{{ orderNo }}</div>
+                </div>
+
+                <div class="pay-card">
+                    <div class="pay-item" role="button" tabindex="0"
+                         :class="{ 'pay-item--on': channel === 'WECHAT' }"
+                         @click="selectChannel('WECHAT')" @keydown.enter="selectChannel('WECHAT')">
+                        <div class="pay-icon wechat">
+                            <i class="ri-wechat-line"></i>
+                        </div>
+                        <span class="pay-name">微信支付</span>
+                        <i class="pay-check" :class="channel === 'WECHAT' ? 'ri-checkbox-blank-circle-fill' : 'ri-checkbox-blank-circle-line'"></i>
+                    </div>
+                    <div class="pay-item" role="button" tabindex="0"
+                         :class="{ 'pay-item--on': channel === 'ALIPAY' }"
+                         @click="selectChannel('ALIPAY')" @keydown.enter="selectChannel('ALIPAY')">
+                        <div class="pay-icon alipay">
+                            <i class="ri-alipay-line"></i>
+                        </div>
+                        <span class="pay-name">支付宝</span>
+                        <i class="pay-check" :class="channel === 'ALIPAY' ? 'ri-checkbox-blank-circle-fill' : 'ri-checkbox-blank-circle-line'"></i>
+                    </div>
+                    <!-- 餐补支付（企业餐补）：仅已开通且有余额的顾客可见 -->
+                    <div class="pay-item" role="button" tabindex="0" v-if="subsidyEnabled"
+                         :class="{ 'pay-item--on': channel === 'SUBSIDY' }"
+                         @click="selectChannel('SUBSIDY')" @keydown.enter="selectChannel('SUBSIDY')">
+                        <div class="pay-icon subsidy">
+                            <i class="ri-coupon-3-line"></i>
+                        </div>
+                        <span class="pay-name">餐补支付（余额 ¥{{ subsidyBalanceText }}）</span>
+                        <i class="pay-check" :class="channel === 'SUBSIDY' ? 'ri-checkbox-blank-circle-fill' : 'ri-checkbox-blank-circle-line'"></i>
+                    </div>
+                </div>
+
+                <!-- 沙箱提示：仅 mock 模式展示（真实支付不显示） -->
+                <div class="mock-tip" v-if="isMock">
+                    <i class="ri-information-line"></i>
+                    <span>演示环境：当前为模拟支付，点击「确认支付」即模拟完成付款，不会产生真实交易。</span>
+                </div>
+            </div>
+
+            <!-- 真实支付扫码弹窗：NATIVE 场景展示渠道二维码，支付成功后轮询自动跳转 -->
+            <van-popup v-model="showQrPopup" position="center" round
+                       :close-on-click-overlay="false" @close="onQrPopupClose"
+                       class="qr-pay-popup">
+                <div class="qr-pay-box">
+                    <div class="qr-pay-title">请使用{{ channelName }}扫一扫</div>
+                    <img class="qr-pay-img" :src="qrCodeUrl" alt="支付二维码">
+                    <div class="qr-pay-amount">¥{{ amountText }}</div>
+                    <div class="qr-pay-tip">支付完成后页面自动跳转，无需手动操作</div>
+                    <button class="qr-pay-cancel" @click="showQrPopup = false">取消支付</button>
+                </div>
+            </van-popup>
+
+            <!-- 参数缺失/订单加载失败态（2026-09-21：补可点出口，修死胡同） -->
+            <div class="cashier-state" v-if="loadError">
+                <i class="ri-file-warning-line"></i>
+                <p>{{ loadError }}</p>
+                <div class="state-actions">
+                    <button class="state-btn state-btn-primary" @click="goBack">返回上一页</button>
+                    <a class="state-btn" href="/front/index.html">返回首页</a>
+                </div>
+            </div>
+
+            <div class="pay-bar" v-if="loaded">
+                <div class="bar-amount">应付 <b>¥{{ amountText }}</b></div>
+                <button class="confirm-btn" :disabled="paying" @click="confirmPay">
+                    {{ paying ? '支付处理中...' : '确认支付' }}
+                </button>
+            </div>
+        </div>
+
+        <script src="../../backend/plugins/vue/vue.js"></script>
+        <script src="../../backend/plugins/axios/axios.min.js"></script>
+        <script src="./../js/request.js?v=20260930"></script>
+        <script src="./../js/common.js?v=20260930b"></script>
+        <script src="../js/vant.min.js"></script>
+        <script src="./../api/payment.js?v=20260918"></script>
+        <script src="./../api/order.js?v=20260917"></script>
+        <script>
+        new Vue({
+            el: '#cashier',
+            data: function () {
+                return {
+                    orderId: '',
+                    channel: 'WECHAT',
+                    // 餐补（企业餐补）：已开通且有账户才展示餐补支付入口
+                    subsidyEnabled: false,
+                    subsidyBalance: 0,
+                    // 商户支付单号（/pay 返回，回调 out_trade_no 必需）
+                    tradeNo: '',
+                    orderNo: '',
+                    amount: 0,
+                    loaded: false,
+                    loadError: '',
+                    paying: false,
+                    // 渠道模式：true=模拟支付（提示条可见、走 mock 回调），false=真实渠道
+                    isMock: false,
+                    // 扫码弹窗（NATIVE）
+                    showQrPopup: false,
+                    qrCodeUrl: '',
+                    // 支付结果轮询
+                    pollTimer: null,
+                    pollBeginTs: 0,
+                    // 页面跳渠道收银台前的隐藏时刻（用于扣除隐藏时长，暂停超时累计）
+                    hiddenTs: 0
+                }
+            },
+            computed: {
+                isWechat: function () { return this.channel !== 'ALIPAY' && this.channel !== 'SUBSIDY'; },
+                channelName: function () {
+                    if (this.channel === 'ALIPAY') return '支付宝';
+                    if (this.channel === 'SUBSIDY') return '餐补';
+                    return '微信支付';
+                },
+                subsidyBalanceText: function () { return Number(this.subsidyBalance || 0).toFixed(2); },
+                amountText: function () { return Number(this.amount || 0).toFixed(2); }
+            },
+            created: function () {
+                var q = this.parseQuery();
+                this.orderId = q.orderId || '';
+                this.channel = (q.channel === 'ALIPAY') ? 'ALIPAY' : 'WECHAT';
+                this.tradeNo = q.tradeNo || '';
+                // 修复(2026-09-27 审查P0-3)：仅 orderId 是硬门槛。tradeNo 缺失/过期/被构造
+                // 不再判死——「确认支付」调 /pay 幂等重建支付单并回填权威 tradeNo，
+                // 此前整页死胡同（"请返回重新下单"但重新下单也回不来）
+                if (!this.orderId) {
+                    this.loadError = '支付参数缺失，请返回重新下单';
+                    return;
+                }
+                this.loadOrder();
+                this.loadSubsidy();
+                // H5 场景跳渠道收银台后返回时，页面重新可见立即查一次支付结果
+                document.addEventListener('visibilitychange', this.handleVisibility);
+                window.addEventListener('pageshow', this.onPageShow);
+            },
+            beforeDestroy: function () {
+                document.removeEventListener('visibilitychange', this.handleVisibility);
+                window.removeEventListener('pageshow', this.onPageShow);
+                this.stopPolling();
+            },
+            methods: {
+                // 选择支付渠道：支付进行中/轮询中禁止切换，避免单据错乱
+                selectChannel: function (ch) {
+                    if (this.paying) return;
+                    this.channel = ch;
+                },
+                parseQuery: function () {
+                    var map = {};
+                    (window.location.search.replace(/^\?/, '').split('&') || []).forEach(function (pair) {
+                        if (!pair) return;
+                        var kv = pair.split('=');
+                        map[decodeURIComponent(kv[0] || '')] = decodeURIComponent(kv[1] || '');
+                    });
+                    return map;
+                },
+                // 拉订单真实金额与单号展示（不信任 URL 透传金额，支付金额以后端订单为准）
+                loadOrder: function () {
+                    var self = this;
+                    getOrderDetailApi(this.orderId).then(function (res) {
+                        if (res && res.code === 1 && res.data) {
+                            var d = res.data;
+                            self.amount = Number(d.amount || d.actualAmount || 0);
+                            self.orderNo = d.number || d.orderNo || '';
+                            self.loaded = true;
+                            // 校验支付单归属与模式（他人订单直接报错；已支付补跳成功页）
+                            self.checkPaymentState();
+                        } else {
+                            self.loadError = (res && res.msg) || '订单信息加载失败';
+                        }
+                    }).catch(function () {
+                        self.loadError = '网络异常，订单信息加载失败';
+                    });
+                },
+                // 查询本人餐补余额（未开通时 enabled=false，隐藏餐补支付入口；失败静默不影响收银台）
+                loadSubsidy: function () {
+                    var self = this;
+                    subsidyMyApi().then(function (res) {
+                        if (res && res.code === 1 && res.data) {
+                            self.subsidyEnabled = !!res.data.enabled && Number(res.data.balance) > 0;
+                            self.subsidyBalance = Number(res.data.balance || 0);
+                        }
+                    }).catch(function () { /* 静默：餐补查询失败不阻塞常规支付 */ });
+                },
+                // 确认支付：重新调 /pay（幂等复用同一 PENDING 支付单、重新拿渠道支付链接），
+                // 按 mockMode 分支——演示环境走模拟回调；真实环境扫码弹二维码 / H5 跳渠道页 + 轮询
+                confirmPay: function () {
+                    if (this.paying) return;
+                    var self = this;
+                    this.paying = true;
+                    // C 端为移动端浏览器，显式 payType=H5（微信出 H5 链接，支付宝不识别走默认 WAP）
+                    paymentCreateApi({ orderId: this.orderId, channel: this.channel, payType: 'H5' })
+                        .then(function (res) {
+                            if (!res || res.code !== 1 || !res.data) {
+                                self.paying = false;
+                                vant.Toast.fail((res && res.msg) || '支付下单失败，请重试');
+                                return;
+                            }
+                            var d = res.data;
+                            if (!d.success) {
+                                self.paying = false;
+                                vant.Toast.fail(d.errorMsg || '支付下单失败，请重试');
+                                return;
+                            }
+                            // 以 /pay 回填的权威 tradeNo 为准（URL 上的可能被构造成本人另一订单的单号）
+                            if (d.tradeNo) {
+                                self.tradeNo = d.tradeNo;
+                            }
+                            if (!self.tradeNo) {
+                                // 兜底：无单号无法发起回调/轮询（0元单直接确认支付到达此处），停止并提示
+                                self.paying = false;
+                                vant.Toast.fail('支付单创建异常，请刷新后重试');
+                                return;
+                            }
+                            if (d.mockMode) {
+                                self.mockNotifyPay();
+                                return;
+                            }
+                            // 餐补支付：/pay 内同步扣款并推进订单，直接跳结果页
+                            if (self.channel === 'SUBSIDY' && d.success) {
+                                self.stopPolling();
+                                window.location.replace('/front/page/pay-success.html?reorderId=' + self.orderId);
+                                return;
+                            }
+                            // 真实渠道：先启动轮询，再按支付形态展示二维码或跳转
+                            self.startPolling();
+                            if (d.qrCodeUrl) {
+                                self.qrCodeUrl = d.qrCodeUrl;
+                                self.showQrPopup = true;
+                            } else if (d.payUrl) {
+                                window.location.href = d.payUrl;
+                            } else {
+                                self.stopPolling();
+                                self.paying = false;
+                                vant.Toast.fail('支付渠道响应异常，请重试');
+                            }
+                        }).catch(function () {
+                            self.paying = false;
+                            vant.Toast.fail('网络异常，支付下单失败，请重试');
+                        });
+                },
+                // 演示环境：构造渠道模拟回调参数，请求 /notify/{channel}（mock-mode 跳过验签直接受理）
+                mockNotifyPay: function () {
+                    var amount = Number(this.amount || 0);
+                    var params = {
+                        out_trade_no: this.tradeNo,
+                        sign: 'mock'
+                    };
+                    if (this.isWechat) {
+                        // 微信回调：total_fee 单位分，result_code=SUCCESS 表示业务成功
+                        params.total_fee = String(Math.round(amount * 100));
+                        params.result_code = 'SUCCESS';
+                        params.return_code = 'SUCCESS';
+                        params.transaction_id = 'MOCK_WX_' + Date.now();
+                    } else {
+                        // 支付宝回调：total_amount 单位元，trade_status=TRADE_SUCCESS
+                        params.total_amount = amount.toFixed(2);
+                        params.trade_status = 'TRADE_SUCCESS';
+                        params.trade_no = 'MOCK_ALI_' + Date.now();
+                    }
+                    var self = this;
+                    paymentNotifyMockApi(this.channel, params).then(function (res) {
+                        if (res && res.code === 1) {
+                            // 回调已受理并推进订单状态 → 跳支付结果页（由其回查确认）
+                            window.location.replace('/front/page/pay-success.html?reorderId=' + self.orderId);
+                        } else {
+                            self.paying = false;
+                            vant.Toast.fail((res && res.msg) || '支付失败，请重试');
+                        }
+                    }).catch(function () {
+                        self.paying = false;
+                        vant.Toast.fail('网络异常，支付失败，请重试');
+                    });
+                },
+                // ============ 真实支付轮询（2s/次，最长 5 分钟）============
+                startPolling: function () {
+                    this.stopPolling();
+                    this.pollBeginTs = Date.now();
+                    var self = this;
+                    this.pollTimer = setInterval(function () { self.pollOnce(); }, 2000);
+                },
+                stopPolling: function () {
+                    if (this.pollTimer) {
+                        clearInterval(this.pollTimer);
+                        this.pollTimer = null;
+                    }
+                },
+                pollOnce: function () {
+                    var self = this;
+                    paymentQueryApi(this.tradeNo).then(function (res) {
+                        if (res && res.code === 1 && res.data) {
+                            var st = res.data.status;
+                            if (st === 'SUCCESS') {
+                                self.gotoSuccess();
+                                return;
+                            }
+                            if (st === 'FAIL' || st === 'REFUND') {
+                                self.handlePollEnd(st === 'REFUND' ? '支付单状态异常，请重新发起支付'
+                                    : '支付失败，请重新发起支付');
+                                return;
+                            }
+                        }
+                        self.checkPollTimeout();
+                    }).catch(function () {
+                        // 单次网络异常静默；持续异常也要保证超时能到期（否则 paying 永久 true、按钮永久禁用）
+                        self.checkPollTimeout();
+                    });
+                },
+                // 轮询窗口（5 分钟，只累计页面可见时间）到期处理；返回 true 表示已超时
+                checkPollTimeout: function () {
+                    if (Date.now() - this.pollBeginTs > 5 * 60 * 1000) {
+                        this.handlePollTimeout();
+                        return true;
+                    }
+                    return false;
+                },
+                gotoSuccess: function () {
+                    this.stopPolling();
+                    window.location.replace('/front/page/pay-success.html?reorderId=' + this.orderId);
+                },
+                handlePollEnd: function (msg) {
+                    this.stopPolling();
+                    this.showQrPopup = false;
+                    this.paying = false;
+                    vant.Toast.fail(msg);
+                },
+                handlePollTimeout: function () {
+                    this.stopPolling();
+                    this.showQrPopup = false;
+                    this.paying = false;
+                    // 原 Toast 弱提示易错过：改用弹窗明确告知，并提示去订单列表核实
+                    vant.Dialog.alert({
+                        title: '等待支付结果超时',
+                        message: '如您已完成付款，可在订单列表中查看支付结果。'
+                    }).then(function () {}).catch(function () {});
+                },
+                // 扫码弹窗关闭（用户点取消）：停止轮询与等待；H5 场景弹窗未开，不受影响
+                onQrPopupClose: function () {
+                    this.stopPolling();
+                    this.paying = false;
+                },
+                // 页面可见性变化：跳渠道收银台时记录隐藏时刻；返回时扣除隐藏时长（5 分钟窗口
+                // 只累计页面可见时间），并无视 paying 至少查一次——用户可能在超时后才完成付款
+                handleVisibility: function () {
+                    if (document.hidden) {
+                        this.hiddenTs = Date.now();
+                        // 隐藏期间暂停 2s 轮询：避免后台空转耗电与无意义请求；
+                        // 返回时由下方 paying && !pollTimer 条件自动重启
+                        if (this.pollTimer) this.stopPolling();
+                        return;
+                    }
+                    if (this.hiddenTs) {
+                        this.pollBeginTs += Date.now() - this.hiddenTs;
+                        this.hiddenTs = 0;
+                    }
+                    if (this.paying && !this.pollTimer) {
+                        this.startPolling();
+                    }
+                    this.pollOnce();
+                },
+                // iOS Safari 从 bfcache 恢复可能只触发 pageshow 而无 visibilitychange
+                onPageShow: function (e) {
+                    if (e.persisted) {
+                        this.handleVisibility();
+                    }
+                },
+                // 进入收银台时校验支付单：归属/模式/已支付补跳
+                checkPaymentState: function () {
+                    var self = this;
+                    // 无 tradeNo 视为无在途支付单，跳过校验直接进收银台（确认支付时 /pay 会重建）
+                    if (!this.tradeNo) { this.isMock = false; return; }
+                    paymentQueryApi(this.tradeNo).then(function (res) {
+                        if (res && res.code === 1 && res.data) {
+                            self.isMock = !!res.data.mockMode;
+                            if (res.data.status === 'SUCCESS') {
+                                window.location.replace('/front/page/pay-success.html?reorderId=' + self.orderId);
+                            }
+                        } else {
+                            // 修复(2026-09-27 审查P0-3)：支付单查不到（过期/被构造）不再整页判死，
+                            // 忽略该单号继续进收银台，「确认支付」会通过 /pay 重建支付单
+                            self.tradeNo = '';
+                        }
+                    }).catch(function () {
+                        // 网络抖动不阻断收银台展示，确认支付时仍会重新校验
+                    });
+                },
+                goBack: function () {
+                    // 返回优先回订单/结算来源；无历史时回首页，避免死胡同
+                    if (window.history.length > 1) {
+                        window.history.back();
+                    } else {
+                        window.location.replace('/front/index.html');
+                    }
+                }
+            }
+        });
+        </script>
+    </body>
+</html>

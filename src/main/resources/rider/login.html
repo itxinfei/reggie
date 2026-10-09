@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>骑手登录</title>
+  <link rel="stylesheet" href="/front/styles/vant.min.css">
+  <link rel="stylesheet" href="/shared/styles/tokens.css?v=20260930b">
+  <link rel="stylesheet" href="/backend/plugins/remixicon/remixicon.css">
+  <link rel="stylesheet" href="/rider/css/rider.css?v=20260930e">
+</head>
+<body>
+  <div id="app">
+    <main id="rider-main">
+      <h1 class="sr-only">骑手登录</h1>
+    <van-nav-bar title="骑手登录"></van-nav-bar>
+    <div class="login-wrap">
+      <div class="login-title">骑手登录</div>
+      <div class="login-sub">请使用门店分配的骑手账号登录</div>
+      <van-cell-group inset>
+        <van-field v-model="phone" name="phone" label="手机号" placeholder="请输入手机号"
+                   type="tel" maxlength="11" clearable
+                   :error="!!phoneError" :error-message="phoneError" @input="phoneError = ''"></van-field>
+        <van-field v-model="password" name="password" label="密码" placeholder="请输入密码"
+                   type="password"
+                   :error="!!passwordError" :error-message="passwordError" @input="passwordError = ''"
+                   @keyup.enter="onLogin"></van-field>
+      </van-cell-group>
+      <div class="login-extra">
+        <van-checkbox v-model="rememberMe" icon-size="16px">记住我（30天免登录）</van-checkbox>
+        <button type="button" class="forgot-link" @click="openForgot">忘记密码</button>
+      </div>
+      <div class="rider-actions">
+        <button class="rider-btn primary" :disabled="loading" @click="onLogin">
+          {{ loading ? '登录中…' : '登 录' }}
+        </button>
+      </div>
+      <div class="login-tip" v-if="isDev">演示账号：13900005003　密码：123456（仅开发环境显示）</div>
+    </div>
+
+    <!-- 忘记密码：手机号 + 短信验证码 + 新密码（Vant2 无 Dialog.prompt，用 popup 自建） -->
+    <van-popup v-model="showForgot" position="bottom" round :style="{ maxHeight: '90%' }">
+      <div class="login-wrap">
+        <div class="login-title">重置密码</div>
+        <div class="login-sub">验证注册手机号后设置新密码</div>
+        <van-cell-group inset>
+          <van-field v-model="fPhone" label="手机号" type="tel" maxlength="11" placeholder="请输入注册手机号"
+                     :error="!!fPhoneError" :error-message="fPhoneError"
+                     @input="fPhoneError = ''"></van-field>
+          <van-field v-model="fCode" label="验证码" type="tel" maxlength="6" placeholder="请输入短信验证码">
+            <template #button>
+              <button type="button" class="code-link" :class="{ disabled: codeCooldown > 0 || codeSending }"
+                    @click="sendCode">
+                {{ codeCooldown > 0 ? codeCooldown + 's后重发' : (codeSending ? '发送中…' : '获取验证码') }}
+              </button>
+            </template>
+          </van-field>
+          <van-field v-model="fPassword" label="新密码" type="password" maxlength="20"
+                     placeholder="6-20位新密码"></van-field>
+          <van-field v-model="fConfirm" label="确认密码" type="password" maxlength="20"
+                     placeholder="再次输入新密码" @keyup.enter="onReset"></van-field>
+        </van-cell-group>
+        <div class="rider-actions">
+          <button class="rider-btn primary" :disabled="resetLoading" @click="onReset">
+            {{ resetLoading ? '提交中…' : '确认重置' }}
+          </button>
+        </div>
+      </div>
+    </van-popup>
+  </main>
+  </div>
+
+  <script src="/backend/plugins/vue/vue.js"></script>
+  <script src="/backend/plugins/axios/axios.min.js"></script>
+  <script src="/front/js/vant.min.js"></script>
+  <script src="/rider/js/request.js?v=20260930"></script>
+  <script src="/rider/js/api.js"></script>
+  <script>
+    Vue.use(vant);
+    new Vue({
+      data: function () {
+        return {
+          phone: '', password: '', loading: false, phoneError: '', passwordError: '',
+          rememberMe: false,
+          // 忘记密码弹层
+          showForgot: false,
+          fPhone: '', fCode: '', fPassword: '', fConfirm: '',
+          fPhoneError: '', codeCooldown: 0, codeSending: false, resetLoading: false,
+          codeTimer: null,
+          // 仅本机访问显示演示账号，避免在内网/生产环境泄露
+          isDev: ['localhost', '127.0.0.1'].indexOf(window.location.hostname) !== -1
+        };
+      },
+      methods: {
+        onLogin: function () {
+          var phone = (this.phone || '').trim();
+          var password = this.password || '';
+          var vm = this;
+          vm.phoneError = '';
+          vm.passwordError = '';
+          if (!/^1[3-9]\d{9}$/.test(phone)) {
+            vm.phoneError = '请输入正确的手机号';
+            return;
+          }
+          if (!password) {
+            vm.passwordError = '请输入密码';
+            return;
+          }
+          vm.loading = true;
+          RiderApi.login(phone, password, vm.rememberMe).then(function (res) {
+            var rider = res.data || {};
+            try {
+              sessionStorage.setItem('riderName', rider.name || '');
+              sessionStorage.setItem('riderId', rider.id != null ? String(rider.id) : '');
+            } catch (e) { /* 忽略 */ }
+            window.location.href = '/rider/index.html';
+          }).catch(function () {
+            // 错误提示已在拦截器统一处理
+          }).then(function () {
+            vm.loading = false;
+          });
+        },
+
+        openForgot: function () {
+          this.fPhone = this.phone || '';
+          this.fCode = '';
+          this.fPassword = '';
+          this.fConfirm = '';
+          this.fPhoneError = '';
+          this.showForgot = true;
+        },
+
+        sendCode: function () {
+          var vm = this;
+          var phone = (vm.fPhone || '').trim();
+          if (!/^1[3-9]\d{9}$/.test(phone)) {
+            vm.fPhoneError = '请输入正确的手机号';
+            return;
+          }
+          if (vm.codeCooldown > 0 || vm.codeSending) {
+            return;
+          }
+          vm.codeSending = true;
+          RiderApi.sendSmsCode(phone).then(function () {
+            vant.Toast.success('验证码已发送');
+            vm.codeCooldown = 60;
+            vm.codeTimer = setInterval(function () {
+              vm.codeCooldown--;
+              if (vm.codeCooldown <= 0) {
+                clearInterval(vm.codeTimer);
+                vm.codeTimer = null;
+              }
+            }, 1000);
+          }).catch(function () {
+            // 错误提示已在拦截器统一处理
+          }).then(function () {
+            vm.codeSending = false;
+          });
+        },
+
+        onReset: function () {
+          var vm = this;
+          var phone = (vm.fPhone || '').trim();
+          var code = (vm.fCode || '').trim();
+          var pwd = vm.fPassword || '';
+          if (!/^1[3-9]\d{9}$/.test(phone)) {
+            vm.fPhoneError = '请输入正确的手机号';
+            return;
+          }
+          if (!/^\d{6}$/.test(code)) {
+            vant.Toast.fail('请输入6位验证码');
+            return;
+          }
+          if (pwd.length < 6 || pwd.length > 20) {
+            vant.Toast.fail('新密码长度须为6-20位');
+            return;
+          }
+          if (pwd !== vm.fConfirm) {
+            vant.Toast.fail('两次输入的密码不一致');
+            return;
+          }
+          vm.resetLoading = true;
+          RiderApi.forgotPassword(phone, code, pwd).then(function () {
+            vm.showForgot = false;
+            vant.Toast.success('密码重置成功，请使用新密码登录');
+            // 带回手机号，骑手直接输新密码即可登录
+            vm.phone = phone;
+            vm.password = '';
+          }).catch(function () {
+            // 错误提示已在拦截器统一处理
+          }).then(function () {
+            vm.resetLoading = false;
+          });
+        }
+      }
+    }).$mount('#app');
+  </script>
+</body>
+</html>

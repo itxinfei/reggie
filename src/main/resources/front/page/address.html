@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+        <title>地址管理 - 瑞吉外卖</title>
+        <link rel="icon" href="./../images/favico.ico">
+        <!--不同屏幕尺寸根字体设置-->
+        <script src="./../js/base.js?v=20260930"></script>
+        <!--引入vant样式-->
+        <link rel="stylesheet" href="../styles/vant.min.css"/>
+        <!-- 引入样式  -->
+        <link rel="stylesheet" href="../styles/index.css?v=20260930b" />
+        <link rel="stylesheet" href="../styles/skeleton.css?v=20260930" />
+        <!-- 修改点：补充加载 remixicon.css + fallback —— 本页新增 ri-edit-line / ri-checkbox-* 图标字体，此前仅位图未加载字体 -->
+        <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+        <script src="../js/icon-fallback.js?v=20260917"></script>
+        <!--本页面内容的样式-->
+        <link rel="stylesheet" href="./../styles/address.css?v=20260930b" />
+    </head>
+    <body class="scrollable-page">
+        <!-- 修改点：移除ElementUI v-loading，改用CSS加载遮罩 -->
+        <div id="address" class="app relative">
+         <cend-shell title="地址管理" :show-back="true">
+            <!-- 修改点：骨架屏替代 loading 遮罩（skeleton.css 无行布局工具类，
+                 行级 flex/gap 以内联样式保留，视觉等价） -->
+            <div v-if="loading" class="skeleton-container">
+                <div class="skeleton-card" v-for="i in 3" :key="'sa'+i">
+                    <div class="flex items-center gap-8 mb-12">
+                        <div class="skeleton-tag"></div>
+                        <div class="skeleton-line skeleton-w60"></div>
+                    </div>
+                    <div class="flex gap-12 mb-12">
+                        <div class="skeleton-line skeleton-w30"></div>
+                        <div class="skeleton-line skeleton-w40"></div>
+                    </div>
+                    <div class="flex">
+                        <div class="skeleton-line skeleton-w20"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- 修改点：van-pull-refresh 包裹内容实现下拉刷新 -->
+            <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
+            <div class="divContent">
+                <!-- 修改点：卡片三区块重构 —— 顶部标签+地址 / 中部收货人 / 底部操作栏（默认单选左 + 编辑右），替代原绝对定位编辑图标与裸 divSplit -->
+                <van-swipe-cell v-for="item in addressList" :key="item.id">
+                <div class="divItem" :class="{itemDefault: item.isDefault === 1}" @click="itemClick(item)">
+                    <div class="addrTop">
+                        <span class="addrTag" :class="{spanCompany:item.label === '公司',spanHome:item.label === '家',spanSchool:item.label === '学校',spanNone:item.label === '无'}">{{item.label}}</span>
+                        <span class="addrText">{{ fullAddress(item) }}</span>
+                        <span v-if="item.isDefault === 1" class="defaultBadge">默认</span>
+                    </div>
+                    <div class="addrContact">
+                        <span class="consignee">{{item.consignee}}</span>
+                        <span class="sexText">{{Number(item.sex) === 0 ? '女士' : '先生'}}</span>
+                        <span class="phone">{{item.phone}}</span>
+                    </div>
+                    <div class="divActionBar">
+                        <!-- 修改点：默认地址行 —— 选中态金点+金色加粗文案 / 未选中灰环，文案随状态切换 -->
+                        <div class="divDefault" :class="{isDefault: item.isDefault === 1}" @click.stop="item.isDefault !== 1 && setDefaultAddress(item)">
+                            <i class="ri-checkbox-circle-fill" v-if="item.isDefault === 1"></i>
+                            <i class="ri-checkbox-blank-circle-line" v-else></i>
+                            <span class="defaultText">{{ item.isDefault === 1 ? '默认地址' : '设为默认地址' }}</span>
+                        </div>
+                        <div class="divActions">
+                            <span class="actionBtn" @click.stop.prevent="toAddressEditPage(item)"><i class="ri-edit-line"></i>编辑</span>
+                            <span class="actionBtn actionBtnDelete" @click.stop.prevent="deleteAddress(item)"><i class="ri-delete-bin-line"></i>删除</span>
+                        </div>
+                    </div>
+                </div>
+                <template #right>
+                    <div class="swipe-delete-btn" @click.stop="deleteAddress(item)">
+                        <i class="ri-delete-bin-line"></i> 删除
+                    </div>
+                </template>
+                </van-swipe-cell>
+                <!-- 修改点(2026-09-17)：空态统一为全站标准 .empty-state -->
+                <div class="empty-state" v-if="!loading && addressList.length === 0">
+                    <i class="ri-map-pin-line"></i>
+                    <p class="empty-text">暂无收货地址</p>
+                    <p class="empty-sub">添加地址后，下单更便捷</p>
+                </div>
+            </div>
+            </van-pull-refresh>
+            <div class="divBottom" @click="toAddressCreatePage">+ 添加收货地址</div>
+         </cend-shell>
+        </div>
+            <!-- 开发环境版本,包含了有帮助的命令行警告 -->
+            <script src="../../backend/plugins/vue/vue.js"></script>
+            <!-- 引入vant -->
+            <script src="./../js/vant.min.js"></script>
+            <!-- 跨页复用组件（cend-shell/cend-empty），须在 vant 之后、new Vue 之前 -->
+            <script src="../js/components-cend.js?v=20260922"></script>
+            <script src="./../api/address.js?v=20260917"></script>
+            <!-- 引入axios -->
+            <script src="../../backend/plugins/axios/axios.min.js"></script>
+            <script src="./../js/request.js?v=20260930"></script>
+            <script src="./../js/common.js?v=20260930b"></script>
+            <script>
+            new Vue({
+                el:"#address",
+                data(){
+                    return {
+                        addressList:[],
+                        loading: false, // 修改点：新增加载状态
+                        refreshing: false, // 修改点：下拉刷新状态
+                        settingDefault: false // 修改点：设为默认地址防重锁
+                    }
+                },
+                computed:{},
+                created(){
+                    this.initData()
+                    // 兜底：从结算页跳入后若未选地址直接返回/刷新，pagehide 时清掉一次性标志，
+                    // 避免残留标志劫持日后正常进入地址管理的点击导航
+                    this._onPageHide = function() {
+                        sessionStorage.removeItem('addressFromCheckout')
+                    }
+                    window.addEventListener('pagehide', this._onPageHide)
+                },
+                beforeDestroy(){
+                    if (this._onPageHide) window.removeEventListener('pagehide', this._onPageHide)
+                },
+                methods:{
+                    // 修改点：下拉刷新（refreshing 由 initData.finally 复位）
+                    async onRefresh(){
+                        try { await this.initData() } finally { this.refreshing = false }
+                    },
+                    // 修改点：拼接完整省市区地址（统一走 composeAddressText，去重存量 detail 前缀）
+                    fullAddress(item){
+                        return composeAddressText(item)
+                    },
+                    // 修改点(2026-09-22)：goBack 已统一由 cend-shell 组件处理，页面不再重复定义
+                    toAddressEditPage(item){
+                        window.requestAnimationFrame(()=>{
+                            window.location.href= `/front/page/address-edit.html?id=${item.id}`
+                        })
+                    },
+                    toAddressCreatePage(){
+                        window.requestAnimationFrame(()=>{
+                            window.location.href= '/front/page/address-edit.html'
+                        })
+                    },
+                    deleteAddress(item){
+                        if(!item || !item.id) return
+                        var self = this
+                        vant.Dialog.confirm({
+                            title: '确认删除',
+                            message: '删除后无法恢复，确认删除该地址吗？',
+                            confirmButtonText: '确认删除',
+                            confirmButtonColor: cssVar('--color-danger'),
+                            cancelButtonText: '取消'
+                        }).then(function(){
+                            self.doDeleteAddress(item)
+                        }).catch(function(){})
+                    },
+                    async doDeleteAddress(item){
+                        try {
+                            var res = await deleteAddressApi({ids: item.id})
+                            if(res.code === 1){
+                                vant.Toast.success('删除成功')
+                                this.initData()
+                            } else {
+                                vant.Toast.fail(res.msg || '删除失败')
+                            }
+                        } catch(e) {
+                            vant.Toast.fail('删除失败')
+                        }
+                    },
+                    async initData(){
+                        try {
+                            this.loading = true
+                            const res = await addressListApi()
+                            this.loading = false
+                            if(res.code === 1){
+                                this.addressList = res.data || []
+                            }else{
+                                vant.Toast.fail(res.msg || '加载地址列表失败');
+                            }
+                        } catch(e) {
+                            this.loading = false
+                            vant.Toast.fail('加载地址列表失败');
+                        }
+                    },
+                    async setDefaultAddress(item){
+                        if(!item || !item.id) return
+                        // 修改点：乐观更新防重锁，避免连点竞态
+                        if(this.settingDefault) return
+                        this.settingDefault = true
+                        try {
+                            this.addressList.forEach(a => { a.isDefault = 0 })
+                            item.isDefault = 1
+                            const res = await setDefaultAddressApi({id:item.id})
+                            if(res.code !== 1){
+                                vant.Toast.fail(res.msg || '设置默认地址失败');
+                                this.initData()
+                            }
+                        } catch(e) {
+                            vant.Toast.fail('设置默认地址失败');
+                            this.initData()
+                        } finally {
+                            this.settingDefault = false
+                        }
+                    },
+                    itemClick(item){
+                        const fromCheckout = sessionStorage.getItem('addressFromCheckout')
+                        if(fromCheckout === '1'){
+                            // 修改点：结算流程点地址仅作为「本单选择」，记录选中 id 后返回结算页，
+                            // 不再调用 setDefaultAddress 改写用户的默认地址（否则下次外卖会送错地方）
+                            sessionStorage.setItem('selectedAddressId', String(item.id))
+                            sessionStorage.removeItem('addressFromCheckout')
+                            history.go(-1)
+                        } else {
+                            // 修改点：地址管理场景点击整张卡片进入编辑（原实现非结算入口点击无任何反应）
+                            this.toAddressEditPage(item)
+                        }
+                    }
+
+                }
+            })
+            </script>
+    </body>
+</html>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.reggie.module.dish.mapper.DishSpecRelationMapper">
+
+    <!-- 批量插入菜品规格关联 -->
+    <insert id="insertBatch" parameterType="java.util.List">
+        INSERT INTO dish_spec_relation (dish_id, group_id, sort_order, tenant_id, create_time, create_user)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.dishId}, #{item.groupId}, #{item.sortOrder}, #{item.tenantId}, #{item.createTime}, #{item.createUser})
+        </foreach>
+    </insert>
+
+</mapper>

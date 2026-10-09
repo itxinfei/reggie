@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>门店管理 - 瑞吉外卖管理端</title>
+
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+    <style>
+        /* 布局/容器/工具栏/分页全部走公共样式（consistency.css + table-bar/crud-table），
+           本页仅保留表格插槽与弹窗用到的局部类 */
+        .amount-highlight { color: var(--color-warning); font-weight: 600; }
+        .order-count { font-weight: 600; color: var(--el-color-primary); }
+
+        /* 编辑弹窗 */
+        .form-section-title { font-size:var(--font-size-base); font-weight: 600; color: var(--el-text-primary); margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 1px dashed var(--el-border-lighter2); }
+        .form-section-title:first-child { margin-top: 0; }
+        .footer-actions { text-align: right; padding-top: 8px; }
+
+        .sync-section { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+
+        /* 门店详情弹窗 */
+        .store-detail .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+        .store-detail .detail-title { font-size: var(--font-size-lg); font-weight: 600; color: var(--el-text-primary); }
+        .store-detail .detail-code { font-size: var(--font-size-xs); color: var(--text-muted); background: var(--bg-subtle); padding: 2px 8px; border-radius: var(--radius-sm); }
+        .store-detail .form-section-title:first-of-type { margin-top: 4px; }
+        /* 详情字段网格（替代未注册的 el-descriptions） */
+        .store-detail .detail-grid { border: 1px solid var(--el-border-extra-light); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 4px; }
+        .store-detail .detail-grid .el-col {
+            display: flex; align-items: center;
+            padding: 9px 12px; border-bottom: 1px solid var(--el-border-extra-light);
+            border-right: 1px solid var(--el-border-extra-light);
+        }
+        .store-detail .detail-grid .el-col:nth-child(2n) { border-right: none; }
+        .store-detail .detail-grid .el-col:nth-last-child(-n+2) { border-bottom: none; }
+        .store-detail .detail-grid .el-col[class*="span-24"],
+        .store-detail .detail-grid .el-col:last-child:nth-child(odd) { border-right: none; }
+        .store-detail .dt-label { flex: 0 0 84px; color: var(--text-muted); font-size: var(--font-size-sm); }
+        .store-detail .dt-value { flex: 1; color: var(--el-text-primary); font-size: var(--font-size-sm); word-break: break-all; }
+    </style>
+</head>
+<body>
+<!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+<a href="#main-content" class="skip-link">跳转到主内容</a>
+<div id="app">
+    <div class="dashboard-container">
+        <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+          <h1 class="sr-only" id="page-title">门店管理</h1>
+            
+            
+            <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
+            <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
+
+            <!-- ===== 搜索 + 操作工具栏（筛选改选即查，批量按钮随勾选启停） ===== -->
+            <table-bar
+                :search-items="searchItems"
+                :actions="barActions"
+                @search="onBarSearch"
+                @reset="onBarReset"
+                @action="onBarAction"
+                :show-refresh="true"
+                @refresh="loadData(false)">
+            </table-bar>
+
+            <!-- ===== 数据表格（内置分页/骨架/空态） ===== -->
+            <crud-table aria-label="数据表格"
+                    :data="tableData"
+                    :columns="columns"
+                    :loading="loading"
+                    :show-actions="true"
+                    :actions-width="240"
+                    :selection="true"
+                    :show-index="true"
+                    :page="pagination.current"
+                    :page-size="pagination.size"
+                    :total="pagination.total"
+                    :default-sort="{prop: 'createTime', order: 'descending'}"
+                    empty-hint="暂无门店数据，点击上方「新建门店」创建第一家门店"
+                    border stripe size="small"
+                    @selection-change="onSelectionChange"
+                    @sort-change="onSortChange"
+                    @row-click="onRowClick"
+                    @page-change="onPageChange"
+                    @size-change="onPageSizeChange">
+                    <template #col-storeName="{ row }">
+                        <el-tag :type="storeTypeTag(row.storeType)" size="small" effect="plain">{{ storeTypeName(row.storeType) }}</el-tag>
+                        <span style="margin-left:6px; font-weight:500;">{{ row.storeName }}</span>
+                    </template>
+                    <template #col-contact="{ row }">
+                        <span>{{ row.contactPerson || '—' }}</span>
+                        <span style="margin-left:8px; color:var(--text-muted);">{{ row.contactPhone || '—' }}</span>
+                    </template>
+                    <template #col-status="{ row }">
+                        <el-switch
+                            v-model="row.status"
+                            :active-value="1"
+                            :inactive-value="0"
+                            @change="toggleSingleStatus(row)"
+                            active-color="var(--color-success)"
+                            inactive-color="var(--color-gray-300)"></el-switch>
+                    </template>
+                    <template #col-todayOrders="{ row }">
+                        <span class="order-count">{{ row.todayOrders || 0 }}</span>
+                    </template>
+                    <template #col-todayAmount="{ row }">
+                        <span class="amount-highlight">&yen;{{ fmtAmount(row.todayAmount) }}</span>
+                    </template>
+                    <template #col-pauseOrder="{ row }">
+                        <el-tag v-if="row.pauseOrder === 1" type="warning" size="small" effect="plain">
+                            <i class="ri-pause-circle-line" style="margin-right:2px;"></i>暂停接单
+                        </el-tag>
+                        <el-tag v-else type="success" size="small" effect="plain">
+                            <i class="ri-play-circle-line" style="margin-right:2px;"></i>正常接单
+                        </el-tag>
+                    </template>
+                    <!-- 操作列契约：详情/编辑/接单状态 3 个常显，看板/切换/同步收「更多」，4 元素 240 档 -->
+                    <template #actions="{ row }">
+                        <el-button type="text" size="small" class="btn-view" @click.stop="openDetail(row)">详情</el-button>
+                        <el-button type="text" size="small" class="btn-view" @click.stop="openEditDialog(row)">编辑</el-button>
+                        <el-button v-if="row.pauseOrder === 1" type="text" size="small" class="btn-success" @click.stop="togglePause(row, false)">恢复接单</el-button>
+                        <el-button v-else type="text" size="small" class="btn-warning" @click.stop="togglePause(row, true)">暂停接单</el-button>
+                        <el-dropdown trigger="click" @command="(cmd) => onStoreCommand(cmd, row)" @click.native.stop>
+                            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+                            <el-dropdown-menu slot="dropdown">
+                                <el-dropdown-item command="dashboard" icon="ri-bar-chart-line">门店看板</el-dropdown-item>
+                                <el-dropdown-item command="switch" icon="ri-toggle-line">切换门店</el-dropdown-item>
+                                <el-dropdown-item command="sync" icon="ri-refresh-line">平台同步</el-dropdown-item>
+                            </el-dropdown-menu>
+                        </el-dropdown>
+                    </template>
+            </crud-table>
+        </main>
+    </div>
+    <!-- #app（L68）的闭合在全部弹窗之后，见文件尾，确保弹窗在 Vue 编译范围内 -->
+
+    <!-- ===== 新建/编辑门店对话框 ===== -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :title="dialogTitle"
+      :visible.sync="formDialogVisible"
+      size="lg"
+      :submit-loading="submitting"
+      :close-on-click-modal="false"
+      @submit="submitForm"
+      @close="resetForm"
+    >
+        <el-form :model="form" ref="formRef" label-width="100px" size="small" :rules="formRules">
+            <div class="form-section-title">基本信息</div>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="门店名称" prop="storeName">
+                        <el-input v-model="form.storeName" placeholder="如：瑞吉外卖-朝阳店" maxlength="100" ></el-input>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="门店编码" prop="storeCode">
+                        <el-input v-model="form.storeCode" placeholder="如：BJ001" maxlength="32" ></el-input>
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="门店类型" prop="storeType">
+                        <el-select v-model="form.storeType" style="width:100%">
+                            <el-option label="直营总店" :value="1" ></el-option>
+                            <el-option label="直营分店" :value="2" ></el-option>
+                            <el-option label="加盟店" :value="3" ></el-option>
+                        </el-select>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="营业时间" prop="businessHours">
+                        <el-time-picker
+                            v-model="form.businessHoursRange"
+                            is-range
+                            range-separator="至"
+                            start-placeholder="开始"
+                            end-placeholder="结束"
+                            format="HH:mm"
+                            value-format="HH:mm"
+                            style="width:100%"
+                            placeholder="选择营业时间">
+                        </el-time-picker>
+                    </el-form-item>
+                </el-col>
+            </el-row>
+
+            <div class="form-section-title">联系信息</div>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="联系人" prop="contactPerson">
+                        <el-input v-model="form.contactPerson" placeholder="门店联系人" maxlength="64" ></el-input>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="联系电话" prop="contactPhone">
+                        <el-input v-model="form.contactPhone" placeholder="联系电话" maxlength="20" ></el-input>
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <el-form-item label="门店地址" prop="address">
+                <el-input v-model="form.address" placeholder="门店详细地址" maxlength="200" ></el-input>
+            </el-form-item>
+
+            <div class="form-section-title">运营设置</div>
+            <el-row :gutter="16">
+                <el-col :span="8">
+                    <el-form-item label="配送半径(m)">
+                        <el-input-number v-model="form.deliveryRadius" :min="500" :max="20000" :step="500" controls-position="right" style="width:100%" ></el-input-number>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                    <el-form-item label="起送金额">
+                        <el-input-number v-model="form.minDeliveryAmount" :min="0" :max="200" :precision="2" :step="1" controls-position="right" style="width:100%" ></el-input-number>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                    <el-form-item label="配送费">
+                        <el-input-number v-model="form.deliveryFee" :min="0" :max="50" :precision="2" :step="0.5" controls-position="right" style="width:100%" ></el-input-number>
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <el-row :gutter="16">
+                <el-col :span="8">
+                    <el-form-item label="支持外卖">
+                        <el-switch v-model="form.isDeliveryEnabled" :active-value="1" :inactive-value="0" active-color="var(--color-success)" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                    <el-form-item label="支持堂食">
+                        <el-switch v-model="form.isDineInEnabled" :active-value="1" :inactive-value="0" active-color="var(--color-brand-500)" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                    <el-form-item label="门店状态">
+                        <el-switch v-model="form.status" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="停用" />
+                    </el-form-item>
+                </el-col>
+            </el-row>
+
+            <!-- 新建时显示管理员信息 -->
+            <template v-if="isCreate">
+                <div class="form-section-title">管理员账号</div>
+                <el-row :gutter="16">
+                    <el-col :span="12">
+                        <el-form-item label="管理员账号" prop="adminUsername">
+                            <el-input v-model="form.adminUsername" placeholder="门店管理员登录账号" maxlength="32" ></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="管理员密码" prop="adminPassword">
+                            <el-input v-model="form.adminPassword" type="password" placeholder="初始密码，至少6位" maxlength="32" show-password ></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+            </template>
+        </el-form>
+    </crud-dialog>
+
+    <!-- ===== 门店详情对话框（点击行 / 详情按钮打开，展示完整信息，避免列表列过多；只读，仅有关闭按钮） ===== -->
+    <crud-dialog
+      title="门店详情"
+      :visible.sync="detailDialogVisible"
+      size="lg"
+      :show-submit="false"
+      :show-cancel="true"
+      cancel-text="关 闭"
+      :close-on-click-modal="true"
+      @close="detailData=null">
+        <div v-if="detailData" class="store-detail">
+            <!-- 头部概要 -->
+            <div class="detail-header">
+                <el-tag :type="storeTypeTag(detailData.storeType)" size="small" effect="plain">{{ storeTypeName(detailData.storeType) }}</el-tag>
+                <span class="detail-title">{{ detailData.storeName }}</span>
+                <span class="detail-code">{{ detailData.storeCode }}</span>
+                <el-tag :type="detailData.status === 1 ? 'success' : 'info'" size="small" effect="light">
+                    {{ detailData.status === 1 ? '已启用' : '已停用' }}
+                </el-tag>
+            </div>
+
+            <!-- 基本信息 -->
+            <div class="form-section-title">基本信息</div>
+            <el-row :gutter="0" class="detail-grid">
+                <el-col :span="12"><span class="dt-label">门店名称</span><span class="dt-value">{{ detailData.storeName || '—' }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">门店编码</span><span class="dt-value">{{ detailData.storeCode || '—' }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">门店类型</span><span class="dt-value">{{ storeTypeName(detailData.storeType) }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">营业时间</span><span class="dt-value">{{ detailData.businessHours || '—' }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">联系人</span><span class="dt-value">{{ detailData.contactPerson || '—' }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">联系电话</span><span class="dt-value">{{ detailData.contactPhone || '—' }}</span></el-col>
+                <el-col :span="24"><span class="dt-label">门店地址</span><span class="dt-value">{{ detailData.address || '—' }}</span></el-col>
+            </el-row>
+
+            <!-- 运营设置 -->
+            <div class="form-section-title">运营设置</div>
+            <el-row :gutter="0" class="detail-grid">
+                <el-col :span="8"><span class="dt-label">配送半径</span><span class="dt-value">{{ detailData.deliveryRadius || 0 }} m</span></el-col>
+                <el-col :span="8"><span class="dt-label">起送金额</span><span class="dt-value">&yen;{{ fmtAmount(detailData.minDeliveryAmount) }}</span></el-col>
+                <el-col :span="8"><span class="dt-label">配送费</span><span class="dt-value">&yen;{{ fmtAmount(detailData.deliveryFee) }}</span></el-col>
+                <el-col :span="8">
+                    <span class="dt-label">支持外卖</span>
+                    <span class="dt-value"><el-tag :type="detailData.isDeliveryEnabled === 1 ? 'success' : 'info'" size="small">{{ detailData.isDeliveryEnabled === 1 ? '支持' : '不支持' }}</el-tag></span>
+                </el-col>
+                <el-col :span="8">
+                    <span class="dt-label">支持堂食</span>
+                    <span class="dt-value"><el-tag :type="detailData.isDineInEnabled === 1 ? 'success' : 'info'" size="small">{{ detailData.isDineInEnabled === 1 ? '支持' : '不支持' }}</el-tag></span>
+                </el-col>
+                <el-col :span="8">
+                    <span class="dt-label">数据完善度</span>
+                    <span class="dt-value"><el-progress :percentage="toNumber(detailData.dataCompleteRate)" :stroke-width="12" :color="progressColor(detailData.dataCompleteRate)"></el-progress></span>
+                </el-col>
+            </el-row>
+
+            <!-- 时间信息 -->
+            <div class="form-section-title">时间信息</div>
+            <el-row :gutter="0" class="detail-grid">
+                <el-col :span="12"><span class="dt-label">创建时间</span><span class="dt-value">{{ formatDateTime(detailData.createTime) }}</span></el-col>
+                <el-col :span="12"><span class="dt-label">更新时间</span><span class="dt-value">{{ formatDateTime(detailData.updateTime) }}</span></el-col>
+            </el-row>
+
+            <div class="footer-actions">
+                <el-button size="small" type="primary" icon="ri-edit-line" @click="openEditDialog(detailData)">编辑</el-button>
+                <el-button size="small" icon="ri-toggle-line" @click="switchToStore(detailData)">切换门店</el-button>
+                <el-button size="small" icon="ri-refresh-line" @click="openSyncDialog(detailData)">数据同步</el-button>
+            </div>
+        </div>
+    </crud-dialog>
+
+    <!-- ===== 数据同步对话框（只读，仅有关闭按钮） ===== -->
+    <crud-dialog
+      title="数据同步"
+      :visible.sync="syncDialogVisible"
+      size="md"
+      :show-submit="false"
+      :show-cancel="true"
+      cancel-text="关 闭"
+      :close-on-click-modal="true"
+      @close="syncResult=null"
+    >
+        <p style="margin-bottom:14px; color:var(--el-text-regular); font-size:var(--font-size-sm);">
+            将总部数据同步到 <b style="color:var(--el-text-primary);">{{ syncTargetName }}</b>
+        </p>
+        <div class="sync-section">
+            <el-button size="small" type="primary" @click="doSync('dishes')" :loading="syncing.dishes" icon="ri-price-tag-line">同步菜品</el-button>
+            <el-button size="small" type="success" @click="doSync('categories')" :loading="syncing.categories" icon="ri-menu-line">同步分类</el-button>
+            <el-button size="small" type="warning" @click="doSync('setmeals')" :loading="syncing.setmeals" icon="ri-grid-line">同步套餐</el-button>
+        </div>
+        <el-alert
+            v-if="syncResult"
+            :title="'同步完成：成功 ' + syncResult.synced + ' 条，失败 ' + syncResult.failed + ' 条'"
+            :type="syncResult.failed > 0 ? 'warning' : 'success'"
+            :closable="false"
+            style="margin-top:14px;">
+        </el-alert>
+        <template v-if="syncResult && syncResult.errors && syncResult.errors.length > 0">
+          <p v-for="(err, i) in syncResult.errors" :key="i"
+             style="font-size:var(--font-size-xs); color:var(--color-danger); margin-top:4px;">{{ err }}</p>
+        </template>
+    </crud-dialog>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js?v=20260915"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js?v=20260930"></script>
+<script src="../../js/accessibility-utils.js?v=20260927"></script>
+<script src="../../js/performance-utils.js?v=20260926"></script>
+<script src="../../api/store.js?v=20260926"></script>
+<script src="../../js/components.js?v=20261002"></script>
+<script>
+  new Vue({
+    el: '#app',
+    data: {
+        loading: false,
+        submitting: false,
+        exporting: false,
+        // 表格数据
+        tableData: [],
+        columns: [
+          { prop: 'storeName', label: '门店名称', minWidth: 180, align: 'center', slot: 'col-storeName', sortable: 'custom' },
+          { prop: 'storeCode', label: '门店编码', width: 92, align: 'center', sortable: 'custom' },
+          { prop: 'contactPerson', label: '联系人 / 电话', minWidth: 140, align: 'center', slot: 'col-contact' },
+          { prop: 'status', label: '状态', width: 60, align: 'center', slot: 'col-status' },
+          { prop: 'todayOrders', label: '今日订单', width: 80, align: 'center', slot: 'col-todayOrders', sortable: 'custom' },
+          { prop: 'todayAmount', label: '今日营收', width: 100, align: 'center', type: 'money', slot: 'col-todayAmount', sortable: 'custom' },
+          { prop: 'pauseOrder', label: '接单状态', width: 100, align: 'center', slot: 'col-pauseOrder' }
+        ],
+        selection: [],           // 已选行
+        // 统计
+        stats: { totalStores: 0, activeStores: 0, inactiveStores: 0, todayTotalStores: 0 },
+        activeFilter: '',
+        // 搜索条件
+        search: { keyword: '', storeType: null, status: null },
+        // table-bar 筛选项（组件内部 searchValues 不双向绑定，经 onBarSearch 桥接回 search）
+        searchItems: [
+            { type: 'input', field: 'keyword', label: '门店名称 / 编码', placeholder: '门店名称 / 编码', width: 180 },
+            { type: 'select', field: 'storeType', placeholder: '门店类型', width: 180, options: [
+                { label: '直营总店', value: 1 },
+                { label: '直营分店', value: 2 },
+                { label: '加盟店', value: 3 }
+            ] },
+            { type: 'select', field: 'status', placeholder: '门店状态', width: 180, options: [
+                { label: '已启用', value: 1 },
+                { label: '已停用', value: 0 }
+            ] }
+        ],
+        // 排序
+        sort: { sortBy: 'createTime', sortOrder: 'desc' },
+        // 分页
+        pagination: { current: 1, size: 10, total: 0, pages: 0 },
+        // 表单
+        formDialogVisible: false,
+        isCreate: true,
+        editTenantId: null,
+        // 详情
+        detailDialogVisible: false,
+        detailData: null,
+        form: {
+            storeName: '', storeCode: '', storeType: 2,
+            contactPerson: '', contactPhone: '', address: '',
+            businessHours: '', businessHoursRange: null,
+            deliveryRadius: 3000, minDeliveryAmount: 20.00, deliveryFee: 0.00,
+            isDeliveryEnabled: 1, isDineInEnabled: 1, status: 1,
+            adminUsername: '', adminPassword: ''
+        },
+        formRules: {
+            storeName: [{ required: true, message: '请输入门店名称', trigger: 'blur' }],
+            storeCode: [{ required: true, message: '请输入门店编码', trigger: 'blur' }],
+            storeType: [{ required: true, message: '请选择门店类型', trigger: 'change' }],
+            contactPhone: [
+                { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+            ],
+            adminUsername: [{ required: true, message: '请输入管理员账号', trigger: 'blur' }],
+            adminPassword: [
+                { required: true, message: '请输入管理员密码', trigger: 'blur' },
+                { min: 6, message: '密码至少6位', trigger: 'blur' }
+            ]
+        },
+        // 同步
+        syncDialogVisible: false,
+        syncTargetId: null,
+        syncTargetName: '',
+        syncing: { dishes: false, categories: false, setmeals: false },
+        syncResult: null
+    },
+    computed: {
+        dialogTitle: function() { return this.isCreate ? '新建门店' : '编辑门店'; },
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+        statsCards: function() {
+            var self = this;
+            return [
+                { key: '', icon: 'ri-home-5-line', label: '门店总数', value: self.stats.totalStores, color: 'primary', clickable: true, active: self.activeFilter === '' },
+                { key: 'active', icon: 'ri-checkbox-circle-line', label: '已启用', value: self.stats.activeStores, color: 'success', clickable: true, active: self.activeFilter === 'active' },
+                { key: 'inactive', icon: 'ri-pause-circle-line', label: '已停用', value: self.stats.inactiveStores, color: 'warning', clickable: true, active: self.activeFilter === 'inactive' },
+                { key: 'today', icon: 'ri-money-cny-circle-line', label: '今日有营收门店', value: self.stats.todayTotalStores, color: 'info', unit: '家' }
+            ]
+        },
+        // 工具栏操作：批量启用/停用随勾选启停；导出为真实 CSV 下载
+        barActions: function() {
+            var noSelection = this.selection.length === 0;
+            return [
+                { key: 'create', text: '新建门店', type: 'primary', icon: 'ri-add-line' },
+                { key: 'batchEnable', text: '批量启用', type: 'warning', icon: 'ri-upload-2-line', disabled: noSelection },
+                { key: 'batchDisable', text: '批量停用', type: 'info', icon: 'ri-download-line', disabled: noSelection },
+                { key: 'export', text: '导出数据', icon: 'ri-download-line', disabled: noSelection }
+            ];
+        }
+    },
+    created: function() { this.loadData(true); },
+    methods: {
+        // ========== 数据加载 ==========
+        loadData: function(reloadStats) {
+            if (reloadStats === undefined) { reloadStats = true; }
+            var self = this;
+            self.loading = true;
+            var params = {
+                keyword: self.search.keyword || null,
+                storeType: self.search.storeType,
+                status: self.search.status,
+                page: self.pagination.current,
+                pageSize: self.pagination.size,
+                sortBy: self.sort.sortBy,
+                sortOrder: self.sort.sortOrder
+            };
+            // 如果选了统计卡片筛选，覆盖status
+            if (self.activeFilter === 'active') { params.status = 1; }
+            else if (self.activeFilter === 'inactive') { params.status = 0; }
+
+            pageStores(params).then(function(res) {
+                if (res && res.code === 1 && res.data) {
+                    self.tableData = (res.data.records || []).map(function(r) {
+                        // 修改点：前端补全"数据完善度"百分比（0-100 整数），供 el-progress 展示
+                        r.dataCompleteRate = self.calcCompleteRate(r);
+                        return r;
+                    });
+                    // 修改点：分页字段强制 Number，避免后端返回字符串导致 ElPagination 类型校验失败
+                    self.pagination.total = Number(res.data.total) || 0;
+                    self.pagination.pages = Number(res.data.pages) || 0;
+                    self.pagination.current = Number(res.data.current) || 1;
+                    self.pagination.size = Number(res.data.size) || 10;
+                    // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
+                    if (reloadStats) { self.updateStats(); }
+                }
+            }).catch(function(err) {
+                ReggieUI.error('加载门店数据失败');
+            }).finally(function() { self.loading = false; });
+        },
+        updateStats: function() {
+            var self = this;
+            // 修改点：改为调用后端 /store/stats SQL 聚合接口，替代 listStores 拉全量后 filter 统计（消除 N+1 与全量内存计算）
+            storeStats().then(function(res) {
+                if (res && res.code === 1 && res.data) {
+                    var d = res.data;
+                    self.stats.totalStores = Number(d.totalStores) || 0;
+                    self.stats.activeStores = Number(d.activeStores) || 0;
+                    self.stats.inactiveStores = Number(d.inactiveStores) || 0;
+                    self.stats.todayTotalStores = Number(d.todayTotalStores) || 0;
+                }
+            }).catch(function(err) { console.warn('[门店管理] 加载统计数据失败:', err) });
+        },
+
+        // 修改点：stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
+        onCardClick: function(payload) {
+            this.activeFilter = payload.activeKey
+            this.pagination.current = 1
+            this.loadData(false)
+        },
+        // ========== 搜索（table-bar 桥接：回写 search 后查询） ==========
+        onBarSearch: function(params) {
+            this.search.keyword = params.keyword || '';
+            this.search.storeType = (params.storeType === '' || params.storeType === undefined || params.storeType === null)
+                ? null : Number(params.storeType);
+            this.search.status = (params.status === '' || params.status === undefined || params.status === null)
+                ? null : Number(params.status);
+            this.pagination.current = 1;
+            this.activeFilter = '';
+            this.loadData(false);
+        },
+        onBarReset: function() {
+            this.search = { keyword: '', storeType: null, status: null };
+            this.sort = { sortBy: 'createTime', sortOrder: 'desc' };
+            this.activeFilter = '';
+            this.pagination.current = 1;
+            this.loadData(false);
+        },
+        // ========== 工具栏操作分发 ==========
+        onBarAction: function(payload) {
+            switch (payload.key) {
+                case 'create': this.openCreateDialog(); break;
+                case 'batchEnable': this.batchEnable(); break;
+                case 'batchDisable': this.batchDisable(); break;
+                case 'export': this.doExport(); break;
+            }
+        },
+
+        // ========== 排序 ==========
+        onSortChange: function(sortInfo) {
+            if (sortInfo.prop) {
+                this.sort.sortBy = sortInfo.prop;
+                this.sort.sortOrder = sortInfo.order === 'ascending' ? 'asc' : 'desc';
+            } else {
+                this.sort = { sortBy: 'createTime', sortOrder: 'desc' };
+            }
+            this.loadData(false);
+        },
+
+        // ========== 分页（crud-table：page-change 载荷 {page,pageSize}，size-change 为数字） ==========
+        onPageChange: function(p) {
+            this.pagination.current = p.page;
+            this.loadData(false);
+        },
+        onPageSizeChange: function(s) {
+            var size = (s && s.pageSize !== undefined) ? s.pageSize : s;
+            this.pagination.size = size;
+            this.pagination.current = 1;
+            this.loadData(false);
+        },
+
+        // ========== 选择 ==========
+        // crud-table 的 selection-change 载荷为 { rows, ids, count }（components.js），
+        // 直接赋数组否则 length/disabled/map 全部失效
+        onSelectionChange: function(val) { this.selection = (val && val.rows) || []; },
+
+        // ========== 批量操作 ==========
+        batchEnable: function() {
+            this.batchConfirm(1, '批量启用');
+        },
+        batchDisable: function() {
+            this.batchConfirm(0, '批量停用');
+        },
+        batchConfirm: function(status, label) {
+            var self = this;
+            var ids = self.selection.map(function(r) { return r.tenantId; });
+            if (ids.length === 0) { ReggieUI.warning('请选择门店'); return; }
+            ReggieUI.confirm('确认' + label + '已选的 ' + ids.length + ' 个门店吗？', '提示', {
+                confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
+            }).then(function() {
+                batchUpdateStatus(ids, status).then(function(res) {
+                    if (res && res.code === 1) {
+                        var result = res.data;
+                        ReggieUI.success(label + '成功：' + result.successCount + '/' + result.total);
+                        self.loadData();
+                    } else {
+                        ReggieUI.error(label + '失败');
+                    }
+                }).catch(function() { ReggieUI.error(label + '失败'); });
+            }).catch(function(err) { console.warn('[门店管理] 批量操作取消或失败:', err) });
+        },
+        doExport: function() {
+            var self = this;
+            // 修改点：防重守卫——导出期间禁止重复触发（连点多次会创建多个 Blob 下载）
+            if (self.exporting) return;
+            // 仅导出勾选行（未勾选时按钮已禁用）
+            var rows = self.selection || [];
+            if (!rows.length) { ReggieUI.warning('请先勾选要导出的门店'); return; }
+            self.exporting = true;
+            var esc = function(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
+            var header = ['门店名称', '门店编码', '联系人', '状态', '今日订单', '今日营收（元）'];
+            var lines = rows.map(function(r) {
+                var statusText = Number(r.status) === 1 ? '启用' : '停用';
+                return [r.storeName, r.storeCode, r.contactPerson, statusText,
+                        r.todayOrders != null ? r.todayOrders : 0,
+                        r.todayAmount != null ? r.todayAmount : 0].map(esc).join(',');
+            });
+            var csv = '﻿' + header.map(esc).join(',') + '\r\n' + lines.join('\r\n');
+            var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+            var url = window.URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'store_export_' + new Date().toISOString().slice(0, 10) + '.csv';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            self.exporting = false;
+            ReggieUI.success('已导出选中的 ' + rows.length + ' 家门店');
+        },
+
+        // ========== 单行操作 ==========
+        toggleSingleStatus: function(row) {
+            var self = this;
+            // 说明：el-switch 的 @change 在 v-model 更新【之后】触发，此时 row.status 已是目标状态，直接透传
+            var targetStatus = row.status === 1 ? '启用' : '停用';
+            ReggieUI.confirm('确认' + targetStatus + '门店「' + (row.storeName || row.storeCode || '') + '」？', '状态变更', { type: 'warning' }).then(function() {
+                return updateStatus(row.tenantId, row.status);
+            }).then(function(res) {
+                if (res && res.code === 1) {
+                    ReggieUI.success('状态已更新');
+                    self.loadData(true);
+                } else {
+                    ReggieUI.error((res && res.msg) || '状态更新失败');
+                }
+            }).catch(function(err) {
+                if (err !== 'cancel') {
+                  console.warn('[门店管理] 状态更新失败:', err);
+                  ReggieUI.error('状态更新失败，请重试');
+                }
+                self.loadData();
+            });
+        },
+        // ========== 暂停/恢复接单 ==========
+        togglePause: function(row, pause) {
+            var self = this;
+            var label = pause ? '暂停接单' : '恢复接单';
+            var msg = pause
+                ? '确认暂停门店「' + (row.storeName || row.storeCode || '') + '」的接单？暂停后用户将无法下单。'
+                : '确认恢复门店「' + (row.storeName || row.storeCode || '') + '」的接单？';
+            ReggieUI.confirm(msg, label, { type: 'warning' }).then(function() {
+                return togglePauseOrder(row.tenantId, pause);
+            }).then(function(res) {
+                if (res && res.code === 1) {
+                    ReggieUI.success(res.msg || label + '成功');
+                    self.loadData(false);
+                } else {
+                    ReggieUI.error((res && res.msg) || label + '失败');
+                }
+            }).catch(function(err) {
+                if (err === 'cancel') return;
+                console.warn('[门店管理] ' + label + '失败:', err);
+                ReggieUI.error(label + '失败，请重试');
+            });
+        },
+        switchToStore: function(row) {
+            var self = this;
+            switchStore(row.tenantId).then(function(res) {
+                if (res && res.code === 1) {
+                    ReggieUI.success('已切换到门店：' + row.storeName);
+                    self.loadData(true);
+                } else {
+                    ReggieUI.error((res && res.msg) || '切换门店失败');
+                }
+            }).catch(function(err) {
+                console.warn('[门店管理] 切换门店失败:', err);
+                ReggieUI.error('切换门店失败，请重试');
+            });
+        },
+
+        // 操作列「更多」下拉命令分发
+        onStoreCommand: function(cmd, row) {
+            if (cmd === 'dashboard') {
+                this.openDashboard(row);
+            } else if (cmd === 'switch') {
+                this.switchToStore(row);
+            } else if (cmd === 'sync') {
+                this.openSyncDialog(row);
+            }
+        },
+
+        // ========== 详情 ==========
+        // 修改点：8.7.2 门店列表 → 点门店进看板（新窗口打开单店看板，URL 带 storeId/name）
+        openDashboard: function(row) {
+            if (!row || !row.tenantId) {
+                ReggieUI.warning('该门店缺少租户标识，无法打开看板');
+                return;
+            }
+            var name = encodeURIComponent(row.storeName || '');
+            window.open('dashboard.html?storeId=' + row.tenantId + '&name=' + name, '_blank');
+        },
+        openDetail: function(row) {
+            var self = this;
+            // 修复点：列表数据可能不含全部字段，统一走 /store/detail 获取完整信息
+            getStoreDetail(row.tenantId).then(function(res) {
+                if (res && res.code === 1 && res.data) {
+                    var d = res.data;
+                    d.dataCompleteRate = self.calcCompleteRate(d);
+                    self.detailData = d;
+                    self.detailDialogVisible = true;
+                } else {
+                    ReggieUI.error('获取门店详情失败');
+                }
+            }).catch(function() {
+                ReggieUI.error('获取门店详情失败');
+            });
+        },
+        // 点击行打开详情（排除点击操作按钮 / 复选框 / 状态开关等交互元素时的误触发）
+        onRowClick: function(row, column, event) {
+            if (!event || !event.target) return;
+            var t = event.target;
+            if (t.closest('.el-button') || t.closest('.el-checkbox') || t.closest('.el-switch') || t.closest('.cell')) {
+                // 操作列 / 选择列 / 状态列点击不触发详情（cell 内可能含按钮）
+            }
+            // 仅当点击的是主数据单元格（非操作/选择/状态列）时打开详情
+            var cell = t.closest('.el-table__row td');
+            if (!cell) return;
+            var cls = cell.getAttribute('class') || '';
+            if (cls.indexOf('el-table-column--selection') > -1) return;
+            if (cls.indexOf('crud-actions-col') > -1) return;
+            if (t.closest('.el-switch')) return;
+            this.openDetail(row);
+        },
+
+        // ========== 编辑 ==========
+        openEditDialog: function(row) {
+            var self = this;
+            self.isCreate = false;
+            self.editTenantId = row.tenantId;
+            getStoreDetail(row.tenantId).then(function(res) {
+                if (res && res.code === 1 && res.data) {
+                    var d = res.data;
+                    self.form = {
+                        storeName: d.storeName || '',
+                        storeCode: d.storeCode || '',
+                        storeType: d.storeType || 2,
+                        contactPerson: d.contactPerson || '',
+                        contactPhone: d.contactPhone || '',
+                        address: d.address || '',
+                        businessHours: d.businessHours || '',
+                        businessHoursRange: self.parseBusinessHours(d.businessHours),
+                        deliveryRadius: d.deliveryRadius || 3000,
+                        minDeliveryAmount: d.minDeliveryAmount || 20.00,
+                        deliveryFee: d.deliveryFee || 0.00,
+                        isDeliveryEnabled: d.isDeliveryEnabled === 0 ? 0 : (d.isDeliveryEnabled || 1),
+                        isDineInEnabled: d.isDineInEnabled === 0 ? 0 : (d.isDineInEnabled || 1),
+                        status: d.status === 0 ? 0 : (d.status || 1),
+                        adminUsername: '', adminPassword: ''
+                    };
+                    self.formDialogVisible = true;
+                }
+            }).catch(function() {
+                ReggieUI.error('获取门店详情失败');
+            });
+        },
+
+        // ========== 新建 ==========
+        openCreateDialog: function() {
+            this.isCreate = true;
+            this.editTenantId = null;
+            this.resetForm();
+            this.formDialogVisible = true;
+        },
+        resetForm: function() {
+            this.form = {
+                storeName: '', storeCode: '', storeType: 2,
+                contactPerson: '', contactPhone: '', address: '',
+                businessHours: '', businessHoursRange: null,
+                deliveryRadius: 3000, minDeliveryAmount: 20.00, deliveryFee: 0.00,
+                isDeliveryEnabled: 1, isDineInEnabled: 1, status: 1,
+                adminUsername: '', adminPassword: ''
+            };
+            if (this.$refs.formRef) this.$refs.formRef.clearValidate();
+        },
+        submitForm: function() {
+            var self = this;
+            self.$refs.formRef.validate(function(valid) {
+                if (!valid) return;
+                self.submitting = true;
+
+                // 处理营业时间
+                var businessHours = self.form.businessHours;
+                if (self.form.businessHoursRange && self.form.businessHoursRange.length === 2) {
+                    businessHours = self.form.businessHoursRange[0] + '-' + self.form.businessHoursRange[1];
+                }
+
+                var payload = {
+                    storeName: self.form.storeName,
+                    storeCode: self.form.storeCode,
+                    storeType: self.form.storeType,
+                    contactPerson: self.form.contactPerson,
+                    contactPhone: self.form.contactPhone,
+                    address: self.form.address,
+                    businessHours: businessHours,
+                    deliveryRadius: self.form.deliveryRadius,
+                    minDeliveryAmount: self.form.minDeliveryAmount,
+                    deliveryFee: self.form.deliveryFee,
+                    isDeliveryEnabled: self.form.isDeliveryEnabled,
+                    isDineInEnabled: self.form.isDineInEnabled,
+                    status: self.form.status
+                };
+
+                var apiCall;
+                if (self.isCreate) {
+                    payload.adminUsername = self.form.adminUsername;
+                    payload.adminPassword = self.form.adminPassword;
+                    apiCall = createStore(payload);
+                } else {
+                    apiCall = updateStore(self.editTenantId, payload);
+                }
+
+                apiCall.then(function(res) {
+                    if (res && res.code === 1) {
+                        ReggieUI.success(self.isCreate ? '门店创建成功' : '编辑成功');
+                        self.formDialogVisible = false;
+                        self.loadData();
+                    } else {
+                        ReggieUI.error(res.msg || '操作失败');
+                    }
+                }).catch(function(err) {
+                    ReggieUI.error('操作失败: ' + (err.response && err.response.data && err.response.data.msg || err.message));
+                }).finally(function() { self.submitting = false; });
+            });
+        },
+
+        // ========== 同步 ==========
+        openSyncDialog: function(row) {
+            this.syncTargetId = row.tenantId;
+            this.syncTargetName = row.storeName;
+            this.syncResult = null;
+            this.syncDialogVisible = true;
+        },
+        doSync: function(type) {
+            var self = this;
+            // 同步源固定为「直营总店」（storeType===1）。必须单独分页查询、不能用当前页 tableData：
+            // 筛选/翻页后总店可能不在当前页导致找不到源；也避免把列表第一行误当总店造成数据错乱。
+            self.syncing[type] = true;
+            pageStores({ storeType: 1, status: 1, page: 1, pageSize: 1 }).then(function(pageRes) {
+                var records = (pageRes && pageRes.code === 1 && pageRes.data) ? (pageRes.data.records || []) : [];
+                var sourceRow = records[0];
+                var sourceTenantId = sourceRow ? sourceRow.tenantId : null;
+                if (!sourceTenantId) {
+                    ReggieUI.error('未找到「直营总店」，无法作为同步源');
+                    return;
+                }
+                var apiMap = {
+                    dishes: syncDishes({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, dishIds: null, operatorId: 1 }),
+                    categories: syncCategories({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, operatorId: 1 }),
+                    setmeals: syncSetmeals({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, setmealIds: null, operatorId: 1 })
+                };
+                var apiCall = apiMap[type];
+                if (!apiCall) return;
+                return apiCall.then(function(res) {
+                    if (res && res.code === 1) {
+                        self.syncResult = res.data;
+                        ReggieUI.success('同步完成');
+                    }
+                });
+            }).catch(function(err) {
+                if (err && err.message === 'NOTLOGIN') return;
+                ReggieUI.error('同步失败：' + (err && err.message ? err.message : err));
+            }).finally(function() { self.syncing[type] = false; });
+        },
+
+        // ========== 工具方法 ==========
+        storeTypeTag: function(type) {
+            return type === 1 ? 'danger' : type === 2 ? 'success' : 'warning';
+        },
+        storeTypeName: function(type) {
+            var map = { 1: '总店', 2: '直营', 3: '加盟' };
+            return map[type] || String(type);
+        },
+        fmtAmount: function(val) {
+            if (val === null || val === undefined) return '0.00';
+            if (typeof val === 'number') return val.toFixed(2);
+            return Number(val).toFixed(2);
+        },
+        // 修改点：统一类型转换工具，解决组件属性类型校验失败问题
+        // 将任意值（字符串/数字/空）转换为 Number；ElProgress.percentage 必须 Number
+        toNumber: function(val) {
+            var n = Number(val);
+            if (isNaN(n)) return 0;
+            return n;
+        },
+        // 修改点：创建时间安全格式化，兼容后端返回的多种形态
+        // 后端 LocalDateTime(t.create_time) 经 Jackson 序列化可能为：字符串 / 时间戳数字 / 数组([年,月,日,...]) / 对象
+        // 直接调用 substring 在非字符串形态下会抛 "row.createTime.substring is not a function"，此处统一转换
+        formatDate: function(val) {
+            if (val === null || val === undefined || val === '') return '';
+            if (typeof val === 'string') return val.substring(0, 10);
+            if (typeof val === 'number') return new Date(val).toISOString().substring(0, 10);
+            if (Array.isArray(val)) {
+                var p = function(n) { return (Number(n) < 10 ? '0' : '') + Number(n); };
+                if (val.length >= 3) return val[0] + '-' + p(val[1]) + '-' + p(val[2]);
+                return '';
+            }
+            return String(val).substring(0, 10);
+        },
+        // 修改点：详情弹窗用，保留完整日期时间（年-月-日 时:分:秒）
+        formatDateTime: function(val) {
+            if (val === null || val === undefined || val === '') return '—';
+            if (typeof val === 'string') return val.replace('T', ' ').substring(0, 19);
+            if (typeof val === 'number') return new Date(val).toISOString().replace('T', ' ').substring(0, 19);
+            return String(val);
+        },
+        // 修改点：el-progress 颜色随完善度变化（绿/橙/灰），统一走语义令牌
+        progressColor: function(val) {
+            var n = this.toNumber(val);
+            if (n >= 80) return 'var(--color-success)';
+            if (n >= 50) return 'var(--color-warning)';
+            return 'var(--color-info)';
+        },
+        // 修改点：根据字段填写情况计算数据完善度（0-100 整数），驱动 el-progress
+        calcCompleteRate: function(row) {
+            var fields = [
+                row.storeName, row.storeCode, row.contactPerson, row.contactPhone,
+                row.address, row.businessHours, row.deliveryRadius,
+                row.minDeliveryAmount, row.deliveryFee,
+                row.isDeliveryEnabled, row.isDineInEnabled
+            ];
+            var filled = 0;
+            for (var i = 0; i < fields.length; i++) {
+                if (fields[i] !== null && fields[i] !== undefined && fields[i] !== '') filled++;
+            }
+            return Math.round((filled / fields.length) * 100);
+        },
+        parseBusinessHours: function(val) {
+            if (!val) return null;
+            var parts = val.split('-');
+            if (parts.length === 2) return [parts[0], parts[1]];
+            return null;
+        }
+    }
+});
+</script>
+</body>
+</html>
+
+
+
+

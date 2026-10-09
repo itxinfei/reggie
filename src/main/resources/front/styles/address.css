@@ -1,0 +1,366 @@
+/* ---- 地址管理页面样式 v5 ---- */
+/* 修改点：卡片重构为三区块布局（标签+地址 / 收货人 / 操作栏），
+   移除绝对定位编辑图标与裸 divSplit，改用文档流操作栏。
+   修改点(2026-09-28)：--addr-tag-* 标签色板收口到 styles/index.css，
+   列表页与编辑页统一引用，不再在 #address 作用域重复声明。 */
+
+/* 页面全局覆盖 */
+body.scrollable-page {
+  overflow: visible;
+  background: transparent;
+  max-width: none;
+  height: auto;
+}
+
+/* ========== 顶部标题栏（2026-09-22 起由 cend-shell light 导航接管，本页头部规则已删除） ========== */
+
+/* ========== 内容区域 ========== */
+/* 修改点（2026-09-01 二轮）：min-height → height 固定滚动容器 ——
+   index.css 全局 html,body{overflow:hidden}，页面仅靠 body.scrollable-page 无法让列表滚动，
+   原 min-height + overflow-y:auto 形同虚设，地址多于一屏时内容被视口裁剪不可见。
+   改为固定高度（100vh − 白底导航 var(--navbar-height)+安全区 − 底部按钮区 65rem）内部滚动，
+   与 address-edit 的 .divScroll 模式一致；padding-bottom 保留 96rem 防最后一条被按钮遮挡。
+   2026-09-22：头部换 cend-shell，88rem 金色头 → 44rem 白底导航（含 env 安全区）。 */
+#address .divContent {
+  height: calc(100vh - var(--navbar-height) - env(safe-area-inset-top) - 65rem);
+  padding: 4rem 0 96rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+}
+
+/* ========== 地址卡片 ========== */
+#address .divContent .divItem {
+  min-height: 128rem;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  margin-top: 12rem;
+  margin-left: 12rem;
+  margin-right: 12rem;
+  /* 2026-09-22：水平 padding 18rem → 16rem，收入 4 倍数节奏 */
+  padding: 16rem 16rem;
+  position: relative;
+  box-shadow: 0 2rem 10rem var(--mask-light);
+  transition: box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  /* 修改点(2026-09-17)：px→rem 统一（宽屏随根字号缩放） */
+  border-left: 3rem solid transparent;
+}
+
+/* 修改点：默认地址卡片 —— 金色左边框常驻 + 轻微金色投影，一眼可辨 */
+#address .divContent .divItem.itemDefault {
+  border-left-color: var(--color-primary);
+  box-shadow: var(--shadow-card);
+}
+
+#address .divContent .divItem:active {
+  box-shadow: 0 4rem 16rem var(--mask-soft);
+  background: var(--bg-hover);
+  border-left-color: var(--color-primary);
+}
+
+/* ---- 顶部：标签 + 地址 ---- */
+#address .divContent .divItem .addrTop {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* 修改点：标签与地址文本分离为独立 class（addrTag/addrText），
+   替代原 .divAddress 内混排 —— 标签不再参与文本折行计算 */
+#address .divContent .divItem .addrTag {
+  flex-shrink: 0;
+  min-width: 36rem;
+  height: 22rem;
+  font-size: 11rem;
+  font-weight: 600;
+  display: inline-block;
+  text-align: center;
+  line-height: 22rem;
+  padding: 0 8rem;
+  margin-right: 8rem;
+  margin-top: 2rem;
+  border-radius: var(--radius-lg);
+}
+
+#address .divContent .divItem .addrText {
+  flex: 1;
+  min-width: 0;
+  font-size: 15rem;
+  font-family: var(--font-family-body);
+  font-weight: 500;
+  text-align: left;
+  color: var(--color-text-primary);
+  line-height: 22rem;
+  /* 修改点：允许两行显示，省市区+详细地址可能较长 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* 标签颜色 — 与编辑页统一（--addr-tag-* 令牌收口于 styles/index.css） */
+#address .divContent .divItem .addrTag.spanCompany {
+  background: var(--addr-tag-company-gradient);
+  color: var(--addr-tag-company-fg);
+}
+#address .divContent .divItem .addrTag.spanHome {
+  background: var(--addr-tag-home-gradient);
+  color: var(--addr-tag-home-fg);
+}
+#address .divContent .divItem .addrTag.spanSchool {
+  background: var(--addr-tag-school-gradient);
+  color: var(--color-success-text);
+}
+#address .divContent .divItem .addrTag.spanNone {
+  background: linear-gradient(135deg, var(--bg-hover), var(--addr-tag-none-gradient-end));
+  /* 修改点(2026-09-27 审查P1对比度族)：disabled(#ccc) 1.6:1 近乎不可见 → hint */
+  color: var(--color-text-hint);
+}
+
+/* ---- 中部：收货人信息 ---- */
+#address .divContent .divItem .addrContact {
+  margin-top: 8rem;
+  display: flex;
+  align-items: center;
+  line-height: 20rem;
+}
+
+/* 修改点：收货人姓名加大加粗突出，性别弱化为辅助文字，电话用等宽数字字体 */
+#address .divContent .divItem .addrContact .consignee {
+  font-size: 15rem;
+  font-family: var(--font-family-title);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-right: 8rem;
+}
+
+#address .divContent .divItem .addrContact .sexText {
+  font-size: 13rem;
+  color: var(--color-text-secondary);
+  margin-right: 8rem;
+}
+
+#address .divContent .divItem .addrContact .phone {
+  font-size: 14rem;
+  font-family: var(--font-family-number), var(--font-family-base);
+  color: var(--color-text-secondary);
+  letter-spacing: 0.5rem;
+}
+
+/* ---- 底部：操作栏（默认单选 + 编辑） ---- */
+/* 修改点：操作栏 —— 上边框替代原 .divSplit，默认单选居左、编辑图标居右，
+   两者都在文档流中，长地址不再遮挡编辑入口 */
+#address .divContent .divItem .divActionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12rem;
+  padding-top: 12rem;
+  border-top: 1px solid var(--border-light);
+}
+
+#address .divContent .divItem .divDefault {
+  display: flex;
+  align-items: center;
+  font-size: 12rem;
+  color: var(--color-text-hint);
+  cursor: pointer;
+  user-select: none;
+  /* 修改点(2026-09-18)：补齐 44rem 触控热区，与右侧编辑/删除按钮对齐，负外边距补偿视觉位置 */
+  min-height: 44rem;
+  padding: 0 6rem;
+  margin-left: -6rem;
+  transition: color 0.2s;
+}
+/* 修改点：默认地址行 —— 选中态整行高亮 + 文案加粗
+   （2026-09-30 审查：原用 --color-primary #ffc200 做白底 16px 文字仅 1.62:1，改深棕金档） */
+#address .divContent .divItem .divDefault.isDefault {
+  color: var(--color-primary-text-strong);
+}
+#address .divContent .divItem .divDefault.isDefault .defaultText {
+  font-weight: 600;
+}
+#address .divContent .divItem .divDefault:active { color: var(--color-text-primary); }
+
+#address .divContent .divItem .divDefault i {
+  height: 20rem;
+  width: 20rem;
+  margin-right: 4rem;
+  font-family: remixicon !important;
+  font-style: normal;
+  font-size: 20rem;
+  line-height: 1;
+}
+/* 修改点：位图 checked_*.png → 图标字体，选中态金色、未选中灰色 */
+#address .divContent .divItem .divDefault .ri-checkbox-circle-fill {
+  color: var(--color-primary);
+}
+#address .divContent .divItem .divDefault .ri-checkbox-blank-circle-line {
+  color: var(--color-text-hint);
+}
+
+/* ---- 编辑按钮 ---- */
+/* 修改点：编辑图标由绝对定位改入操作栏文档流；配色随令牌，消除模糊底图 */
+#address .divContent .divItem .ri-edit-line {
+  font-family: remixicon !important;
+  font-style: normal;
+  font-size: 18rem;
+  line-height: 1;
+  width: 32rem;
+  height: 32rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text-hint);
+  border-radius: var(--radius-md);
+  background: var(--bg-page);
+  transition: color 0.25s, background-color 0.25s, transform 0.25s;
+}
+#address .divContent .divItem .ri-edit-line:active {
+  color: var(--color-primary);
+  background: var(--color-primary-tint);
+  transform: scale(1.1);
+}
+
+/* 修改点(2026-09-17)：删除 #address .emptyState 自定义空态样式，统一使用全局 .empty-state */
+
+/* ========== 底部添加按钮 ========== */
+/* 修改点：bottom 追加 safe-area-inset-bottom，适配 iPhone 底部 Home Indicator（2026-09-01） */
+#address .divBottom {
+  /* 修改点(2026-09-17)：42→46rem，达到 44px+ 触控标准 */
+  height: 46rem;
+  background: var(--color-primary);
+  border-radius: var(--btn-radius);
+  font-size: 15rem;
+  font-family: var(--font-family-title);
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-text-primary);
+  line-height: 46rem;
+  letter-spacing: 1rem;
+  position: absolute;
+  bottom: calc(23rem + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translate(-50%, 0);
+  width: calc(100% - 24rem);
+  max-width: 334rem;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-cta);
+  user-select: none;
+}
+
+#address .divBottom:active {
+  transform: translate(-50%, 0) scale(0.97);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ========== 响应式适配 ========== */
+/* 修改点：小屏适配 */
+@media screen and (max-width: 360px) {
+  #address .divContent .divItem {
+    margin-left: 6rem;
+    margin-right: 6rem;
+    padding-left: 12rem;
+    padding-right: 12rem;
+  }
+
+  #address .divBottom {
+    width: calc(100% - 12rem);
+  }
+}
+
+/* 修改点：桌面大屏适配 */
+@media screen and (min-width: 752px) {
+  #address .divContent {
+    max-width: 460rem;
+    margin: 0 auto;
+  }
+
+  #address .divContent .divItem {
+    max-width: 440rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  #address .divBottom {
+    max-width: 420rem;
+  }
+}
+
+/* ================================================================
+   新增：默认地址内联徽标（标签旁）
+   ================================================================ */
+#address .divContent .divItem .defaultBadge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10rem;
+  font-weight: 600;
+  /* 修改点(2026-09-17)：padding 1/6→2/8rem，与 addrTag 基线对齐且更饱满 */
+  padding: 2rem 8rem;
+  line-height: 16rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-tint);
+  /* 修改点(2026-09-26)：#ff9a00 on 10% 金底约 2:1，换金底深棕文字令牌 */
+  color: var(--color-primary-text);
+  margin-left: 6rem;
+  flex-shrink: 0;
+  letter-spacing: 0.5rem;
+  vertical-align: middle;
+}
+
+/* ================================================================
+   操作按钮栏：编辑 + 删除（统一文字按钮样式）
+   ================================================================ */
+#address .divContent .divItem .divActionBar .divActions {
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+}
+
+#address .divContent .divItem .divActionBar .actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3rem;
+  font-size: 12rem;
+  font-family: var(--font-family-body);
+  color: var(--color-text-hint);
+  cursor: pointer;
+  user-select: none;
+  /* 修改点(2026-09-17)：32→44rem 触控标准，编辑/删除不易误触 */
+  padding: 8rem 12rem;
+  min-height: 44rem;
+  border-radius: var(--radius-sm);
+  transition: color 0.2s, background-color 0.2s;
+}
+
+#address .divContent .divItem .divActionBar .actionBtn i {
+  font-size: 14rem;
+}
+
+#address .divContent .divItem .divActionBar .actionBtn:active {
+  color: var(--color-primary-text);
+  background: var(--color-primary-tint);
+}
+
+#address .divContent .divItem .divActionBar .actionBtnDelete:active {
+  color: var(--color-danger);
+  background: var(--color-danger-tint);
+}
+
+/* 滑动删除按钮 */
+.swipe-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rem;
+  width: 72rem;
+  height: 100%;
+  background: var(--color-danger);
+  color: var(--color-text-white);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}

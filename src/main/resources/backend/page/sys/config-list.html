@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>系统配置 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="config-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">系统配置管理</h1>
+      
+      
+      <!-- 数据统计卡片 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
+
+      <!-- 搜索 + 操作栏 -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+        :show-refresh="true"
+        @refresh="init(false)"
+      ></table-bar>
+
+      <!-- 数据表格 -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :show-actions="true"
+        :actions-width="120"
+        row-key="id"
+        :batch-delete="doBatchDelete"
+        @batch-deleted="init(true)"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-configType="{ row }">
+          <el-tag size="small" :type="typeTagType(row.configType)">{{ typeName(row.configType) }}</el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="editRow(row)">编辑</el-button>
+          <el-dropdown trigger="click" @command="(cmd) => cmd === 'delete' && deleteHandle(row.id)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- 编辑弹窗 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :title="formData.title"
+      :visible.sync="formData.dialogVisible"
+      :submit-loading="submitting"
+      size="md"
+      @submit="submitForm"
+      @close="formData.dialogVisible = false"
+    >
+      <!-- 修改点：补全 ref/:model/:rules 与 prop，启用 Element 校验（原 required 无 prop 不生效） -->
+      <el-form ref="configForm" :model="formData" :rules="configRules" label-width="100px" size="small">
+        <el-form-item label="配置键" prop="configKey">
+          <el-input v-model="formData.configKey" :disabled="!!formData.id" placeholder="如：store_name"></el-input>
+        </el-form-item>
+        <el-form-item label="配置值" prop="configValue">
+          <el-input v-model="formData.configValue" placeholder="配置值"></el-input>
+        </el-form-item>
+        <el-form-item label="类型">
+          <el-select v-model="formData.configType" style="width:100%">
+            <el-option label="功能开关" :value="1"></el-option>
+            <el-option label="运营参数" :value="2"></el-option>
+            <el-option label="显示设置" :value="3"></el-option>
+            <el-option label="其他" :value="4"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="说明">
+          <el-input v-model="formData.description" type="textarea" :rows="2"></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../api/sys.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#config-app',
+      data() {
+        return {
+          loading: false,
+          page: 1,
+          pageSize: 10,
+          counts: 0,
+          tableData: [],
+          // 统计数据
+          stats: { total: 0, type1: 0, type2: 0, type3: 0, type4: 0 },
+          activeFilter: '',
+          lastSearch: {},
+          submitting: false,
+          // 搜索配置
+          searchConfig: [
+            { type: 'input', field: 'configKey', placeholder: '配置键', width: '180px' },
+            { type: 'select', field: 'configType', placeholder: '配置类型', width: '140px',
+              options: [
+                { label: '功能开关', value: '1' },
+                { label: '运营参数', value: '2' },
+                { label: '显示设置', value: '3' },
+                { label: '其他', value: '4' }
+              ] },
+            { type: 'input', field: 'keyword', placeholder: '配置值/说明', width: '200px' }
+          ],
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'add', text: '+ 新增配置', type: 'primary' },
+            { key: 'refresh', text: '刷新', type: 'default' }
+          ],
+          // 表格列配置
+          columns: [
+            { prop: 'configKey', label: '配置键', minWidth: 180 },
+            { prop: 'configValue', label: '配置值', minWidth: 160 },
+            { prop: 'configType', label: '类型', width: 100, align: 'center', slot: true },
+            { prop: 'description', label: '说明', minWidth: 120 }
+          ],
+          // 弹窗表单
+          formData: {
+            title: '新增配置',
+            dialogVisible: false,
+            id: null, configKey: '', configValue: '', configType: 1, description: ''
+          },
+          // 修改点：配置表单校验规则（配合 el-form :rules + validate()）
+          configRules: {
+            configKey: [{ required: true, message: '请输入配置键', trigger: 'blur' }],
+            configValue: [{ required: true, message: '请输入配置值', trigger: 'blur' }]
+          }
+        }
+      },
+      created() {
+        this.init(true)
+      },
+      computed: {
+        statsCards: function() {
+          const self = this
+          const typeLabels = {}
+          const typeKeys = ['type1', 'type2', 'type3', 'type4']
+          return [
+            { key: '', icon: 'ri-settings-3-line', label: '配置总数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: 'type1', icon: 'ri-record-circle-line', label: '功能开关', value: self.stats.type1 || 0, color: 'success', clickable: true, active: self.activeFilter === 'type1' },
+            { key: 'type2', icon: 'ri-bar-chart-2-line', label: '运营参数', value: self.stats.type2 || 0, color: 'warning', clickable: true, active: self.activeFilter === 'type2' },
+            { key: 'type3', icon: 'ri-palette-line', label: '显示设置', value: self.stats.type3 || 0, color: 'info', clickable: true, active: self.activeFilter === 'type3' }
+          ]
+        }
+      },
+      methods: {
+        /* ── 数据加载 ── */
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '参数配置', request: sysApi.configDelete })
+        },
+        async init(reloadStats = true) {
+          this.loading = true
+          try {
+            var ls = this.lastSearch || {}
+            var params = Object.assign({ page: this.page, pageSize: this.pageSize }, ls)
+            const requests = [sysApi.configPage(params)]
+            if (reloadStats) { requests.push(this.loadConfigStats()) }
+            const results = await Promise.all(requests)
+            const listRes = results[0]
+            const statsRes = results[1]
+            if (listRes && listRes.code === 1) {
+              this.tableData = (listRes.data.records || []).map(function(item) {
+                return Object.assign({}, item, { _editing: false })
+              })
+              this.counts = listRes.data.total || 0
+            } else {
+              // 修改点：接口失败兜底提示（原无 else 分支静默）
+              ReggieUI.error((listRes && listRes.msg) || '加载配置列表失败')
+            }
+            if (reloadStats && statsRes && statsRes.code === 1) {
+              this.stats = Object.assign({}, this.stats, statsRes.data  || {})
+            }
+          } catch (err) {
+            if (err.message !== 'NOTLOGIN') {
+              ReggieUI.error('加载配置列表失败，请刷新重试')
+            }
+          } finally {
+            this.loading = false
+          }
+        },
+        async loadConfigStats() {
+          try {
+            // 修改点：使用后端 /sys/config/stats 聚合端点（原 pageSize:1 只拿 1 条记录做统计，永远不准）
+            const res = await sysApi.configStats()
+            if (res && res.code === 1) {
+              return { code: 1, data: res.data }
+            }
+          } catch (err) { console.warn('加载配置统计失败:', err) }
+          return { code: 0 }
+        },
+        /* ── 筛选与分页 ── */
+        onCardClick: function(payload) {
+          this.activeFilter = payload.activeKey
+          this.lastSearch = this.activeFilter ? this.buildFilterParams(this.activeFilter) : {}
+          this.page = 1
+          this.init(false)
+        },
+        buildFilterParams(key) {
+          const map = { type1: 1, type2: 2, type3: 3 }
+          return map[key] ? { configType: map[key] } : {}
+        },
+        // table-bar 回调
+        onSearch(searchParams) {
+          this.activeFilter = ''
+          this.lastSearch = searchParams
+          this.page = 1
+          this.init(false)
+        },
+        onReset() {
+          this.activeFilter = ''
+          this.lastSearch = {}
+          this.page = 1
+          this.init(false)
+        },
+        onAction(payload) {
+          if (payload.key === 'add') this.openDialog()
+          if (payload.key === 'refresh') this.init(true)
+        },
+        onPageChange(payload) {
+          this.page = payload.page
+          this.init(false)
+        },
+        onSizeChange(payload) {
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
+          this.init(false)
+        },
+        typeName(type) {
+          const map = { 1: '功能开关', 2: '运营参数', 3: '显示设置' }
+          return map[type] || '其他'
+        },
+        typeTagType(type) {
+          const map = { 1: 'success', 2: 'warning', 3: 'info' }
+          return map[type] || ''
+        },
+        /* ── 弹窗表单（新增/编辑/删除） ── */
+        openDialog() {
+          this.formData.title = '新增配置'
+          this.formData = { title: '新增配置', dialogVisible: true, id: null, configKey: '', configValue: '', configType: 1, description: '' }
+        },
+        editRow(row) {
+          this.formData.title = '编辑配置'
+          this.formData = Object.assign({}, this.formData, { title: '编辑配置', dialogVisible: true }, JSON.parse(JSON.stringify(row)))
+        },
+        submitForm() {
+          const self = this
+          self.$refs.configForm.validate(function(valid) {
+            if (!valid) {
+              ReggieUI.warning('请完善表单必填项')
+              return
+            }
+            self.submitting = true
+          const api = self.formData.id ? sysApi.configUpdate(self.formData) : sysApi.configAdd(self.formData)
+          api.then(function(res) {
+            if (res && res.code === 1) {
+              ReggieUI.success(res.msg || '操作成功')
+              self.formData.dialogVisible = false
+              self.init()
+            } else {
+              ReggieUI.error(res ? res.msg : '操作失败')
+            }
+            }).catch(function() { ReggieUI.error('操作失败') })
+            .finally(function() { self.submitting = false })
+          })
+        },
+        deleteHandle(id) {
+          const self = this
+          ReggieUI.confirm('确定删除该配置吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+            .then(function() {
+              sysApi.configDelete(id).then(function(res) {
+                if (res && res.code === 1) {
+                  ReggieUI.success('删除成功')
+                  self.init()
+                }
+              })
+            }).catch(function(err) {
+              // request.js 对业务失败 reject(new Error(msg))，需明确提示；用户点取消 reject('cancel')，静默
+              if (err instanceof Error) { ReggieUI.error(err.message || '删除失败') }
+            })
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

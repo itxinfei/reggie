@@ -1,0 +1,154 @@
+-- ==================== 业务订单表（H2 内存库自建，定义与 schema.sql 一致） ====================
+CREATE TABLE IF NOT EXISTS orders (
+  id bigint NOT NULL COMMENT '主键',
+  number varchar(50) NULL DEFAULT NULL COMMENT '订单',
+  status int NOT NULL DEFAULT 1 COMMENT '订单状',
+  user_id bigint NULL DEFAULT NULL COMMENT '用户id',
+  address_book_id bigint NULL DEFAULT NULL COMMENT '地址id',
+  order_time datetime NULL DEFAULT NULL COMMENT '下单时间',
+  checkout_time datetime NULL DEFAULT NULL COMMENT '结账时间',
+  pay_method int NULL DEFAULT NULL COMMENT '攻方式',
+  amount decimal(10,2) NOT NULL COMMENT '实收金',
+  delivery_fee decimal(10,2) NULL DEFAULT NULL COMMENT '配送费（外卖单独立存储，堂食为0）',
+  full_reduction_amount decimal(10,2) NULL DEFAULT 0.00 COMMENT '满减优惠金额（满减活动扣减，未享受为0）',
+  new_customer_discount_amount decimal(10,2) NULL DEFAULT 0.00 COMMENT '新客立减金额（新客活动扣减，未享受为0）',
+  remark varchar(100) NULL DEFAULT NULL COMMENT '备注',
+  internal_remark varchar(500) NULL DEFAULT NULL COMMENT '内部备注（仅后台可见）',
+  cancel_reason varchar(255) NULL DEFAULT NULL COMMENT '取消/拒单原因（P0-5 回执，顾客端可见；不再覆盖 remark）',
+  pickup_code varchar(16) NULL DEFAULT NULL COMMENT '取餐码（P0-6 核销：派单/抢单时生成，骑手取餐须校验）',
+  expect_delivery_time varchar(20) NULL DEFAULT NULL COMMENT '预送达时间',
+  user_name varchar(50) NULL DEFAULT NULL COMMENT '用户',
+  phone varchar(255) NULL DEFAULT NULL COMMENT '手机',
+  address varchar(255) NULL DEFAULT NULL COMMENT '地址',
+  consignee varchar(50) NULL DEFAULT NULL COMMENT '收货',
+  dining_type varchar(20) NULL DEFAULT 'OUTSIDE' COMMENT '用类型',
+  table_id bigint NULL DEFAULT NULL COMMENT '堂桌台ID',
+  table_name varchar(32) NULL DEFAULT NULL COMMENT '堂桌台名称',
+  idempotency_key varchar(128) NULL DEFAULT NULL COMMENT '幂等',
+  stock_refunded int NULL DEFAULT 0 COMMENT '已库存数量',
+  used_coupon_id bigint NULL DEFAULT NULL COMMENT '优惠券ID',
+  rider_id bigint NULL DEFAULT NULL COMMENT '配送骑手ID（店长派单/骑手抢单后写入）',
+  dispatch_time datetime NULL DEFAULT NULL COMMENT '派单/抢单时间（超时回流判断）',
+  platform_type varchar(32) NULL DEFAULT NULL COMMENT '平台来源',
+  platform_order_id varchar(128) NULL DEFAULT NULL COMMENT '平台订单',
+  platform_shop_id varchar(128) NULL DEFAULT NULL COMMENT '平台门店ID',
+  platform_raw longtext NULL COMMENT '平台原订单JSON',
+  create_time datetime NOT NULL COMMENT '创建时间',
+  update_time datetime NOT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建',
+  update_user bigint NULL DEFAULT NULL COMMENT '俔',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '昐删除',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
+  version int NOT NULL DEFAULT 0 COMMENT '乐锁版朏',
+  master_order_id bigint NULL DEFAULT NULL COMMENT '父订单ID（AA分账时指向主订单）',
+  split_count int NULL DEFAULT NULL COMMENT '分账份数（AA分账记录拆分数量）',
+  PRIMARY KEY (id)
+);
+
+-- ==================== 订单明细表 ====================
+CREATE TABLE IF NOT EXISTS order_detail (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  name varchar(50) NOT NULL COMMENT '名称',
+  order_id bigint NOT NULL COMMENT '订单id',
+  dish_id bigint NULL DEFAULT NULL COMMENT '菜品id',
+  setmeal_id bigint NULL DEFAULT NULL COMMENT '套餐id',
+  dish_flavor varchar(50) NULL DEFAULT NULL COMMENT '口味',
+  number int NOT NULL DEFAULT 1 COMMENT '数量',
+  amount decimal(10,2) NOT NULL COMMENT '单价',
+  remark varchar(255) NULL DEFAULT NULL COMMENT '订单明细备注',
+  image varchar(255) NULL DEFAULT NULL COMMENT '图片',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  create_time datetime NOT NULL COMMENT '创建时间',
+  update_time datetime NOT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  PRIMARY KEY (id)
+);
+
+-- 只清理本测试专用的平台订单（订单号前缀 MT20260824），绝不删开发库（tenant=1）的平台订单。
+-- 避免 @DirtiesContext 重启后残留导致去重误判；明细按 orders 子查询一并清理。
+-- 单库隔离（2026-10-06）：仅清理测试租户 999 的残留，禁止无条件全表 DELETE（会清掉租户 1 演示数据）
+DELETE FROM order_detail WHERE order_id IN (SELECT id FROM (SELECT id FROM orders WHERE platform_order_id LIKE 'MT20260824%') t);
+DELETE FROM orders WHERE platform_order_id LIKE 'MT20260824%';
+
+-- 外卖平台接入配置 测试库建表（H2 / MySQL 兼容）
+CREATE TABLE IF NOT EXISTS platform_config (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  platform_type varchar(32) NOT NULL COMMENT '平台类型 MEITUAN/ELEME/DOUYIN/SELF/OTHER',
+  platform_name varchar(128) NULL DEFAULT NULL COMMENT '平台展示名称',
+  shop_id varchar(128) NULL DEFAULT NULL COMMENT '平台侧门店ID',
+  app_key varchar(512) NULL DEFAULT NULL COMMENT '应用标识(加密)',
+  app_secret varchar(512) NULL DEFAULT NULL COMMENT '应用密钥(加密)',
+  access_token varchar(512) NULL DEFAULT NULL COMMENT '访问令牌(加密)',
+  enabled int NOT NULL DEFAULT 1 COMMENT '昐吔 0停用 1吔',
+  sync_scope int NOT NULL DEFAULT 1 COMMENT '同范围位标 1订单2商品4库存8营业状',
+  remark varchar(500) NULL DEFAULT NULL COMMENT '备注',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (id)
+);
+
+-- ==================== 商品平台映射表 ====================
+CREATE TABLE IF NOT EXISTS dish_platform_mapping (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  dish_id bigint NOT NULL COMMENT '朳统菜品ID',
+  platform_type varchar(32) NOT NULL COMMENT '平台类型 MEITUAN/ELEME/DOUYIN/SELF/OTHER',
+  platform_shop_id varchar(128) NULL DEFAULT NULL COMMENT '平台侧门店ID',
+  platform_dish_id varchar(128) NULL DEFAULT NULL COMMENT '平台菜品ID',
+  platform_sku_id varchar(128) NULL DEFAULT NULL COMMENT '平台SKU ID',
+  price decimal(10,2) NULL DEFAULT NULL COMMENT '平台价格',
+  status int NOT NULL DEFAULT 1 COMMENT '状 0下架 1上架',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (id),
+  UNIQUE INDEX idx_mapping_dish_platform (dish_id, platform_type, platform_dish_id)
+);
+
+-- ==================== 平台同步操作日志表 ====================
+CREATE TABLE IF NOT EXISTS platform_sync_log (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  platform_type varchar(32) NOT NULL COMMENT '平台类型',
+  platform_order_id varchar(128) NULL DEFAULT NULL COMMENT '平台订单ID',
+  local_order_id bigint NULL DEFAULT NULL COMMENT '朜订单ID',
+  action varchar(32) NOT NULL COMMENT '动作 PULL/ACCEPT/REJECT',
+  direction varchar(16) NOT NULL DEFAULT 'IN' COMMENT '方向 IN=拉单 OUT=回传',
+  request_body text NULL COMMENT '请求内',
+  response_body text NULL COMMENT '响应内',
+  status int NOT NULL DEFAULT 0 COMMENT '结果 0=成功 1=失败',
+  error_message varchar(512) NULL DEFAULT NULL COMMENT '错信息',
+  retry_count int NOT NULL DEFAULT 0 COMMENT '重试次数',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  PRIMARY KEY (id)
+);
+
+-- ==================== 平台对账任务表 ====================
+CREATE TABLE IF NOT EXISTS platform_reconcile_task (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  platform_type varchar(32) NOT NULL COMMENT '平台类型',
+  reconcile_date date NOT NULL COMMENT '对账日期',
+  begin_time datetime NOT NULL COMMENT '对账始时',
+  end_time datetime NOT NULL COMMENT '对账结束时间',
+  total_platform_count int NOT NULL DEFAULT 0 COMMENT '平台侧订单数',
+  total_local_count int NOT NULL DEFAULT 0 COMMENT '本地订单数',
+  match_count int NOT NULL DEFAULT 0 COMMENT '匹配成功',
+  missing_local_count int NOT NULL DEFAULT 0 COMMENT '平台有本地无',
+  missing_platform_count int NOT NULL DEFAULT 0 COMMENT '朜有平台无',
+  status int NOT NULL DEFAULT 0 COMMENT '状 0=进 1=完成 2=失败',
+  error_message varchar(512) NULL DEFAULT NULL COMMENT '错信息',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (id)
+);
+
+-- 清理测试租户段（999 默认 / 998 第二租户）的平台配置相关数据，保证可重复执行；不触碰 tenant=1/2。
+DELETE FROM platform_reconcile_task WHERE tenant_id IN (999, 998);
+DELETE FROM platform_sync_log WHERE tenant_id IN (999, 998);
+DELETE FROM dish_platform_mapping WHERE tenant_id IN (999, 998);
+DELETE FROM platform_config WHERE tenant_id IN (999, 998);

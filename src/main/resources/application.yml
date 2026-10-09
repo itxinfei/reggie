@@ -1,0 +1,173 @@
+server:
+  port: 8080
+  servlet:
+    session:
+      timeout: 30m  # 会话30分钟无操作自动过期
+      cookie:
+        http-only: true      # 防止 XSS 窃取 Session ID
+        secure: false        # 开发环境 false，生产环境启用 HTTPS 后设为 true
+        same-site: strict    # 防止 CSRF 攻击
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,image/svg+xml,font/ttf,font/woff,font/woff2
+    min-response-size: 1024
+
+spring:
+  application:
+    name: reggie_take_out
+  profiles:
+    active: dev  # 默认开发环境
+  devtools:
+    restart:
+      enabled: false
+  # P2 AI 视觉多模态图片上传：默认 1MB 会导致 413，放宽到 10MB/12MB
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+
+mybatis-plus:
+  mapper-locations:
+    - classpath*:/mapper/**/*.xml
+    - classpath*:/com/reggie/mapper/**/*.xml
+    - classpath*:/com/reggie/module/*/mapper/**/*.xml
+    - classpath*:/com/reggie/module/*/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: ASSIGN_ID
+# 测试图片生成配置
+reggie:
+  server-url: http://localhost:8080
+  image:
+    # 是否在启动时下载真实网络图片（true=仅首次启动时下载，false=禁用）
+    # 注意：下载一次后，后续启动会自动跳过（检测到图片即停止）
+    download-real-images: true
+    # 网络图片下载超时时间（毫秒）
+    download-timeout: 10000
+    # 下载重试次数（暂未启用，预留）
+    download-retry: 2
+  # 短信服务配置
+  sms:
+    # 短信签名（生产环境需在application-prod.yml中覆盖）
+    sign-name: 瑞吉外卖
+    # 短信模板编码（开发环境留空，不实际发送；生产环境在application-prod.yml中配置）
+    template-code:
+    # 修改点：短信Mock模式开关（开发环境默认true，仅打印日志不实际发送）
+    mock-mode: true
+
+  # 修改点：APP推送服务配置
+  push:
+    # 推送Mock模式（开发环境默认true，仅打印日志不实际发送；生产环境设为false并配置推送SDK）
+    mock-mode: true
+    # 推送服务商：mock / jpush / getui / fcm
+    provider: mock
+
+  # SSE实时推送配置（2026-09-26）：C端在线时服务端实时下发，离线由站内信(marketing_message)兜底
+  sse:
+    # SSE总开关（关闭后停止心跳保活）
+    enabled: true
+    # 单条连接超时时间（毫秒），默认30分钟
+    timeout: 1800000
+    # 心跳间隔（毫秒），防止Nginx/移动网关回收空闲连接
+    heartbeat: 30000
+
+  # 修改点(2026-09-15)：平台对接（美团/京东/饿了么/抖音）同步总开关
+  # 当前各平台适配器为占位协议（接口路径/签名未按官方开放平台文档实现），默认 false：
+  # 关闭后定时拉单(30s)/重试(2min)/恢复(5min)/对账(每日)任务直接跳过，不再向占位网关空转外呼刷 ERROR 日志。
+  # 完成平台入驻（美团 developer.waimai.meituan.com、京东 opendj.jd.com、饿了么 open.faas.ele.me、
+  # 抖音 developer.open-douyin.com）并按官方文档重写协议层后，再置为 true
+  platform:
+    sync-enabled: false
+
+  # 支付回调签名校验配置
+  # 安全约定：mock-mode=true（默认，开发/演示）跳过回调验签仅告警；
+  # 生产环境必须设为 false 并配置支付宝公钥/微信API密钥做真实签名校验，密钥缺失则拒绝回调（fail-closed）
+  payment:
+    mock-mode: true
+    # 支付宝公钥（RSA2，Base64 X.509，不含 PEM 头尾）——支付宝开放平台 → 应用 → 开发设置
+    alipay-public-key:
+    # 微信支付 API 密钥（APIv2，32位）——微信商户平台 → 账户中心 → API安全
+    wechat-api-key:
+    # 微信回调签名类型：MD5（默认）/ HMAC-SHA256
+    wechat-sign-type: MD5
+
+  # 外卖平台对接配置
+  # 安全约定：mock-mode=true（默认，开发/演示）跳过真实平台调用与回调验签，仅打印告警；
+  # 生产环境必须设为 false 并配置各平台 enabled=true + appId/appSecret/baseUrl/merchantId/notifyToken，
+  # 未配置的平台操作一律拒绝执行（fail-closed），严禁静默假成功
+  delivery:
+    mock-mode: true
+    platforms:
+      MEITUAN:
+        enabled: false
+        app-id:
+        app-secret:
+        merchant-id:
+        base-url: https://api-open.meituan.com
+        notify-token:
+      ELEME:
+        enabled: false
+        app-id:
+        app-secret:
+        merchant-id:
+        base-url: https://open-api.shop.ele.me
+        notify-token:
+      DOUYIN:
+        enabled: false
+        app-id:
+        app-secret:
+        merchant-id:
+        base-url: https://open.douyin.com
+        notify-token:
+
+# API文档配置（必须在Spring根级别，不能嵌套在reggie下）
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+    try-it-out-enabled: true
+    filter: true
+    doc-expansion: none
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+
+# Actuator 管理端点：默认仅暴露 health 和 info，防止敏感信息泄露
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: never
+
+# ==================== 开发环境专用 Actuator 增强 ====================
+# 仅在 dev 环境（当前默认 active: dev）开放更多监控端点并展示详情，
+# 方便 IDEA 的 Actuator/Endpoints 面板检索 health、beans、mappings 等数据。
+# 生产环境请勿激活 dev，避免敏感信息暴露。
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+management:
+  endpoints:
+    web:
+      exposure:
+        # 安全说明：移除 env/configprops — 这两个端点会泄露所有环境变量和配置属性（含密码、API Key）
+        include: health,info,beans,mappings,loggers,metrics,threaddump
+  endpoint:
+    health:
+      show-details: always

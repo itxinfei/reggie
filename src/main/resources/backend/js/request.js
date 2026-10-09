@@ -1,0 +1,256 @@
+/**
+ * 后台管理端请求封装：axios 实例 + CSRF 自动带头 + 统一响应/未登录处理。
+ * 依赖全局 axios、ELEMENT/ReggieUI；CSRF 存取与请求拦截复用 /shared/js/request-core.js。
+ */
+document.write('<script src="/shared/js/request-core.js?v=20260930"><\/script>');
+(function (win) {
+  axios.defaults.headers['Content-Type'] = 'application/json;charset=utf-8'
+  // 创建axios实例
+  const service = axios.create({
+    // axios中请求配置有baseURL选项，表示请求URL公共部分
+    baseURL: '/',
+    // 超时
+    timeout: 30000
+  })
+  // request拦截器：写操作带 CSRF 头（统一实现见 /shared/js/request-core.js）。
+  // 注意：document.write 注入的脚本在本文件顶层代码「之后」才执行，
+  // 故 core 未就绪时先登记 pending 列表，由其加载完成时统一补挂。
+  if (win.ReggieCsrf) {
+    win.ReggieCsrf.attachRequestInterceptor(service, win.ReggieCsrf.get);
+  } else {
+    (win.__reggieCsrfPending = win.__reggieCsrfPending || []).push(service);
+  }
+
+  // 暴露给 el-upload 等绕过 axios 的上传场景复用同一 Token（如 /common/upload、/employee/import）
+  // 惰性取值：调用发生在运行时，此时 request-core 必然已就绪
+  win.getCsrfToken = function () {
+    return win.ReggieCsrf ? win.ReggieCsrf.get() : null;
+  };
+
+  /**
+   * 未登录统一处理：清理本地登录态，并跳转登录页。
+   * iframe 内发 postMessage 通知顶层窗口跳转（index.html 已有 handleChildNotLogin 监听），
+   * 非 iframe 时直接当前窗口跳转。
+   * 2026-09-26：去掉"先提示再延迟1.2s跳转"，未登录立即跳转（打开页面必须是登录态）。
+   */
+  // 防重入：并发请求同时返回未登录时只跳转一次
+  var notLoginHandled = false;
+  function handleNotLogin() {
+    try { localStorage.removeItem('userInfo'); } catch (_) {}
+    win.ReggieCsrf.clear();
+    if (notLoginHandled) { return; }
+    notLoginHandled = true;
+    if (window.self !== window.top) {
+      try {
+        window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*');
+      } catch (_) {}
+    } else {
+      window.location.replace('/backend/page/login/login.html');
+    }
+  }
+
+  /* ===== 列表请求失败信号（2026-09-27） =====
+     背景：主列表接口失败时，页面 catch 通常只打日志、tableData 保持 []，
+     表格于是渲染成"暂无数据 / 试试调整筛选条件"，把后端故障误导成"本来就没数据"。
+     这里在拦截器层统一记录信号，供 crud-table 渲染失败态，
+     避免逐页改 59 个列表页。
+     口径：
+       - 仅 /xxx/page 与 /xxx/list 视为列表请求（统计类 /stats 不参与，避免误判）
+       - 401 未登录不置位（会跳登录页，与"列表加载失败"无关）
+       - 只在该次请求成功时才清除，统计类成功后不会误清
+     用事件而非时间窗口传递，避免时序抖动导致的误判。 */
+  function isListRequest (cfg) {
+    if (!cfg) { return false }
+    var url = String(cfg.url || '')
+    if (/\/(page|list)(\?|$)/.test(url)) { return true }
+    var p = cfg.params
+    if (p && typeof p === 'object') {
+      for (var k in p) {
+        if (k === 'page' || k === 'current') { return true }
+      }
+    }
+    return false
+  }
+
+  function emitListState (failed) {
+    try {
+      win.__reggieListFailed = failed
+      win.dispatchEvent(new win.CustomEvent(failed ? 'reggie:list-fail' : 'reggie:list-ok'))
+    } catch (e) { /* noop */ }
+  }
+
+  // 响应拦截器
+  service.interceptors.response.use(res => {
+      // 修改点：保存后端返回的CSRF Token
+      var csrfToken = res.headers['x-csrf-token'];
+      if (csrfToken) {
+        win.ReggieCsrf.save(csrfToken);
+      }
+      // 修改点：统一code判断，code===0为业务失败，code===1为成功
+      const code = res.data ? res.data.code : undefined;
+      // NOTLOGIN状态码处理：返回登录页面
+      if (code === 0 && res.data.msg === 'NOTLOGIN') {
+        handleNotLogin();
+        return Promise.reject(new Error('NOTLOGIN'))  // 修改点：阻止Promise继续进入then回调
+      } else {
+        // 修改点(2026-08-24)：业务失败（code=0 且非 NOTLOGIN）时，reject 让请求进入页面 catch，
+        // 由页面统一错误提示，避免页面静默拿到空数据却不报错（表现为"打开了但没数据"）。
+        if (res.data && res.data.code === 0) {
+          return Promise.reject(new Error(res.data.msg || '业务处理失败'))
+        }
+        // 修改点(2026-08-27)：分页响应 records→list 别名 + data 兜底（修复"页面无数据展示"根因）。
+        // - 后端 MyBatis-Plus IPage 序列化结果：{code:1, msg:"success", data:{records:[...], total:N, current:1, size:10, pages:N}}
+        // - 前端 48 处列表页读取 this.tableData = res.data.list（list 字段不存在→undefined→表格为空）
+        // - 此处将 records 别名到 list，同时兼容后端已返回 list 的情况；对非分页响应（data 非对象、无 records）无副作用。
+        // - data 兜底：后端偶发返回 data:null 时，多处页面（dining/queue-list, member-center/*）裸访问 res.data.total 会 TypeError。
+        var payload = res.data;
+        if (payload && typeof payload === 'object') {
+          if (payload.records && !payload.list) {
+            payload.list = payload.records;
+          }
+        } else {
+          payload = {};
+        }
+        // 列表请求成功 → 清除失败标志（统计类成功不清除，避免误清）
+        if (isListRequest(res.config)) { emitListState(false) }
+        return payload
+      }
+    },
+    error => {
+      // 修改点(2026-09-14)：未登录识别。
+      // 后端 LoginCheckFilter 在未登录时返回 HTTP 401 + JSON body {code:0, msg:'NOTLOGIN'}，
+      // axios 会把 4xx 视为错误走本 error 分支，原 NOTLOGIN 跳转逻辑写在 success 分支不生效。
+      // 此处先识别 401/NOTLOGIN，复用 handleNotLogin 跳转登录页，且不弹错误提示。
+      if (error && error.response && error.response.status === 401) {
+        var respData = error.response.data;
+        if (respData && (respData.msg === 'NOTLOGIN' || respData.code === 0)) {
+          handleNotLogin();
+          return Promise.reject(new Error('NOTLOGIN'));
+        }
+      }
+      // 列表类请求失败 → 置位，供 crud-table 渲染失败态（401 已提前返回，不会走到这里）
+      if (isListRequest(error.config)) { emitListState(true) }
+      let { message } = error;
+      // 修改点：尝试从响应体中提取详细的错误信息
+      if (error.response && error.response.data) {
+        const respData = error.response.data;
+        // 后端统一响应格式：{ code: 0, msg: "..." }
+        if (respData.msg && typeof respData.msg === 'string' && respData.msg.startsWith('参数校验失败')) {
+          message = respData.msg;
+        } else if (respData.msg) {
+          message = respData.msg;
+        }
+      }
+      if (message === "Network Error") {
+        message = "后端接口连接异常";
+      }
+      else if (message.includes("timeout")) {
+        message = "系统接口请求超时";
+      }
+      else if (message.includes("Request failed with status code")) {
+        var httpStatus = error.response ? error.response.status : 0;
+        if (httpStatus === 403) {
+          // 无权限：明确告知原因与解决途径，而非笼统的系统异常
+          message = "您没有该操作的访问权限，请联系管理员开通";
+        } else {
+          message = "系统接口" + message.substring(message.length - 3) + "异常";
+        }
+      }
+      if (window.ReggieUI && window.ReggieUI.error) {
+        // 统一走 ReggieUI 反馈入口（common.js 规范：禁止混用 $message / ElMessage 直写）；
+        // 错误提示保留 5s，便于阅读完整错误信息
+        window.ReggieUI.error(message, 5 * 1000)
+      } else if (window.ELEMENT && window.ELEMENT.Message) {
+        window.ELEMENT.Message({
+          message: message,
+          type: 'error',
+          duration: 5 * 1000
+        })
+      }
+      return Promise.reject(error)
+    }
+  )
+  win.$axios = service;
+
+  /* ===== 页面登录守卫（2026-09-26）：打开页面必须是登录状态 =====
+     页面加载时立即探测 /employee/me，未登录由响应拦截器 handleNotLogin 统一处理：
+     顶层窗口立即跳登录页；iframe 子页面 postMessage 通知顶层立即跳转。
+     登录页自身不守卫（否则死循环）。探测失败若是断网/5xx 不会触发跳转（handleNotLogin 仅由
+     401/NOTLOGIN 触发），不影响异常场景。 */
+  (function guardLoginOnPageOpen() {
+    var path = win.location.pathname;
+    if (path.indexOf('/backend/page/login/') !== -1) { return; }
+    win.$axios({ url: '/employee/me', method: 'get', silent: true }).catch(function () {});
+  })();
+
+  /* ===== ReggieUI 统一交互反馈（挂载于 window.ReggieUI） =====
+     规范（前端二次审查 2026-07-17）：所有页面的 toast / loading / confirm /
+     notify 必须经由本模块，禁止在业务页混用 this.$message / ElMessage /
+     Notification 直写，确保提示样式与交互反馈一致、可统一管控。
+     优先走 Vue.prototype.$message 等原型方法，缺失时降级 window.ELEMENT。 */
+  (function (global) {
+    'use strict';
+    function getVue() {
+      return global.Vue || (global.top && global.top.Vue);
+    }
+    function callMethod(name, fallback) {
+      var Vue = getVue();
+      var args = Array.prototype.slice.call(arguments, 2);
+      if (Vue && Vue.prototype && typeof Vue.prototype[name] === 'function') {
+        return Vue.prototype[name].apply(Vue.prototype, args);
+      }
+      if (typeof fallback === 'function') {
+        return fallback.apply(null, args);
+      }
+      return null;
+    }
+    var ReggieUI = {
+      /** 兼容 Element $message 对象形式，如 ReggieUI.message({ type:'success', message:'x' }) */
+      message: function (options) {
+        var res = callMethod('$message', global.ELEMENT && global.ELEMENT.Message, options);
+        if (res === null && options && options.message) { global.alert(options.message); }
+      },
+      /** 轻提示：type 可取 success/warning/info/error；duration 毫秒（默认 3000，与 Element UI 默认一致） */
+      toast: function (message, type, duration) {
+        var res = callMethod('$message', global.ELEMENT && global.ELEMENT.Message, {
+          message: message,
+          type: type || 'info',
+          duration: (duration == null) ? 3000 : duration
+        });
+        if (res === null) { global.alert(message); }
+      },
+      success: function (m, d) { this.toast(m, 'success', d); },
+      error: function (m, d) { this.toast(m, 'error', d); },
+      warning: function (m, d) { this.toast(m, 'warning', d); },
+      info: function (m, d) { this.toast(m, 'info', d); },
+      /** 全屏加载态，返回带 close() 的句柄 */
+      loading: function (text) {
+        var opts = {
+          text: text || '加载中…',
+          fullscreen: true,
+          background: 'rgba(255, 255, 255, 0.7)'
+        };
+        var inst = callMethod('$loading', global.ELEMENT && global.ELEMENT.Loading && global.ELEMENT.Loading.service, opts);
+        if (inst) { return inst; }
+        return { close: function () {} };
+      },
+      /** 确认框：签名兼容 Element this.$confirm(message, title, options)，返回 Promise */
+      confirm: function (message, title, options) {
+        var opts = options || {};
+        if (opts.confirmButtonText == null) { opts.confirmButtonText = '确定'; }
+        if (opts.cancelButtonText == null) { opts.cancelButtonText = '取消'; }
+        if (opts.type == null) { opts.type = 'warning'; }
+        var fb = global.ELEMENT && global.ELEMENT.MessageBox && global.ELEMENT.MessageBox.confirm;
+        var p = callMethod('$confirm', fb, message, title || '提示', opts);
+        if (p) { return p; }
+        return global.confirm(message) ? Promise.resolve() : Promise.reject();
+      },
+      /** 通知（右上角）：签名兼容 Element this.$notify(options) */
+      notify: function (options) {
+        var res = callMethod('$notify', global.ELEMENT && global.ELEMENT.Notification, options);
+        if (res === null && options && options.message) { global.alert(options.message); }
+      }
+    };
+    global.ReggieUI = ReggieUI;
+  })(window);
+})(window);

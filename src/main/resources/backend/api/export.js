@@ -1,0 +1,192 @@
+/**
+ * 数据导出模块 - 后台API
+ * 支持Excel(.xlsx)和PDF两种格式
+ *
+ * 使用独立axios实例，绕过$axios的JSON拦截器
+ * 原因：导出返回Blob二进制流，$axios拦截器会尝试解析为JSON导致报错
+ *
+ * 修改点：添加response拦截器处理NOTLOGIN和Token过期场景
+ *       session过期时自动跳转登录页
+ */
+var exportApi = (function() {
+    var service = axios.create({
+        baseURL: '/',
+        timeout: 120000
+    });
+
+    service.interceptors.request.use(function(config) {
+        // 修改点：为写操作注入 CSRF Token（与 request.js 保持一致，防止导出接口绕过 CSRF 防护）
+        var method = (config.method || 'get').toLowerCase();
+        if (method === 'post' || method === 'put' || method === 'delete') {
+            var token = null;
+            try {
+                // 优先从 Cookie 读取
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var c = cookies[i].trim();
+                    if (c.indexOf('csrfToken=') === 0) { token = c.substring('csrfToken='.length); break; }
+                }
+                // Cookie 无则读 sessionStorage
+                if (!token) { token = sessionStorage.getItem('csrfToken'); }
+            } catch (e) { token = null; }
+            if (token) { config.headers['X-CSRF-Token'] = token; }
+        }
+        return config;
+    }, function(error) {
+        return Promise.reject(error);
+    });
+
+    // 修改点：添加响应拦截器，处理session过期跳转
+    service.interceptors.response.use(function(res) {
+        // 如果响应Content-Type是JSON（说明后端返回了错误信息而非文件流）
+        if (res.headers['content-type'] && res.headers['content-type'].indexOf('application/json') !== -1
+                && res.data instanceof Blob) {
+            return new Promise(function(_, reject) {
+                var reader = new FileReader();
+                reader.onload = function() {
+                    try {
+                        var errData = JSON.parse(reader.result);
+                        if (errData.code === 0 && errData.msg === 'NOTLOGIN') {
+                            localStorage.removeItem('userInfo');
+                            // 修正：iframe 内 window.top 会被 sandbox 拦截，改用 postMessage 通知顶层跳登录
+                            if (window.self !== window.top) { try { window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*'); } catch(e) {} }
+                            else { window.location.href = '/backend/page/login/login.html'; }
+                        }
+                        reject(new Error(errData.msg || '导出失败'));
+                    } catch(e) {
+                        reject(new Error('导出失败，服务器返回异常'));
+                    }
+                };
+                reader.readAsText(res.data);
+            });
+        }
+        return res;
+    }, function(error) {
+        var message = error.message || '';
+        if (message === 'Network Error') {
+            message = '后端接口连接异常';
+        } else if (message.indexOf('timeout') !== -1) {
+            message = '系统接口请求超时';
+        }
+        window.ELEMENT && window.ELEMENT.Message({
+            message: message,
+            type: 'error',
+            duration: 5000
+        });
+        return Promise.reject(error);
+    });
+
+    // ==================== 订单导出 ====================
+    var exportOrdersExcel = function(params) {
+        return service.get('/export/orders/excel', { params: params, responseType: 'blob' });
+    };
+    var exportOrdersPdf = function(params) {
+        return service.get('/export/orders/pdf', { params: params, responseType: 'blob' });
+    };
+
+    // ==================== 菜品导出 ====================
+    var exportDishesExcel = function(params) {
+        return service.get('/export/dishes/excel', { params: params, responseType: 'blob' });
+    };
+    var exportDishesPdf = function(params) {
+        return service.get('/export/dishes/pdf', { params: params, responseType: 'blob' });
+    };
+
+    // ==================== 员工导出 ====================
+    var exportEmployeesExcel = function(params) {
+        return service.get('/export/employees/excel', { params: params, responseType: 'blob' });
+    };
+    var exportEmployeesPdf = function(params) {
+        return service.get('/export/employees/pdf', { params: params, responseType: 'blob' });
+    };
+
+    // ==================== 报表导出 ====================
+    var exportReportExcel = function(params) {
+        return service.get('/api/report/export', { params: Object.assign({}, params, { format: 'excel' }), responseType: 'blob' });
+    };
+    var exportReportPdf = function(params) {
+        return service.get('/api/report/export', { params: Object.assign({}, params, { format: 'pdf' }), responseType: 'blob' });
+    };
+
+    // ==================== C端用户导出 ====================
+    var exportUsersExcel = function(params) {
+        return service.get('/export/users/excel', { params: params, responseType: 'blob' });
+    };
+    var exportUsersPdf = function(params) {
+        return service.get('/export/users/pdf', { params: params, responseType: 'blob' });
+    };
+
+    // ==================== 通用下载 ====================
+    var downloadFile = function(apiCall, fileName) {
+        return apiCall.then(function(res) {
+            var blob = res.data instanceof Blob ? res.data : new Blob([res.data]);
+
+            if (blob.type && blob.type.indexOf('application/json') !== -1) {
+                return new Promise(function(_, reject) {
+                    var reader = new FileReader();
+                    reader.onload = function() {
+                        try {
+                            var errData = JSON.parse(reader.result);
+                            reject(new Error(errData.msg || '导出失败，请重新登录'));
+                        } catch(e) {
+                            reject(new Error('导出失败，服务器返回异常'));
+                        }
+                    };
+                    reader.readAsText(blob);
+                });
+            }
+
+            var url = window.URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.style.display = 'none';
+
+            var disposition = res.headers['content-disposition'];
+            var parsedName = null;
+            if (disposition) {
+                // 优先 RFC 5987 的 filename*（后端中文名走这条：filename*=UTF-8''%E8%AE%A2...）
+                // 旧正则有两个问题：
+                //   ① [^;=\\n] 中的 \\n 在正则字面量里表示「反斜杠或字母 n」，本意应是 \n；
+                //   ② 它会先命中后端给出的 ASCII 兜底名 filename="download.xlsx"，
+                //      导致中文文件名永远取不到，下载下来一律叫 download.xlsx。
+                var star = disposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+                if (star && star[1]) {
+                    try { parsedName = decodeURIComponent(star[1].trim()); } catch (e) { parsedName = null; }
+                }
+                // 退化：普通 filename="xxx"
+                if (!parsedName) {
+                    var plain = disposition.match(/filename\s*=\s*"([^"]+)"/i)
+                             || disposition.match(/filename\s*=\s*([^;]+)/i);
+                    if (plain && plain[1]) {
+                        parsedName = plain[1].trim().replace(/^["']+|["']+$/g, '');
+                    }
+                }
+            }
+            a.download = parsedName || fileName;
+
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 200);
+        }).catch(function(err) {
+            console.error('文件下载失败:', err);
+            throw err;
+        });
+    };
+
+    return {
+        exportOrdersExcel: exportOrdersExcel,
+        exportOrdersPdf: exportOrdersPdf,
+        exportDishesExcel: exportDishesExcel,
+        exportDishesPdf: exportDishesPdf,
+        exportEmployeesExcel: exportEmployeesExcel,
+        exportEmployeesPdf: exportEmployeesPdf,
+        exportReportExcel: exportReportExcel,
+        exportReportPdf: exportReportPdf,
+        exportUsersExcel: exportUsersExcel,
+        exportUsersPdf: exportUsersPdf,
+        downloadFile: downloadFile
+    };
+})();

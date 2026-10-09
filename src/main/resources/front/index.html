@@ -1,0 +1,1957 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <!-- 修改点：添加 viewport-fit=cover，适配 iPhone 灵动岛 / 刘海屏安全区 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>瑞吉外卖 - 美味生活，即刻送达</title>
+    <link rel="icon" href="images/favico.ico">
+    <!--不同屏幕尺寸根字体设置-->
+    <script src="./js/base.js?v=20260930"></script>
+    <!--引入vant样式-->
+    <link rel="stylesheet" href="styles/vant.min.css"/>
+    <!--RemixIcon 图标（C端全站统一用 RemixIcon，禁止 emoji 作图标）-->
+    <!-- 修改点：改为加载 RemixIcon 真字体（v4.6.0）。原 fallback 用 emoji 兜底且在其后加载会覆盖真字体，
+         导致全站图标渲染为彩色 emoji；现 emoji 兜底改由 js/icon-fallback.js 在字体确认加载失败时动态注入 -->
+    <link rel="stylesheet" href="../backend/plugins/remixicon/remixicon.css"/>
+    <script src="js/icon-fallback.js?v=20260926"></script>
+    <!-- 引入样式  -->
+    <link rel="stylesheet" href="styles/index.css?v=20260930b" />
+    <link rel="stylesheet" href="styles/skeleton.css?v=20260930" />
+    <!--本页面内容的样式-->
+    <link rel="stylesheet" href="styles/main.css?v=20260930" />
+    <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
+    <link rel="stylesheet" href="styles/tabbar.css?v=20260930" />
+    <!-- 骨架屏样式 -->
+    <style>
+      /* 骨架屏内边距统一走 skeleton.css 的 .skeleton-container（2026-09-25 对标美团优化） */
+      .skeleton-restaurant { display: flex; align-items: center; padding: 16rem; background: var(--bg-card); border-radius: 12rem; margin-bottom: 12rem; }
+      .skeleton-logo { width: 60rem; height: 60rem; border-radius: 8rem; background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
+      .skeleton-info { flex: 1; margin-left: 12rem; }
+      .skeleton-line { height: 14rem; border-radius: 4rem; background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; margin-bottom: 8rem; }
+      .skeleton-line:last-child { margin-bottom: 0; }
+      .skeleton-w30 { width: 30%; }
+      .skeleton-w40 { width: 40%; }
+      .skeleton-w60 { width: 60%; }
+      .skeleton-w80 { width: 80%; }
+      .skeleton-categories { display: flex; gap: 8rem; padding: 12rem; background: var(--bg-card); border-radius: 12rem; margin-bottom: 12rem; overflow: hidden; }
+      .skeleton-cat-item { width: 60rem; height: 28rem; border-radius: 14rem; background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
+      .skeleton-dishes { display: flex; flex-direction: column; gap: 12rem; }
+      .skeleton-dish-item { display: flex; padding: 12rem; background: var(--bg-card); border-radius: 12rem; }
+      .skeleton-dish-img { width: 100rem; height: 100rem; border-radius: 8rem; background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
+      .skeleton-dish-info { flex: 1; margin-left: 12rem; display: flex; flex-direction: column; justify-content: center; }
+      /* 修改点(2026-09-17)：复用全局 @keyframes rg-skeleton-shine，删除本页独立定义 */
+      /* 修改点(2026-09-17 UX)：长列表渲染优化——视口外菜品条目跳过渲染，降低首屏渲染与内存开销。
+         菜品条目高度 ≈ 缩略图 90rem + 上下内边距 28rem，contain-intrinsic-size 取 120rem 减少滚动跳动 */
+      .dish-item { content-visibility: auto; contain-intrinsic-size: auto 120rem; }
+      /* 修改点(2026-09-17)：加购飞入购物车抛物线动效（情感化微交互，对标大厂）
+         两段式合成抛物线：外层 X 轴匀速，内层 Y 轴 ease-in 下落 */
+      .fly-ball-x {
+        position: fixed;
+        z-index: 3000;
+        pointer-events: none;
+        transition: transform 0.6s linear;
+      }
+      .fly-ball {
+        width: 16rem;
+        height: 16rem;
+        margin: -8rem 0 0 -8rem;
+        border-radius: 50%;
+        background: var(--color-primary-gradient);
+        box-shadow: 0 2rem 8rem var(--color-primary-tint-lg);
+        transition: transform 0.6s cubic-bezier(0.5, -0.5, 1, 1);
+      }
+      .cart-bump { animation: cart-bump 0.42s ease; }
+      @keyframes cart-bump {
+        0%   { transform: scale(1); }
+        40%  { transform: scale(1.08); }
+        100% { transform: scale(1); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="main" class="app">
+      <!-- ====== 美团：渐变色头部区域 ====== -->
+      <!-- 修改点(2026-09-17)：可访问性——页面地标（landmark），便于屏幕阅读器快速跳转 -->
+      <div class="header-section" role="banner">
+        <!-- 修改点(2026-09-24)：顶部导航改为「定位 | 搜索通栏 | 右侧图标组」——搜索框居中占满主视觉，
+             右侧消息/AI/头像三入口收拢为 icon 组（负外边距减小间距），对齐美团外卖头部布局 -->
+        <div class="top-bar">
+          <!-- 修改点(2026-09-25)：搜索回到顶栏同行（定位 | 搜索 | 右侧图标组）——
+               双行布局抬高头部约 40px，压缩首屏点餐区，回退为单行 -->
+          <!-- 修改点(2026-09-24)：地址栏空态引导 —— 未选地址时显示「请选择收货地址」+ 下拉箭头，
+               弱金色高亮提示可点击（P3 优化：新用户未必意识到定位可点） -->
+          <div class="location" :class="{ 'location-empty': !addressInfo }" @click="toAddressPage">
+            <i class="ri-map-pin-line"></i>
+            <span>{{ addressInfo ? (addressInfo.label || addressInfo.cityName + addressInfo.districtName) : '请选择收货地址' }}</span>
+            <i class="ri-arrow-down-s-line location-guide-arrow" aria-hidden="true"></i>
+          </div>
+          <!-- 搜索入口：点击唤起搜索浮层 -->
+          <div class="search-box" @click="onSearchClick">
+            <i class="ri-search-line"></i>
+            <span>搜索菜品</span>
+          </div>
+          <!-- 修改点(2026-09-24)：消息/AI/头像收拢为右侧图标组，缩小边距（样式见 .top-actions） -->
+          <div class="top-actions">
+            <div class="msg-bell" @click="toMessagePage">
+              <i class="bell-icon ri-notification-line" aria-hidden="true"></i>
+              <span v-if="unreadMsgCount > 0" class="msg-badge">
+                {{ unreadMsgCount > 99 ? '99+' : unreadMsgCount }}
+              </span>
+            </div>
+            <div class="ai-entry" @click="toAIAssistant">
+              <i class="ai-icon ri-robot-line" aria-hidden="true"></i>
+            </div>
+            <div class="user-btn" @click="toUserPage">
+              <img :src="avatarSrc" alt="用户头像" @error="onAvatarError"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- ====== 骨架屏：页面加载中 ====== -->
+        <div v-if="pageLoading" class="skeleton-container">
+          <!-- 商家信息骨架 -->
+          <div class="skeleton-restaurant">
+            <div class="skeleton-logo"></div>
+            <div class="skeleton-info">
+              <div class="skeleton-line skeleton-w60"></div>
+              <div class="skeleton-line skeleton-w40"></div>
+              <div class="skeleton-line skeleton-w80"></div>
+            </div>
+          </div>
+          <!-- 分类骨架 -->
+          <div class="skeleton-categories">
+            <div class="skeleton-cat-item" v-for="i in 6" :key="'sc'+i"></div>
+          </div>
+          <!-- 菜品列表骨架 -->
+          <div class="skeleton-dishes">
+            <div class="skeleton-dish-item" v-for="i in 4" :key="'sd'+i">
+              <div class="skeleton-dish-img"></div>
+              <div class="skeleton-dish-info">
+                <div class="skeleton-line skeleton-w60"></div>
+                <div class="skeleton-line skeleton-w40"></div>
+                <div class="skeleton-line skeleton-w30"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 商家信息卡片 -->
+        <div class="restaurant-card">
+          <div class="rc-top">
+            <img src="./images/logo.png" class="rc-logo" alt="瑞吉外卖"/>
+            <div class="rc-info">
+              <div class="rc-name-row">
+                <span class="rc-name">{{ restaurantInfo.name || '瑞吉外卖' }}</span>
+              </div>
+              <div class="rc-meta">
+                <span class="rc-stars" v-if="restaurantInfo.stars != null">★{{ restaurantInfo.stars }}</span>
+                <span v-else>暂无评分</span>
+                <template v-if="restaurantInfo.monthlySales != null">
+                  <span class="rc-divider">|</span>
+                  <span>月售{{ restaurantInfo.monthlySales }}</span>
+                </template>
+              </div>
+              <div class="rc-delivery">
+                <span v-if="feePreview.checkEnabled && feePreview.rangeChecked">配送费¥{{ Number(feePreview.fee || 0).toFixed(2) }}</span>
+                <span v-else-if="addressInfo">配送费按地址计算</span>
+                <span v-else>配送费按收货地址计算</span>
+                <template v-if="feePreview.distance != null">
+                  <span class="rc-divider">|</span>
+                  <span>{{ formatDistance(feePreview.distance) }}</span>
+                </template>
+                <template v-if="restaurantInfo.minOrder != null">
+                  <span class="rc-divider">|</span>
+                  <span>¥{{ restaurantInfo.minOrder }}起送</span>
+                </template>
+              </div>
+            </div>
+          </div>
+          <!-- 修改点(2026-09-18 UX)：仅渲染后端真实返回的优惠券。原 defaultCoupons 为写死的
+               「满25减5/新客立减3元/满50减10」，但后端从不返回 coupons，属虚假营销且点进死胡同弹窗，已移除 -->
+          <div class="coupon-bar" v-if="restaurantInfo.coupons && restaurantInfo.coupons.length" @click="showCouponDetail">
+            <div class="coupon-item" v-for="(c, ci) in restaurantInfo.coupons" :key="ci">
+              <span class="coupon-tag">{{ c.tag }}</span>
+              <span class="coupon-text">{{ c.text }}</span>
+            </div>
+            <span class="coupon-arrow">›</span>
+          </div>
+        </div>
+
+        <!-- 公告栏 -->
+        <div class="notice-bar" @click="showNoticeDetail">
+          <i class="notice-icon ri-megaphone-fill"></i>
+          <span class="notice-text">{{ restaurantInfo.notice || '欢迎光临！本店精选新鲜食材，用心烹饪每一道菜品' }}</span>
+          <span class="notice-arrow">›</span>
+        </div>
+      </div>
+
+      <!-- ====== 核心区域：左侧分类 + 右侧菜品 ====== -->
+      <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
+      <div class="content-area" role="main">
+        <!-- 左侧分类栏 -->
+        <div class="category-sidebar" ref="categorySidebar">
+          <div
+            v-for="(item,index) in categoryList" :key="index"
+            class="cat-item"
+            :class="{active: activeType === index}"
+            @click="categoryClick(index,item.id,item.type)"
+          >
+            <span class="cat-icon-wrap">
+              <i :class="getCategoryIcon(item.name)" class="cat-icon"></i>
+              <!-- 修改点(2026-09-15)：分类角标精细化 — 锚定在图标右上角（不再漂浮侧栏整行右侧）；
+                   热销=「热」红角标，优惠=「惠」金角标，修正原「优惠」也显示「热」的文案错配 -->
+              <span class="cat-badge" v-if="item.name === '热销'">热</span>
+              <span class="cat-badge cat-badge--coupon" v-else-if="item.name === '优惠'">惠</span>
+            </span>
+            <span class="cat-text">{{ item.name }}</span>
+          </div>
+        </div>
+
+        <!-- 右侧菜品列表（修改点 2026-09-16：改为按分类分组的单页长列表，支持左右滚动联动） -->
+        <!-- 修改点(2026-09-17)：捕获阶段委托监听加购点击，用于触发飞入购物车动效
+             （capture 先于目标元素 @click.stop 执行，无需改动 addCart 签名与所有调用点） -->
+        <div class="dish-panel" ref="dishPanel" @click.capture="onDishPanelClick">
+          <van-loading v-if="loadingAll" size="24px" vertical class="dish-loading">正在加载菜单...</van-loading>
+          <!-- 修改点(2026-09-17)：菜单虚拟化重构——按「分类区块」分段渲染，降低 DOM 数量。
+               每个分类渲染一个常驻 .cat-section（分类标题 + 未渲染时的高度占位），其下菜品仅在
+               进入视口附近时由 IntersectionObserver 标记渲染（一次性，渲染后不再卸载，避免滚动抖动）。
+               区块容器常驻 ⇒ 右侧滚动联动左侧高亮改按 .cat-section 计算，不再依赖菜品 DOM 是否存在。
+               注：渲染用的对象与 dishList 中为同一引用，购物车数量同步（syncCartNumber）仍可正常生效。 -->
+          <div
+            v-for="cat in categoryList"
+            :key="'sec-'+cat.id"
+            class="cat-section"
+            :data-category-id="cat.id"
+          >
+            <div class="category-dish-title" :data-category-id="cat.id">{{ cat.name }}</div>
+            <template v-if="visibleCats[cat.id]">
+              <div v-for="(item,idx) in catItems(cat.id)" :key="'dish-'+(item.id||idx)" :class="['dish-item', {'dish-soldout': Number(item.status) === 0}]">
+                <div class="di-image" @click="previewDishImage(imgPath(item.image))">
+                  <img :src="imgPath(item.image)" @error="imgError" loading="lazy" :alt="item.name || '菜品图片'">
+                  <div class="di-tag" v-if="item.saleNum > 100">热卖</div>
+                </div>
+                <div class="di-info" @click="dishDetails(item)">
+                  <div class="di-name">{{ item.name }}</div>
+                  <div class="di-desc" v-if="item.description">{{ item.description }}</div>
+                  <!-- 修改点(2026-09-18 UX)：移除写死的「好评率98%」，后端无此数据，属虚假展示 -->
+                  <!-- 修改点(2026-09-21)：Dish 无销量字段，saleNum 恒空，不再显示"月售0"造成死店感；
+                       未来接入真实销量后，有正销量才显示（与门店"月售999+"的矛盾也随之消除） -->
+                  <div class="di-sales" v-if="item.saleNum">月售{{ item.saleNum }}</div>
+                  <div class="di-price-row">
+                    <span class="di-price"><span class="di-symbol">¥</span>{{ Number(item.price || 0).toFixed(2) }}</span>
+                  </div>
+                </div>
+                <div class="di-action">
+                  <span v-if="Number(item.status) === 0" class="di-soldout">已售罄</span>
+                  <template v-else>
+                    <i class="ri-subtract-line" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"></i>
+                    <span class="di-num" v-if="item.number">{{ item.number }}</span>
+                    <span class="di-spec" v-if="item.flavors && item.flavors.length > 0 && !item.number" @click.prevent.stop="chooseFlavorClick(item)">选规格</span>
+                    <i class="ri-add-line" v-if="!item.flavors || !item.flavors.length || item.number" @click.prevent.stop="addCart(item)"></i>
+                  </template>
+                </div>
+              </div>
+            </template>
+            <div v-else class="cat-section-placeholder" :style="{ height: catPlaceholderHeight(cat.id) }"></div>
+          </div>
+          <!-- 修改点(2026-09-17)：菜单空态统一为全站标准 .empty-state——
+               原用自定义 .empty-tip 且插图取 noImg.png（菜品缺图占位图）、alt 写成"图片加载失败"，语义错误 -->
+          <!-- 修改点：区分「加载失败」与「暂无菜品」，失败时显示重试按钮 -->
+          <div class="empty-state" v-if="!loadingAll && (!dishList || dishList.length === 0)">
+            <img v-if="loadFailed" src="./images/no_wifi.png" alt="加载失败"/>
+            <img v-else src="./images/no_order.png" alt="暂无菜品"/>
+            <p class="empty-text">{{ loadFailed ? '菜单加载失败' : '暂无菜品' }}</p>
+            <div v-if="loadFailed" class="empty-action" @click="retryLoadDishes">重新加载</div>
+          </div>
+        </div>
+      </div>
+      </van-pull-refresh>
+
+      <!-- ====== 底部购物车栏（常驻：空态保留深色栏+灰色圆钮+空文案+禁用态结算块） ====== -->
+      <div class="cart-bar" :style="{ zIndex: dialogFlavor.show ? 100 : 3000 }">
+        <div class="cart-icon-wrap" @click="openCart">
+          <div :class="['cart-icon-img', cartData && cartData.length > 0 ? 'cart-icon-active' : 'cart-icon-empty']"></div>
+          <div class="cart-badge" v-if="cartData && cartData.length > 0">{{ goodsNum }}</div>
+        </div>
+        <div class="cart-price" v-if="cartData && cartData.length > 0">
+          <span class="cart-symbol">¥</span>
+          <span class="cart-amount">{{ goodsPrice.toFixed(2) }}</span>
+          <!-- 起送门槛提示 -->
+          <span class="cart-min-order" v-if="goodsPrice < minOrderAmount">
+            还差¥{{(minOrderAmount - goodsPrice).toFixed(2)}}起送
+          </span>
+        </div>
+        <div class="cart-empty-text" v-else>购物车空空如也</div>
+        <div class="cart-spacer"></div>
+        <div :class="['cart-submit', goodsPrice >= minOrderAmount ? 'cart-submit-active' : 'cart-submit-disabled']"
+             @click="goodsPrice >= minOrderAmount ? toAddOrderPage() : null">
+          {{ goodsPrice >= minOrderAmount ? '去结算' : '¥' + minOrderAmount + '起送' }}
+        </div>
+      </div>
+
+      <!-- ====== 口味选择弹窗 ====== -->
+      <van-dialog v-model="dialogFlavor.show" :show-confirm-button="false" :close-on-click-overlay="true" class="dialogFlavor" ref="flavorDialog">
+        <div class="dialogTitle">{{ dialogFlavor.name }}</div>
+        <div class="divContent">
+          <div v-for="flavor in dialogFlavor.flavors" :key="flavor.id">
+            <div class="divFlavorTitle">{{ flavor.name }}</div>
+            <!-- 修改点：JSON.parse 移出模板，改用方法带 try-catch 预解析（非法 value 不再中断整个弹窗渲染） -->
+            <span v-for="item in parsedFlavorOptions(flavor)"
+              :key="item"
+              @click="flavorClick(flavor,item)"
+              :class="{spanActive:flavor.dishFlavor === item}"
+            >{{ item }}</span>
+          </div>
+        </div>
+        <div class="divBottom">
+          <div class="flavor-price"><span class="spanMoney">¥</span>{{ Number(dialogFlavor.price || 0).toFixed(2) }}</div>
+          <div class="flavor-cta" @click="dialogFlavorAddCart">加入购物车</div>
+        </div>
+        <div class="divFlavorClose" @click="dialogFlavor.show = false">
+          <i class="ri-close-line"></i>
+        </div>
+      </van-dialog>
+
+      <!-- ====== 购物车弹出面板 ====== -->
+      <van-popup v-model="cartDialogShow" position="bottom" :style="{ height: '50%' }" :close-on-click-overlay="true" class="dialogCart">
+        <div class="divCartTitle">
+          <div class="title">购物车</div>
+          <div class="clear" @click="clearCart">
+            <i class="clear-icon ri-delete-bin-line"></i> 清空
+          </div>
+          <div class="cart-close-btn" @click="cartDialogShow = false">
+            <i class="ri-close-line"></i>
+          </div>
+        </div>
+        <!-- 满减凑单进度条（数据来自同源试算 frBar） -->
+        <div class="fr-bar" v-if="frBar">
+          <div class="fr-bar-head">
+            <span class="fr-bar-tag">满减</span>
+            <span class="fr-bar-text">{{ frBar.text }}</span>
+          </div>
+          <div class="fr-bar-track">
+            <div class="fr-bar-fill" :style="{ width: frBar.progress + '%' }"></div>
+          </div>
+          <div class="fr-bar-sub">{{ frBar.sub }}</div>
+        </div>
+        <div class="divCartContent">
+          <div v-for="item in cartData" :key="item.id" class="divCartItem">
+            <img :src="imgPath(item.image)" @error="imgError" class="cart-img" loading="lazy" :alt="item.name || '菜品图片'">
+            <div class="divDesc">
+              <div class="name">{{ item.name }}</div>
+              <div class="price">
+                <!-- 修改点：Number() 保护缺失金额不报错 -->
+                <span class="spanMoney">¥</span>{{ (Number(item.amount) || 0).toFixed(2) }}
+              </div>
+            </div>
+            <div class="divNum">
+              <div class="divSubtract">
+                <i class="ri-subtract-line" @click="cartNumberSubtract(item)"></i>
+              </div>
+              <div class="divDishNum">{{ item.number }}</div>
+              <div class="divAdd">
+                <i class="ri-add-line" @click="cartNumAdd(item)"></i>
+              </div>
+            </div>
+            <div class="divSplit"></div>
+          </div>
+        </div>
+      </van-popup>
+
+      <!-- ====== 菜品详情弹窗 ====== -->
+      <van-dialog v-model="detailsDialog.show"
+        :show-confirm-button="false"
+        :close-on-click-overlay="true"
+        class="detailsDialog"
+        ref="detailsDialog"
+      >
+        <!-- 顶部全出血固定比例大图（object-fit:cover，长图不再撑爆弹窗），点击可放大预览 -->
+        <div class="dialog-hero">
+          <img :src="imgPath(detailsDialog.item.image)" @error="imgError" @click.stop="previewDishImage(imgPath(detailsDialog.item.image))" loading="lazy" :alt="detailsDialog.item.name || '菜品大图'">
+        </div>
+        <div class="divContainer">
+          <div class="title detail-title-row">
+            <span class="detail-name">{{ detailsDialog.item.name }}</span>
+            <i class="fav-star" :class="[isFavoriteDish(detailsDialog.item.id) ? 'ri-star-fill active' : 'ri-star-line']" @click.stop="toggleFavoriteDish(detailsDialog.item)"></i>
+          </div>
+          <div class="content" v-if="detailsDialog.item.description">{{ detailsDialog.item.description }}</div>
+          <!-- 评价展示 -->
+          <div class="eval-section" v-if="detailsDialog.item.evalStats">
+            <div class="eval-summary">
+              <span class="eval-rating">{{ detailsDialog.item.evalStats.avgRating || '--' }}</span>
+              <span class="eval-stars">
+                <i v-for="i in 5" :key="i" class="star" :class="{ filled: i <= (detailsDialog.item.evalStats.avgRating || 0) }">★</i>
+              </span>
+              <span class="eval-count">{{ detailsDialog.item.evalStats.totalCount || 0 }} 条评价</span>
+            </div>
+            <div class="eval-reviews" v-if="detailsDialog.item.evalList && detailsDialog.item.evalList.length > 0">
+              <div v-for="review in detailsDialog.item.evalList" :key="review.id" class="eval-review-item">
+                <div class="eval-review-header">
+                  <span class="eval-review-user">{{ review.userName || '用户' }}</span>
+                  <span class="eval-review-stars">
+                    <i v-for="i in 5" :key="i" class="star" :class="{ filled: i <= (review.starRating || 0) }">★</i>
+                  </span>
+                </div>
+                <div class="eval-review-content">{{ review.content }}</div>
+                <div class="eval-review-time">{{ formatDate(review.createTime) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="divNum">
+          <div class="left">
+            <span>¥</span><span>{{ Number(detailsDialog.item.price || 0).toFixed(2) }}</span>
+          </div>
+          <div class="right">
+            <!-- 已加入：减/数量/加 圆钮组 -->
+            <template v-if="detailsDialog.item.number">
+              <span class="dd-sub" @click="subtractCart(detailsDialog.item)"><i class="ri-subtract-line"></i></span>
+              <span class="dd-num">{{ detailsDialog.item.number }}</span>
+              <span class="dd-add" @click="addCart(detailsDialog.item)"><i class="ri-add-line"></i></span>
+            </template>
+            <!-- 未加入：金色大胶囊（有规格点「选规格」，否则直接加入购物车） -->
+            <span class="dd-cta" v-else
+              @click="(detailsDialog.item.flavors && detailsDialog.item.flavors.length > 0) ? chooseFlavorClick(detailsDialog.item) : addCart(detailsDialog.item)"
+            >{{ (detailsDialog.item.flavors && detailsDialog.item.flavors.length > 0) ? '选规格' : '加入购物车' }}</span>
+          </div>
+        </div>
+        <div class="detailsDialogClose" @click="detailsDialog.show = false">
+          <i class="ri-close-line"></i>
+        </div>
+      </van-dialog>
+
+      <!-- ====== 套餐详情弹窗 ====== -->
+      <van-dialog v-model="setMealDialog.show"
+        :show-confirm-button="false"
+        :close-on-click-overlay="true"
+        class="setMealDetailsDialog"
+        ref="setMealDetailsDialogd"
+      >
+        <div class="divContainer">
+          <div class="title">{{ setMealDialog.item.name }}</div>
+          <div class="item" v-for="(item,index) in setMealDialog.item.list" :key="index">
+            <!-- 横向明细行：小缩略图 + 右侧名称份数/描述/价格 -->
+            <div class="meal-body">
+              <img :src="imgPath(item.image)" @error="imgError" class="meal-img" @click.stop="previewDishImage(imgPath(item.image), setMealDialog.item.list.map(s => imgPath(s.image)), index)" loading="lazy" :alt="item.name || '套餐菜品图'">
+              <div class="meal-info">
+                <div class="meal-name-row">
+                  <span class="meal-name">{{ item.name }}<em class="meal-copies">×{{ item.copies }}</em></span>
+                  <span class="divPrice"><span>¥</span>{{ Number(item.price || 0).toFixed(2) }}</span>
+                </div>
+                <div class="content" v-if="item.description">{{ item.description }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="divNum">
+          <div class="left">
+            <span>¥</span><span>{{ Number(setMealDialog.item.price || 0).toFixed(2) }}</span>
+          </div>
+          <div class="right">
+            <!-- 已加入：减/数量/加 圆钮组 -->
+            <template v-if="setMealDialog.item.number">
+              <span class="dd-sub" @click="subtractCart(setMealDialog.item)"><i class="ri-subtract-line"></i></span>
+              <span class="dd-num">{{ setMealDialog.item.number }}</span>
+              <span class="dd-add" @click="addCart(setMealDialog.item)"><i class="ri-add-line"></i></span>
+            </template>
+            <!-- 未加入：金色大胶囊 -->
+            <span class="dd-cta" v-else @click="addCart(setMealDialog.item)">加入购物车</span>
+          </div>
+        </div>
+        <div class="detailsDialogClose" @click="setMealDialog.show = false">
+          <i class="ri-close-line"></i>
+        </div>
+      </van-dialog>
+
+      <!-- ====== 菜品/套餐图片大图预览 ====== -->
+      <!-- 修改点：复用 my-evaluations.html 权威模式，detailsDialog/setMealDialog 内小图点击放大 -->
+      <van-image-preview
+        :show.sync="previewShow"
+        :images="previewImages"
+        :start-position="previewIndex"
+        closeable
+      ></van-image-preview>
+
+      <!-- ====== 底部 Tab 导航（点餐 / 订单 / 我的） ====== -->
+      <!-- 修改点：全站此前无任何全局导航，跨页只能靠顶部头像/返回箭头，路径过长 -->
+      <van-tabbar v-model="activeTab" class="app-tabbar" role="navigation" aria-label="主导航" @change="onTabChange">
+        <van-tabbar-item>
+          <span>点餐</span>
+          <i slot="icon" class="ri-restaurant-line"></i>
+        </van-tabbar-item>
+        <van-tabbar-item>
+          <span>订单</span>
+          <i slot="icon" class="ri-file-list-line"></i>
+        </van-tabbar-item>
+        <van-tabbar-item>
+          <span>我的</span>
+          <i slot="icon" class="ri-user-3-line"></i>
+        </van-tabbar-item>
+      </van-tabbar>
+
+    <!-- ====== 搜索浮层 ====== -->
+    <div class="search-overlay" v-if="searchShow" @click.self="closeSearch">
+      <div class="search-header">
+        <div class="search-input-wrap">
+          <i class="ri-search-line so-icon"></i>
+          <input
+            type="text"
+            class="search-input"
+            v-model="searchKeyword"
+            ref="searchInput"
+            placeholder="搜索菜品、套餐"
+            @input="onSearchInput"
+            @keyup.enter="doSearch"
+          />
+          <i
+            class="ri-close-circle-fill so-clear"
+            v-if="searchKeyword"
+            @click="clearSearch"
+          ></i>
+          <!-- 修改点(2026-09-14)：语音搜索入口移到这里（输入框右侧），位置更符合直觉 -->
+          <i
+            class="ri-mic-line so-voice"
+            @click.stop="startVoiceSearch"
+            title="语音搜索"
+            aria-label="语音搜索"
+          ></i>
+        </div>
+        <span class="search-cancel" @click="closeSearch">取消</span>
+      </div>
+
+      <!-- 修改点：搜索联想建议下拉 -->
+      <div class="search-suggestions" v-if="searchKeyword && searchSuggestions.length > 0 && !searchSearched">
+        <div
+          class="suggestion-item"
+          v-for="(sug, idx) in searchSuggestions"
+          :key="idx"
+          @click="selectSuggestion(sug)"
+        >
+          <i class="ri-search-line"></i>
+          <span class="suggestion-name">{{ sug.name }}</span>
+          <span class="suggestion-type">{{ sug.isMeal ? '套餐' : '菜品' }}</span>
+        </div>
+      </div>
+
+      <!-- 搜索体 -->
+      <div class="search-body">
+        <!-- 无关键词：搜索历史 -->
+        <div class="search-section" v-if="!searchKeyword">
+          <div class="search-section-title" v-if="searchHistory.length > 0">
+            <span>搜索历史</span>
+            <i class="search-section-title-clear ri-delete-bin-line" @click="clearSearchHistory" title="清空"></i>
+          </div>
+          <div class="search-tags">
+            <span
+              class="search-tag"
+              v-for="(tag, idx) in searchHistory"
+              :key="idx"
+              @click="searchFromHistory(tag)"
+            >{{ tag }}</span>
+          </div>
+          <div class="search-empty-state" v-if="searchHistory.length === 0">
+            <p>输入菜品或套餐名称搜索</p>
+          </div>
+        </div>
+
+        <!-- 有关键词：结果 -->
+        <div class="search-section" v-if="searchKeyword && !searchLoading">
+          <div class="search-summary" v-if="searchDishList.length || searchMealList.length">
+            共找到 <b>{{ searchDishList.length + searchMealList.length }}</b> 个结果
+          </div>
+
+          <!-- 菜品结果 -->
+          <div class="search-subtitle" v-if="searchDishList.length">菜品</div>
+          <div
+            class="dish-item"
+            v-for="(item, idx) in searchDishList"
+            :key="'d' + idx"
+          >
+            <div class="di-image" @click="previewDishImage(imgPath(item.image))">
+              <img :src="imgPath(item.image)" @error="imgError" loading="lazy" :alt="item.name || '菜品图片'">
+            </div>
+            <div class="di-info" @click="dishDetails(item)">
+              <div class="di-name">{{ item.name }}</div>
+              <div class="di-desc" v-if="item.description">{{ item.description }}</div>
+              <div class="di-sales" v-if="item.saleNum">月售{{ item.saleNum }}</div>
+              <div class="di-price-row">
+                <span class="di-price"><span class="di-symbol">¥</span>{{ Number(item.price || 0).toFixed(2) }}</span>
+              </div>
+            </div>
+            <div class="di-action">
+              <i class="ri-subtract-line" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"></i>
+              <span class="di-num" v-if="item.number">{{ item.number }}</span>
+              <span class="di-spec" v-if="item.flavors && item.flavors.length > 0 && !item.number" @click.prevent.stop="chooseFlavorClick(item)">选规格</span>
+              <i class="ri-add-line" v-if="!item.flavors || !item.flavors.length || item.number" @click.prevent.stop="addCart(item)"></i>
+            </div>
+          </div>
+
+          <!-- 套餐结果 -->
+          <div class="search-subtitle" v-if="searchMealList.length">套餐</div>
+          <div
+            class="dish-item"
+            v-for="(item, idx) in searchMealList"
+            :key="'m' + idx"
+          >
+            <div class="di-image" @click="previewDishImage(imgPath(item.image))">
+              <img :src="imgPath(item.image)" @error="imgError" loading="lazy" :alt="item.name || '菜品图片'">
+            </div>
+            <div class="di-info" @click="dishDetails(item)">
+              <div class="di-name">{{ item.name }}</div>
+              <div class="di-desc" v-if="item.description">{{ item.description }}</div>
+              <div class="di-sales" v-if="item.saleNum">月售{{ item.saleNum }}</div>
+              <div class="di-price-row">
+                <span class="di-price"><span class="di-symbol">¥</span>{{ Number(item.price || 0).toFixed(2) }}</span>
+              </div>
+            </div>
+            <div class="di-action">
+              <i class="ri-subtract-line" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"></i>
+              <span class="di-num" v-if="item.number">{{ item.number }}</span>
+              <i class="ri-add-line" @click.prevent.stop="addCart(item)"></i>
+            </div>
+          </div>
+
+          <!-- 空结果 -->
+          <!-- 修改点(2026-09-17 UX)：区分"搜索失败"与"真的没货"，失败给出可点击的重试入口 -->
+          <div class="search-empty-result" v-if="!searchDishList.length && !searchMealList.length && searchSearched">
+            <!-- 修改点(2026-09-17)：空态插图改用 no_order.png（原 noImg.png 为菜品缺图占位，语义不符） -->
+            <img src="./images/no_order.png" alt="暂无搜索结果"/>
+            <template v-if="searchFailed">
+              <p>搜索失败，网络似乎开小差了</p>
+              <p class="sub" @click="doSearch">点击重试</p>
+            </template>
+            <template v-else>
+              <p>没有找到相关菜品或套餐</p>
+              <p class="sub">试试其他关键词吧</p>
+            </template>
+          </div>
+        </div>
+
+        <!-- 加载中 -->
+        <div class="search-loading" v-if="searchLoading">
+          <van-loading size="24px" vertical>正在搜索...</van-loading>
+        </div>
+      </div>
+    </div>
+  </div>
+
+        <!-- 开发环境版本，包含了有帮助的命令行警告 -->
+        <script src="../backend/plugins/vue/vue.js"></script>
+        <!-- 引入vant样式 -->
+        <script src="./js/vant.min.js"></script>        
+        <!-- 引入axios -->
+        <script src="../backend/plugins/axios/axios.min.js"></script>
+        <script src="./js/request.js?v=20260930"></script>
+        <script src="./js/common.js?v=20260930b"></script>
+        <script src="./api/main.js?v=20260917"></script>
+        <script src="./api/address.js?v=20260917"></script>
+        <script src="./api/recommend.js?v=20260917"></script>
+        <script src="./api/evaluation.js?v=20260917"></script>
+        <!-- 修改点：引入AI助手API -->
+        <script src="./api/ai.js?v=20260917"></script>
+        <!-- 满减档位与试算 -->
+        <script src="./api/marketing.js?v=20260921"></script>
+        <!-- 用户收藏 -->
+        <script src="./api/favorite.js?v=20260921"></script>
+  </body>
+  <script>
+      // 分类名 → RemixIcon 映射（金刚区与左侧分类栏共用；仅映射表中显式存在的分类才算"有图标"）
+      var CATEGORY_ICON_MAP = {
+        '热销': 'ri-fire-line',        '新品': 'ri-sparkling-line',
+        '优惠': 'ri-gift-line',        '特价': 'ri-diamond-line',
+        '主食': 'ri-bowl-line',        '盖饭': 'ri-bowl-line',
+        '炒菜': 'ri-restaurant-line',  '煲仔': 'ri-bowl-line',
+        '凉菜': 'ri-restaurant-2-line','汤羹': 'ri-bowl-line',
+        '小吃': 'ri-restaurant-line',  '卤味': 'ri-restaurant-line',
+        '饮品': 'ri-drinks-line',      '酒水': 'ri-beer-line',
+        '甜点': 'ri-cake-2-line',      '蛋糕': 'ri-cake-line',
+        '套餐': 'ri-gift-line',        '面条': 'ri-bowl-line',
+        '火锅': 'ri-bowl-line',        '粉面': 'ri-bowl-line',
+        '烧烤': 'ri-fire-line',        '海鲜': 'ri-restaurant-line',
+        '素菜': 'ri-leaf-line',        '煎炸': 'ri-fire-line',
+        '汉堡': 'ri-restaurant-line',  '炸鸡': 'ri-restaurant-line',
+        '披萨': 'ri-restaurant-line',  '寿司': 'ri-restaurant-line',
+        '早餐': 'ri-bread-line',       '午餐': 'ri-restaurant-2-line',
+        '晚餐': 'ri-restaurant-line',  '夜宵': 'ri-moon-cloudy-line',
+        '小炒': 'ri-restaurant-2-line','干锅': 'ri-bowl-line',
+        '砂锅': 'ri-bowl-line',        '蒸菜': 'ri-bowl-line',
+        // 本地种子分类名（热销推荐/招牌主食/…）：显式映射避免全部回落刀叉图标无区分度
+        '热销推荐': 'ri-fire-line',    '招牌主食': 'ri-bowl-line',
+        '美味小炒': 'ri-restaurant-2-line', '营养汤品': 'ri-cup-line',
+        '甜品饮料': 'ri-cake-2-line',  '商务套餐': 'ri-shopping-bag-3-line',
+        '热菜': 'ri-restaurant-line',  '甜品小吃': 'ri-cake-3-line', '招牌套餐': 'ri-gift-line'
+      };
+      new Vue({
+          el:'#main',
+          data(){
+            return {
+              // 修改点：骨架屏加载状态
+              pageLoading: true,
+              // 修改点：下拉刷新状态
+              refreshing: false,
+              //左边菜品类别index
+              activeType:0,
+              categoryList:[],
+              categoryId:undefined,
+              dishList:[],
+              // 修改点(2026-09-17)：菜单虚拟化——分类ID → 菜品数组（模板按区块渲染；与 dishList 为同一对象引用）
+              catDishesMap:{},
+              // 修改点(2026-09-17)：已进入视口、需要真实渲染的分类（true = 渲染其下菜品）
+              visibleCats:{},
+              cartData:[],
+              // 满减试算结果（与下单计费同源，由 /api/marketing/full-reduction/evaluate 返回）
+              frEval:null,
+              // 已收藏菜品ID集合（详情弹窗星标初始态）
+              favoriteIds:[],
+              // 修改点：存储当前登录用户信息
+              userPhone: '',
+              userName: '',
+              userAvatar: '',
+              // 修改点：默认地址信息，用于顶部定位显示
+              addressInfo: null,
+              // 修改点：商家信息（从后端动态获取）
+              restaurantInfo: {},
+              // 配送费试算结果（按默认地址 + 当前购物车实时核价，与下单同源）
+              feePreview: {},
+              dialogFlavor:{
+                name:'',
+                flavors:[],
+                dishId:undefined,
+                price:undefined,
+                show:false,
+                image:''
+              },
+              cartDialogShow:false,
+              detailsDialog:{
+                show:false,
+                item:{image:''}
+              },
+              setMealDialog:{
+                show:false,
+                item:{}
+              },
+              // 修改点：搜索浮层相关数据
+              searchShow: false,
+              searchKeyword: '',
+              searchDishList: [],
+              searchMealList: [],
+              searchLoading: false,
+              searchSearched: false,
+              searchFailed: false, // 修改点(2026-09-17 UX)：区分搜索接口失败与真实无结果
+              searchHistory: [],
+              searchTimer: null,
+              // 修改点：搜索联想建议
+              searchSuggestions: [],
+              suggestionTimer: null,
+              // 修改点：未读消息数量（消息铃铛角标）
+              unreadMsgCount: 0,
+              // 修改点：菜品/套餐图片大图预览
+              previewShow: false,
+              previewImages: [],
+              previewIndex: 0,
+              // 修改点(2026-09-16)：全量加载所有分类菜品时的 loading 态
+              loadingAll: false,
+              // 修改点(2026-09-18)：加购防重由全局布尔锁改为按「菜品/套餐+口味」维度的锁表，
+              // 同一菜品在飞时忽略连点（防数量异常），不同菜品可并发加购（原全局锁会静默丢弃快速加购）。
+              cartLoadingMap: {},
+              // 修改点：菜单加载失败状态（显示重试按钮而非空态误导）
+              loadFailed: false,
+              // 修改点：底部 Tab 导航当前项（0=点餐 1=订单 2=我的）
+              activeTab: 0,
+            }
+          },
+          computed:{
+            // 用户头像：有头像走 imgPath 鉴权地址，无头像用默认头像
+            // 修改点(2026-09-26)：与「我的」页 divUser 统一同一头像源，原直接绑定相对路径导致真实头像裂图
+            avatarSrc(){
+              return this.userAvatar ? imgPath(this.userAvatar) : '/front/images/headPage.png';
+            },
+            goodsNum(){
+              let num = 0
+              this.cartData.forEach(item=>{
+                num += item.number 
+              })
+              if(num <99){
+                return num
+              }else{
+                return '99+'
+              }
+            },
+            goodsPrice(){
+              let price = 0
+              this.cartData.forEach(item=>{
+                price += (item.number * item.amount)
+              })
+              // 修改点：四舍五入到分，避免浮点数累加误差（如 3.7199999999999998）
+              return Math.round(price * 100) / 100
+            },
+            // 起送门槛（取真实起送价；后端未配置时为0即不限，不再用写死的15元兜底）
+            minOrderAmount(){
+              return Number(this.restaurantInfo.minOrder || 0)
+            },
+            // 购物车面板满减凑单条（数据全部来自后端同源试算，不在前端算优惠金额）
+            frBar(){
+              const fr = this.frEval
+              if(!fr || !fr.available) return null
+              const discount = Number(fr.discount)||0
+              const gap = Number(fr.gap)||0
+              const nextDiscount = Number(fr.nextDiscount)||0
+              const isGift = Number(fr.nextDiscountType) === 3
+              let text = '', sub = ''
+              if(fr.hit){
+                text = '已享满减优惠 ¥'+discount.toFixed(2)
+                if(fr.nextMinAmount){
+                  sub = isGift
+                    ? ('再买¥'+gap.toFixed(2)+'，可享「'+(fr.nextRuleName||'赠品')+'」')
+                    : ('再买¥'+gap.toFixed(2)+'，可再减¥'+nextDiscount.toFixed(2))
+                }else{
+                  sub = '已享最高档优惠'
+                }
+              }else if(fr.nextMinAmount){
+                text = '还差¥'+gap.toFixed(2)+' 享满减'
+                sub = isGift
+                  ? ('满¥'+Number(fr.nextMinAmount).toFixed(2)+'可享「'+(fr.nextRuleName||'赠品')+'」')
+                  : ('满¥'+Number(fr.nextMinAmount).toFixed(2)+'可减¥'+nextDiscount.toFixed(2))
+              }else{
+                return null
+              }
+              return { progress: Math.min(100, Math.max(0, Number(fr.progress)||0)), text:text, sub:sub }
+            },
+            // 修改点：当前选中分类名称，用于右侧列表标题
+            activeCategoryName(){
+              if(this.activeType >= 0 && this.categoryList[this.activeType]){
+                return this.categoryList[this.activeType].name
+              }
+              return ''
+            }
+          },
+          watch:{
+            // 商品金额变化即重新试算满减（防抖，连续加减购物车只请求一次）
+            goodsPrice(newVal){
+              if(this._frTimer){ clearTimeout(this._frTimer) }
+              // 购物车清空：无需试算
+              if(!(newVal > 0)){ this.frEval = null; return }
+              this._frTimer = setTimeout(()=>{ this.refreshFullReduction(newVal) }, 200)
+            }
+          },
+          created(){
+            // 修改点：页面初始化时读取登录状态
+            this.userPhone = sessionStorage.getItem("userPhone") || ''
+            this.userName = sessionStorage.getItem("userName") || ''
+            this.userAvatar = sessionStorage.getItem("userAvatar") || ''
+            // 修改点：未登录时不请求受保护接口 —— /recommend/messages/unread-count 未登录返回 401；
+            // 本页已改为强制登录（restoreSession 探测失败即跳登录页），此守卫用于探测进行中的短暂窗口
+            // （与下方 initData 的 isLogin 守卫保持一致）
+            if (this.userPhone) {
+              this.fetchUnreadCount()
+              this.loadFavoriteIds()
+              this._sessionReady = Promise.resolve()
+            } else {
+              // 修复：新标签页/复制链接打开时 sessionStorage 会丢失（按 tab 隔离），
+              // 但服务端 cookie 会话可能仍有效。静默探测 /user/info，成功则恢复本地登录态。
+              this._sessionReady = this.restoreSession()
+            }
+          },
+          mounted(){
+            // 修改点：已登录正常加载；未登录时 restoreSession 会跳登录页，此期间 initData 的 isLogin 守卫挡住受保护请求
+            this.initData()
+            // 修改点：监听右侧面板滚动，实现左右联动（美团小程序特性）
+            this.$nextTick(() => {
+              const panel = this.$refs.dishPanel
+              if(panel){
+                panel.addEventListener('scroll', this.onDishPanelScroll, { passive: true })
+              }
+            })
+            // 修改点：注册 ESC 键监听，支持关闭所有弹窗
+            document.addEventListener('keydown', this._handleEscKey)
+            // SSE 新消息到达时刷新顶部未读角标
+            window.addEventListener('reggie:new-message', this._onSseNewMessage)
+          },
+          beforeDestroy(){
+            const panel = this.$refs.dishPanel
+            if(panel){
+              panel.removeEventListener('scroll', this.onDishPanelScroll)
+            }
+            // 修改点：移除 ESC 键监听
+            document.removeEventListener('keydown', this._handleEscKey)
+            // 移除 SSE 新消息监听
+            window.removeEventListener('reggie:new-message', this._onSseNewMessage)
+          },
+          methods:{
+            // SSE 推送到达：复用未读数拉取，更新顶部角标
+            _onSseNewMessage(){
+              this.fetchUnreadCount()
+            },
+            // 静默会话恢复：复用 common.js 公共逻辑（新标签页 sessionStorage 丢失但 cookie 有效）
+            restoreSession(){
+              var self = this
+              return restoreUserSession().then(function(ok){
+                if(!ok){
+                  // 修改点(2026-09-25)：首页改为强制登录——探测无有效会话时提示并跳登录页，
+                  // 登录成功后按 redirect 回跳本页（goLogin 在 common.js，含"请先登录"提示）
+                  goLogin()
+                  return false
+                }
+                self.userPhone = sessionStorage.getItem("userPhone") || ''
+                self.userName = sessionStorage.getItem("userName") || ''
+                self.userAvatar = sessionStorage.getItem("userAvatar") || ''
+                // 补跑 created 中因未登录跳过的受保护初始化
+                self.fetchUnreadCount()
+                self.loadFavoriteIds()
+              })
+            },
+            // 满减试算：金额变化时拉取与下单同源的优惠/凑单数据
+            async refreshFullReduction(amount){
+              try{
+                const res = await evaluateFullReduction(amount)
+                if(res && res.code === 1){
+                  this.frEval = res.data
+                }
+              }catch(e){
+                // 试算失败不阻断点餐，仅不展示凑单条（下单时后端仍会真实计费）
+                console.warn('[满减] 试算失败:', e)
+              }
+            },
+            // 收藏：登录后拉取已收藏菜品ID，初始化星标态
+            async loadFavoriteIds(){
+              try{
+                const res = await getFavoriteIds(1)
+                if(res && res.code === 1){
+                  this.favoriteIds = Array.isArray(res.data) ? res.data : []
+                }
+              }catch(e){
+                console.warn('[收藏] 加载收藏ID失败:', e)
+              }
+            },
+            isFavoriteDish(id){
+              return this.favoriteIds.indexOf(id) >= 0
+            },
+            // 收藏/取消收藏：乐观更新星标，接口返回后以后端为准校正，失败回滚
+            async toggleFavoriteDish(item){
+              if(!item || !item.id) return
+              if(this._favLock === item.id) return
+              if(!this.userPhone){
+                goLogin()
+                return
+              }
+              this._favLock = item.id
+              var wasFav = this.isFavoriteDish(item.id)
+              var removeId = function(fid){ return fid !== item.id }
+              if(wasFav){
+                this.favoriteIds = this.favoriteIds.filter(removeId)
+              }else{
+                this.favoriteIds = this.favoriteIds.concat([item.id])
+              }
+              try{
+                const res = await toggleFavorite(1, item.id)
+                if(res && res.code === 1){
+                  var favorited = !!(res.data && res.data.favorited)
+                  var ids = this.favoriteIds.filter(removeId)
+                  if(favorited){ ids = ids.concat([item.id]) }
+                  this.favoriteIds = ids
+                  vant.Toast(favorited ? '已收藏' : '已取消收藏')
+                }else{
+                  this.favoriteIds = wasFav
+                    ? this.favoriteIds.concat([item.id])
+                    : this.favoriteIds.filter(removeId)
+                  vant.Toast.fail((res && res.msg) || '操作失败')
+                }
+              }catch(e){
+                this.favoriteIds = wasFav
+                  ? this.favoriteIds.concat([item.id])
+                  : this.favoriteIds.filter(removeId)
+                console.warn('[收藏] 切换失败:', e)
+                vant.Toast.fail('操作失败，请稍后重试')
+              }finally{
+                this._favLock = null
+              }
+            },
+            // 修改点：图片加载失败兜底，替代el-image的error slot
+            imgError(e){
+              if (e.target.src.indexOf('/front/images/noImg.png') >= 0) return
+              e.target.src = './images/noImg.png'
+            },
+            // 头像加载失败兜底默认头像（保持「人头」语义，不用 noImg 占位图）
+            onAvatarError(e){
+              if (e.target.src.indexOf('headPage.png') >= 0) return
+              e.target.src = '/front/images/headPage.png'
+            },
+            // 修改点(2026-09-17)：加购飞入购物车动效——捕获阶段识别加号图标，避免侵入 addCart
+            onDishPanelClick(e){
+              var t = e && e.target
+              // 未登录时 addCart 会提示并跳登录，不播飞入动效，避免"已加入"的误导
+              if (t && t.classList && t.classList.contains('ri-add-line') && this.userPhone) {
+                this.flyToCart(t)
+              }
+            },
+            // 修改点(2026-09-17)：抛物线飞入 + 落点购物车弹跳（情感化微交互）
+            flyToCart(fromEl){
+              var cart = document.querySelector('.cart-bar')
+              if (!cart || !fromEl || !fromEl.getBoundingClientRect) return
+              // 尊重系统「减少动态效果」偏好，开启后不进行飞入动效
+              if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+              var from = fromEl.getBoundingClientRect()
+              var to = cart.getBoundingClientRect()
+              var startX = from.left + from.width / 2
+              var startY = from.top + from.height / 2
+              var endX = to.left + 34
+              var endY = to.top + to.height / 2
+              var outer = document.createElement('div')
+              outer.className = 'fly-ball-x'
+              var inner = document.createElement('div')
+              inner.className = 'fly-ball'
+              outer.appendChild(inner)
+              outer.style.left = startX + 'px'
+              outer.style.top = startY + 'px'
+              document.body.appendChild(outer)
+              requestAnimationFrame(function(){
+                outer.style.transform = 'translateX(' + (endX - startX) + 'px)'
+                inner.style.transform = 'translateY(' + (endY - startY) + 'px)'
+              })
+              setTimeout(function(){
+                if (outer.parentNode) outer.parentNode.removeChild(outer)
+                // 到达后购物车轻弹，强化"已加入"反馈（先移除再强制重排以重启动画）
+                cart.classList.remove('cart-bump')
+                void cart.offsetWidth
+                cart.classList.add('cart-bump')
+              }, 620)
+            },
+            // 修改点(2026-09-16)：支持单图与多图预览——
+            // 列表缩略图直接调起（单图）；套餐详情子项传整个套餐图集 + 当前索引（可左右滑动浏览）。
+            // 复用 my-evaluations.html 权威模式（van-image-preview + closeable）。
+            previewDishImage(url, images, index){
+              if(images && images.length){
+                this.previewImages = images
+                this.previewIndex = (typeof index === 'number') ? index : 0
+              }else{
+                if(!url) return
+                this.previewImages = [url]
+                this.previewIndex = 0
+              }
+              this.previewShow = true
+            },
+            // 修改点：获取未读消息数量，更新铃铛角标
+            fetchUnreadCount(){
+              var self = this;
+              recommendApi.getUnreadCount().then(function(res) {
+                if(res && res.code === 1 && typeof res.data === 'number'){
+                  self.unreadMsgCount = res.data;
+                }
+              }).catch(function(e) { console.warn('[index.html] 获取未读消息数失败:', e) });
+            },
+            // 修改点：跳转到消息中心页面
+            toMessagePage(){
+              window.requestAnimationFrame(()=>{
+                window.location.href = '/front/page/message.html'
+              })
+            },
+            // 修改点：跳转到AI智能点餐助手
+            toAIAssistant(){
+              window.requestAnimationFrame(()=>{
+                window.location.href = '/front/page/ai-assistant.html'
+              })
+            },
+            // 修改点：分类图标映射（复用页面级 CATEGORY_ICON_MAP，RemixIcon 类名，禁止使用 emoji）
+            getCategoryIcon(name){
+              return CATEGORY_ICON_MAP[name] || 'ri-restaurant-line';
+            },
+            // 修改点：搜索功能 — 打开搜索浮层
+            onSearchClick(){
+              // 初始化搜索历史（从 localStorage 读取，带7天过期机制）
+              try {
+                const raw = JSON.parse(localStorage.getItem('searchHistory') || '{"data":[],"ts":0}')
+                const now = Date.now()
+                // 超过7天自动清除历史
+                if(now - raw.ts > 7 * 24 * 60 * 60 * 1000){
+                  this.searchHistory = []
+                  localStorage.removeItem('searchHistory')
+                } else {
+                  this.searchHistory = raw.data || []
+                }
+              } catch(e) {
+                this.searchHistory = []
+              }
+              this.searchShow = true
+              this.searchKeyword = ''
+              this.searchDishList = []
+              this.searchMealList = []
+              this.searchSearched = false
+              // 聚焦输入框
+              this.$nextTick(() => {
+                const input = this.$refs.searchInput
+                if(input) input.focus()
+              })
+            },
+            // 修改点：语音搜索
+            startVoiceSearch(){
+              var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+              if(!SpeechRecognition){
+                vant.Toast.fail('您的浏览器不支持语音搜索')
+                return
+              }
+              var recognition = new SpeechRecognition()
+              recognition.lang = 'zh-CN'
+              recognition.interimResults = false
+              recognition.maxAlternatives = 1
+              recognition.start()
+              this.searchShow = true
+              this.$nextTick(() => {
+                const input = this.$refs.searchInput
+                if(input) input.focus()
+              })
+              recognition.onresult = (event) => {
+                var transcript = event.results[0][0].transcript
+                this.searchKeyword = transcript
+                this.doSearch()
+              }
+              recognition.onerror = (event) => {
+                if(event.error === 'not-allowed'){
+                  vant.Toast.fail('请允许麦克风权限')
+                } else if(event.error !== 'aborted'){
+                  vant.Toast.fail('语音识别失败：' + event.error)
+                }
+              }
+            },
+            // 修改点：关闭搜索浮层
+            closeSearch(){
+              this.searchShow = false
+              this.searchKeyword = ''
+              this.searchDishList = []
+              this.searchMealList = []
+              this.searchSearched = false
+              this.searchSuggestions = []
+            },
+            // 修改点：清除搜索关键词
+            clearSearch(){
+              this.searchKeyword = ''
+              this.searchDishList = []
+              this.searchMealList = []
+              this.searchSearched = false
+              this.searchSuggestions = []
+              this.$nextTick(() => {
+                const input = this.$refs.searchInput
+                if(input) input.focus()
+              })
+            },
+            // 修改点：输入防抖，自动触发搜索 & 联想建议
+            onSearchInput(){
+              if(this.searchTimer) clearTimeout(this.searchTimer)
+              if(this.suggestionTimer) clearTimeout(this.suggestionTimer)
+              const kw = (this.searchKeyword || '').trim()
+              if(!kw){
+                this.searchDishList = []
+                this.searchMealList = []
+                this.searchSearched = false
+                this.searchSuggestions = []
+                return
+              }
+              // 联想建议（100ms防抖，比搜索更快响应）
+              this.suggestionTimer = setTimeout(() => {
+                this.fetchSuggestions(kw)
+              }, 100)
+              // 搜索结果（300ms防抖）
+              this.searchTimer = setTimeout(() => {
+                this.doSearch()
+              }, 300)
+            },
+            // 修改点：获取搜索联想建议
+            async fetchSuggestions(kw){
+              try {
+                const dishRes = await searchSuggestApi({ name: kw })
+                const mealRes = await setmealListApi({ name: kw, status: 1 })
+                const suggestions = []
+                if(dishRes && dishRes.code === 1 && Array.isArray(dishRes.data)){
+                  dishRes.data.slice(0, 3).forEach(d => {
+                    suggestions.push({ name: d.name, isMeal: false, id: d.id })
+                  })
+                }
+                if(mealRes && mealRes.code === 1 && Array.isArray(mealRes.data)){
+                  mealRes.data.slice(0, 2).forEach(m => {
+                    suggestions.push({ name: m.name, isMeal: true, id: m.id })
+                  })
+                }
+                this.searchSuggestions = suggestions
+              } catch(e) {
+                this.searchSuggestions = []
+              }
+            },
+            // 修改点：选中联想建议项
+            selectSuggestion(sug){
+              this.searchKeyword = sug.name
+              this.searchSuggestions = []
+              this.doSearch()
+            },
+            // 修改点：执行搜索
+            async doSearch(){
+              const kw = (this.searchKeyword || '').trim()
+              if(!kw) return
+              this.searchLoading = true
+              this.searchSearched = true
+              try {
+                const [dishRes, mealRes] = await Promise.all([
+                  dishListApi({ name: kw }),
+                  setmealListApi({ name: kw, status: 1 })
+                ])
+                // 处理菜品结果
+                if(dishRes && dishRes.code === 1){
+                  const dishes = dishRes.data || []
+                  // 同步购物车数量
+                  dishes.forEach(d => {
+                    const cart = (this.cartData || []).find(c => c.dishId === d.id)
+                    d.number = cart ? cart.number : undefined
+                  })
+                  this.searchDishList = dishes
+                } else {
+                  this.searchDishList = []
+                }
+                // 处理套餐结果
+                if(mealRes && mealRes.code === 1){
+                  const meals = mealRes.data || []
+                  meals.forEach(m => {
+                    const cart = (this.cartData || []).find(c => c.setmealId === m.id)
+                    m.number = cart ? cart.number : undefined
+                  })
+                  this.searchMealList = meals
+                } else {
+                  this.searchMealList = []
+                }
+                this.searchFailed = false
+                // 保存搜索历史
+                this.addSearchHistory(kw)
+              } catch(e) {
+                // 修改点(2026-09-17 UX)：搜索接口异常不再静默渲染成"没有找到相关菜品"误导用户
+                console.error('[index] 搜索失败:', e)
+                this.searchDishList = []
+                this.searchMealList = []
+                this.searchFailed = true
+                vant.Toast.fail('搜索失败，请稍后重试')
+              } finally {
+                this.searchLoading = false
+              }
+            },
+            // 修改点：保存搜索历史（去重，最多10条，带过期时间戳）
+            addSearchHistory(keyword){
+              let history = [...this.searchHistory]
+              // 去重
+              const idx = history.indexOf(keyword)
+              if(idx > -1) history.splice(idx, 1)
+              history.unshift(keyword)
+              if(history.length > 10) history = history.slice(0, 10)
+              this.searchHistory = history
+              try {
+                localStorage.setItem('searchHistory', JSON.stringify({ data: history, ts: Date.now() }))
+              } catch(e) {}
+            },
+            // 修改点：点击历史标签搜索
+            searchFromHistory(tag){
+              this.searchKeyword = tag
+              this.doSearch()
+            },
+            // 修改点：清空搜索历史
+            clearSearchHistory(){
+              this.searchHistory = []
+              try {
+                localStorage.removeItem('searchHistory')
+              } catch(e) {}
+            },
+            // 修改点：点击定位跳转地址管理页
+            toAddressPage(){
+              window.requestAnimationFrame(()=>{
+                window.location.href = '/front/page/address.html'
+              })
+            },
+            // 按当前默认地址试算配送费（后端按购物车实时核价，与下单扣费同源）
+            loadFeePreview(){
+              if(!this.addressInfo || !this.addressInfo.id){ return }
+              previewDeliveryFeeApi({ addressBookId: this.addressInfo.id }).then(res=>{
+                if(res && res.code === 1){ this.feePreview = res.data || {} }
+              }).catch(()=>{})
+            },
+            // 距离（米）格式化为 m / km
+            formatDistance(meters){
+              const m = Number(meters || 0)
+              if(m >= 1000){ return (Math.round(m / 100) / 10) + 'km' }
+              return Math.round(m) + 'm'
+            },
+            // 点击优惠券栏跳转独立领券中心（P1-9）：可看全部可领券、积分兑换、我的券
+            showCouponDetail(){
+              window.location.href = '/front/page/coupon-center.html'
+            },
+            // 修改点：点击公告栏查看公告详情
+            showNoticeDetail(){
+              vant.Dialog.alert({
+                title: '商家公告',
+                message: this.restaurantInfo.notice || '欢迎光临！本店精选新鲜食材，用心烹饪每一道菜品。',
+                confirmButtonText: '知道了'
+              })
+            },
+            // 修改点：ESC 键全局监听，按优先级依次关闭打开的弹窗/浮层
+            _handleEscKey(e){
+              if(e.key !== 'Escape' && e.key !== 'Esc') return
+              // 优先级：有表单输入时不处理，避免干扰用户输入
+              if(document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')){
+                return
+              }
+              // 按优先级关闭弹窗：搜索浮层 > 口味弹窗 > 详情弹窗 > 套餐弹窗 > 购物车
+              if(this.searchShow){
+                this.closeSearch()
+              }else if(this.dialogFlavor.show){
+                this.dialogFlavor.show = false
+              }else if(this.detailsDialog.show){
+                this.detailsDialog.show = false
+              }else if(this.setMealDialog.show){
+                this.setMealDialog.show = false
+              }else if(this.cartDialogShow){
+                this.cartDialogShow = false
+              }
+            },
+            //初始化数据
+            async initData(){
+              // 等待会话恢复探测完成，确保新标签页打开时 isLogin 判定基于真实 cookie 会话
+              if(this._sessionReady){ await this._sessionReady }
+              // 修改点：未登录时不请求购物车数据，避免NOTLOGIN重定向打断浏览
+              const tasks = [categoryListApi()]
+              const isLogin = !!this.userPhone
+              if(isLogin){
+                tasks.push(cartListApi({}))
+                // 修改点：加载默认地址用于顶部定位展示
+                tasks.push(getDefaultAddressApi().catch(() => null))
+              }
+              // 修改点：加载商家信息（无需登录）
+              tasks.push(fetchRestaurantInfo().catch(() => null))
+              // 修改点(2026-09-18)：return Promise，供下拉刷新真实等待加载完成
+              return Promise.all(tasks).then(res=>{
+                // 修复(2026-09-23 P0)：购物车/地址/门店与分类相互独立，必须先恢复，
+                // 否则分类有数据时下方 return loadAllDishes() 会提前退出，三者永不执行。
+                //获取购物车数据（仅登录后，索引1）
+                if(isLogin && res[1] && res[1].code === 1){
+                  this.cartData = res[1].data
+                }
+                // 修改点：设置地址信息（仅登录后，索引2）
+                if(isLogin && res[2] && res[2].code === 1){
+                  this.addressInfo = res[2].data
+                  // 拿到默认地址后试算真实配送费（与下单扣费同源）
+                  this.loadFeePreview()
+                }
+                // 修改点：设置商家信息（索引3 或 索引1）
+                const restaurantRes = isLogin ? res[3] : res[1]
+                if(restaurantRes && restaurantRes.code === 1){
+                  this.restaurantInfo = restaurantRes.data || {}
+                }
+                //获取分类数据
+                if(res[0].code === 1){
+                  this.categoryList = res[0].data
+                  if(Array.isArray(res[0].data) && res[0].data.length > 0){
+                    this.categoryId = res[0].data[0].id
+                    this.activeType = 0
+                    // 修改点(2026-09-16)：改为一次性加载所有分类，支持右侧滚动联动左侧高亮
+                    // 修改点(2026-09-18)：return 菜品加载 Promise，使下拉刷新等待菜单就绪
+                    return this.loadAllDishes()
+                  }
+                }else{
+                  this.loadFailed = true
+                  vant.Toast.fail(res[0].msg || '加载分类失败');
+                }
+              }).catch(() => {
+                // 修改点：捕获Promise异常，避免控制台报错，未登录时会自动跳转登录页
+                this.loadFailed = true
+              }).finally(() => {
+                // 修改点：无论成功失败，关闭骨架屏
+                this.pageLoading = false
+              })
+            },
+            // 修改点：下拉刷新处理
+            // 修改点(2026-09-18)：await initData 完成后再收起刷新动画，原实现固定 1s 复位，
+            // 弱网下数据未回来刷新图标就消失，强网下又白等
+            async onRefresh(){
+              try {
+                await this.initData()
+              } finally {
+                this.refreshing = false
+              }
+            },
+            //分类点击
+            // 修改点(2026-09-16)：分组长列表模式下，点击分类改为滚动右栏到对应分类标题（不再重新加载）
+            categoryClick(index,id,type){
+              this.activeType = index
+              this.categoryId = id
+              this.$nextTick(() => {
+                const panel = this.$refs.dishPanel
+                if(panel){
+                  // 修改点：若在搜索态，先关闭搜索浮层再滚动到分类
+                  if(this.searchShow || this.searchKeyword){ this.closeSearch() }
+                  const titles = panel.querySelectorAll('.category-dish-title')
+                  const target = Array.prototype.find.call(titles, t => String(t.getAttribute('data-category-id')) === String(id))
+                  if(target){
+                    const top = target.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop
+                    panel.scrollTo({ top: top, behavior: 'smooth' })
+                  }
+                }
+                const sidebar = this.$refs.categorySidebar
+                if(sidebar){
+                  const activeItem = sidebar.children[index]
+                  if(activeItem){
+                    activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                  }
+                }
+              })
+            },
+            // 修改点：右侧面板滚动时自动高亮对应分类（美团小程序左右联动）
+            // 修改点(2026-09-16)：改用 getBoundingClientRect 计算标题相对面板位置，修正 offsetTop 受 offsetParent 影响的偏差
+            onDishPanelScroll(){
+              // 防抖处理：100ms内只执行一次高亮更新
+              if(this._scrollTimer) return
+              this._scrollTimer = setTimeout(() => {
+                this._scrollTimer = null
+                // 根据当前可视区域第一个菜品所属分类，更新左侧分类高亮
+                const panel = this.$refs.dishPanel
+                if(!panel || this.dishList.length === 0) return
+                const panelTop = panel.getBoundingClientRect().top
+                const titles = panel.querySelectorAll('.category-dish-title')
+                let activeIdx = 0
+                Array.prototype.forEach.call(titles, el => {
+                  const top = el.getBoundingClientRect().top - panelTop
+                  if(top <= 1){
+                    const catId = el.getAttribute('data-category-id')
+                    const idx = this.categoryList.findIndex(c => String(c.id) === String(catId))
+                    if(idx >= 0) activeIdx = idx
+                  }
+                })
+                if(this.activeType !== activeIdx){
+                  this.activeType = activeIdx
+                }
+              }, 100)
+            },
+            // 修改点(2026-09-16)：一次性加载所有分类的菜品/套餐，拼成「分类标题+菜品」扁平数组，
+            // 使右侧成为单页长列表，支持滚动联动（点击左侧分类滚动到右栏对应标题；右栏滚动高亮左侧）。
+            // 购物车数量在此统一回填；syncCartNumber/addCart/subtractCart 遍历 dishList 匹配 id，
+            // 标题项无 id 会被自动跳过，无需改动。
+            // 修改点(2026-09-17)：取指定分类的菜品（供分段模板渲染；与 dishList 为同一对象引用）
+            catItems(catId){
+              return this.catDishesMap[catId] || []
+            },
+            // 修改点(2026-09-17)：未渲染分类的占位高度——与 .dish-item 的 contain-intrinsic-size(120rem)
+            // 对齐，保证滚动条长度与联动位置基本稳定；区块真实渲染后以实际高度为准
+            catPlaceholderHeight(catId){
+              const list = this.catDishesMap[catId] || []
+              return (list.length * 120 + 40) + 'rem'
+            },
+            // 修改点(2026-09-17)：菜单虚拟化——分类区块接近视口时才渲染其下菜品
+            initCatVisibilityObserver(){
+              var self = this
+              var panel = this.$refs.dishPanel
+              if(!panel || typeof IntersectionObserver === 'undefined'){
+                // 浏览器不支持时退化为全量渲染，功能不受影响
+                this.categoryList.forEach(function(cat){ self.$set(self.visibleCats, cat.id, true) })
+                return
+              }
+              if(this._catObserver) this._catObserver.disconnect()
+              this._catObserver = new IntersectionObserver(function(entries){
+                entries.forEach(function(entry){
+                  if(!entry.isIntersecting) return
+                  var id = entry.target.getAttribute('data-category-id')
+                  if(id == null) return
+                  // 一次性渲染：标记可见后取消观察，避免反复挂载/卸载造成滚动抖动
+                  self.$set(self.visibleCats, id, true)
+                  if(self._catObserver) self._catObserver.unobserve(entry.target)
+                })
+              }, { root: panel, rootMargin: '400px 0px' })
+              var sections = panel.querySelectorAll('.cat-section')
+              Array.prototype.forEach.call(sections, function(sec){ self._catObserver.observe(sec) })
+            },
+            async loadAllDishes(){
+              if(!this.categoryList || this.categoryList.length === 0) return
+              this.loadingAll = true
+              this.loadFailed = false
+              try {
+                const cartData = this.cartData || []
+                const flat = []
+                // 修改点(2026-09-17)：分批并发（每批 3 个分类）+ 增量渲染——
+                // 原实现用 Promise.all 一次性并发全部分类，分类多时瞬时连接数高，
+                // 且必须等「全部分类都返回」才渲染，首屏长时间空白（只有一个 loading）。
+                // 现每批返回后立即 push 并刷新列表，首屏更快可见、峰值并发更低；
+                // 仍会为每个分类生成标题项，右侧滚动联动左侧高亮不受影响。
+                const BATCH_SIZE = 3
+                for(let start = 0; start < this.categoryList.length; start += BATCH_SIZE){
+                  const batch = this.categoryList.slice(start, start + BATCH_SIZE)
+                  const results = await Promise.all(batch.map(cat => {
+                    if(cat.type === 1){
+                      // includeSoldOut：菜单需返回停售菜并沉底；套餐接口不传 status 即返回全部状态
+                      return dishListApi({ categoryId: cat.id, includeSoldOut: true })
+                    }
+                    return setmealListApi({ categoryId: cat.id })
+                  }))
+                  batch.forEach((cat, i) => {
+                    const res = results[i]
+                    flat.push({ _title: true, _categoryId: cat.id, name: cat.name, type: cat.type })
+                    const items = []
+                    if(res && res.code === 1 && res.data && res.data.length){
+                      // 售罄沉底：在售(status=1)在前、停售(status=0)在后，分类内其余相对顺序保持不变
+                      const sortedList = res.data.slice().sort((a,b) => {
+                        const sa = Number(a.status) === 1 ? 0 : 1
+                        const sb = Number(b.status) === 1 ? 0 : 1
+                        return sa - sb
+                      })
+                      sortedList.forEach(d => {
+                        let num = 0
+                        if(cat.type === 1){
+                          const c = cartData.find(c => c.dishId === d.id)
+                          num = c ? (c.number || 0) : 0
+                        }else{
+                          const c = cartData.find(c => c.setmealId === d.id)
+                          num = c ? (c.number || 0) : 0
+                        }
+                        d.number = num > 0 ? num : undefined
+                        items.push(d)
+                        flat.push(d)
+                      })
+                    }
+                    // 修改点(2026-09-17)：按分类建索引，供分段虚拟化渲染
+                    this.$set(this.catDishesMap, cat.id, items)
+                  })
+                  // 增量渲染：本批完成即刷新，无需等待剩余分类
+                  this.dishList = flat.slice()
+                  // 本批区块已进入 DOM，重建可见性观察（新分类靠近视口时才渲染其菜品）
+                  this.$nextTick(() => { this.initCatVisibilityObserver() })
+                }
+              } catch(e){
+                console.error('[index] 加载菜单失败:', e)
+                this.loadFailed = true
+                vant.Toast.fail('加载菜单失败')
+              } finally {
+                this.loadingAll = false
+              }
+            },
+            // 修改点：重试加载菜单（重置失败状态，重新加载分类+菜品）
+            async retryLoadDishes(){
+              this.loadFailed = false
+              this.dishList = []
+              this.categoryList = []
+              await this.initData()
+            },
+            //获取菜品数据
+            async getDishList(){
+              if(!this.categoryId) return
+              // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+              try {
+                const res = await dishListApi({categoryId:this.categoryId,status:1})
+                if(!res) return
+                if(res.code === 1){
+                  // 修改点：防御 res.data 为 null，避免 dishList.length 抛错
+                  let dishList = res.data || []
+                  const cartData  = this.cartData
+                  if(dishList.length > 0 && cartData.length > 0){
+                    dishList.forEach(dish=>{
+                      cartData.forEach(cart=>{
+                        if(dish.id === cart.dishId){
+                          dish.number = cart.number
+                        }
+                      })
+                    })
+                  }
+                  this.dishList = dishList
+                }else{
+                  vant.Toast.fail(res.msg || '加载菜品失败')
+                }
+              } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
+            },
+            //获取套餐数据setmealId
+            async getSetmealData(){
+              if(!this.categoryId) return
+              // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+              try {
+                const res = await setmealListApi({categoryId:this.categoryId,status:1})
+                if(!res) return
+                if(res.code === 1){
+                    // 修改点：防御 res.data 为 null，避免 dishList.length 抛错
+                    let dishList = res.data || []
+                    const cartData  = this.cartData
+                    if(dishList.length > 0 && cartData.length > 0){
+                      dishList.forEach(dish=>{
+                        cartData.forEach(cart=>{
+                          if(dish.id === cart.setmealId){
+                            dish.number = cart.number
+                          }
+                        })
+                      })
+                    }
+                    this.dishList = dishList
+                }else{
+                  vant.Toast.fail(res.msg || '加载套餐失败')
+                }
+              } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
+            },
+            //获取购物车数据
+            async getCartData(){
+              // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+              try {
+                const res = await cartListApi({})
+                if(!res) return
+                if(res.code === 1){
+                  this.cartData = res.data
+                }else{
+                  vant.Toast.fail(res.msg || '加载购物车失败')
+                }
+              } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
+            },
+            //菜单中往购物车中添加商品
+            // 修改点：修复菜品/套餐误判 — item.flavors !== undefined 可靠区分（菜品有flavors字段，套餐无）
+            async addCart(item){
+              // 停售商品不可加购（UI 已禁用，此处兜底防御）
+              if(item && Number(item.status) === 0){ vant.Toast.fail('该商品已售罄'); return false }
+              // 修改点：按菜品维度防重复提交——同一菜品（含口味）在飞时忽略连点，避免数量异常；
+              // 不同菜品各自独立加锁，不再因全局锁静默丢弃用户对其他菜品的快速加购。
+              var cartKey = (item.flavors !== undefined ? 'd' : 's') + '_' + item.id + '_' + (item.dishFlavor || '')
+              if(this.cartLoadingMap[cartKey]) return false
+              this.$set(this.cartLoadingMap, cartKey, true)
+              // 修改点：未登录时跳转登录页
+              if(!this.userPhone){
+                this.$set(this.cartLoadingMap, cartKey, false)
+                goLogin()
+                return false
+              }
+              // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+              try {
+                let params = {
+                  amount: parseFloat(Number(item.price || 0).toFixed(2)),
+                  dishFlavor: item.dishFlavor,//口味  如果没有传undefined
+                  dishId: undefined,//菜品id
+                  setmealId: undefined,//套餐id
+                  name: item.name,
+                  image: item.image
+                }
+                // 修改点：item.flavors !== undefined 可靠区分菜品和套餐，避免无口味菜品误判为套餐
+                if(item.flavors !== undefined){//表示是菜品（包含无口味的菜品）
+                  params.dishId = item.id
+                }else{//表示套餐 套餐没有口味字段
+                  params.setmealId = item.id
+                }
+                const res = await addCartApi(params)
+                if(!res) return false
+                if(res.code === 1){
+                  // 修改点：使用统一的同步方法
+                  this.syncCartNumber(item.id, res.data.number, false)
+                  if(this.setMealDialog.show){
+                    item.number = res.data.number
+                  }
+                  this.getCartData()
+                  return true
+                }else{
+                  vant.Toast.fail(res.msg || '添加失败')
+                  return false
+                }
+              } catch(e) {
+                /* 由请求拦截器统一处理（如NOTLOGIN跳转） */
+                return false
+              }
+              finally { this.$set(this.cartLoadingMap, cartKey, false) }
+            },
+
+            //菜单中减少选中的商品
+            // 修改点：修复 res.data 为 null 时 NPE（数量=1删除返回null）；修复菜品/套餐误判
+            async subtractCart(item){
+                // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+                try {
+                  // 修改点：item.flavors !== undefined 可靠区分菜品（有flavors字段）和套餐（无该字段）
+                  const isDish = item.flavors !== undefined
+                  let params = {}
+                  if(isDish){
+                    params.dishId = item.id
+                    // 多规格菜：菜单行不携带具体口味，从购物车记录解析；
+                    // 若该菜在购物车有多个口味，无法判断减哪条，打开购物车让用户按口味减
+                    if(item.flavors && item.flavors.length){
+                      var flavorRecs = this.cartData.filter(function(c){ return c.dishId === item.id })
+                      if(flavorRecs.length > 1){
+                        this.cartDialogShow = true
+                        vant.Toast('该菜有多个口味，请在购物车中按口味减少')
+                        return
+                      }
+                      if(flavorRecs.length === 1){
+                        params.dishFlavor = flavorRecs[0].dishFlavor
+                      }
+                    }
+                  }else{
+                    params.setmealId = item.id
+                  }
+                  const res = await updateCartApi(params)
+                  if(!res) return
+                  if(res.code === 1){
+                    // 修改点：res.data 可能为 null（后端数量=1时删除返回null），安全取值
+                    const newNum = (res.data && typeof res.data.number === 'number') ? res.data.number : undefined
+                    this.syncCartNumber(item.id, newNum, true)
+                    if(this.setMealDialog.show){
+                      item.number = (newNum == null) ? undefined : newNum
+                    }
+                    this.getCartData()
+                  }else{
+                    vant.Toast.fail(res.msg || '操作失败')
+                  }
+                } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
+            },
+            
+            //展开购物车
+            openCart(){
+              if(this.cartData.length > 0){
+                this.cartDialogShow = true
+              }
+            },
+            //购物车中增加商品数量
+            async cartNumAdd(item){
+              // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+              try {
+                let params = {
+                  amount: item.amount,//金额
+                  dishFlavor: item.dishFlavor,//口味  如果没有传undefined
+                  dishId: item.dishId,//菜品id
+                  setmealId: item.setmealId,//套餐id
+                  name: item.name,
+                  image: item.image
+                }
+                const res = await addCartApi(params)
+                if(!res) return
+                if(res.code === 1){
+                  // 修改点：使用统一的同步方法
+                  this.syncCartNumber(item.dishId || item.setmealId, res.data.number, false)
+                  this.getCartData()
+                }else{
+                  vant.Toast.fail(res.msg || '操作失败')
+                }
+              } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
+            },
+            //购物车中减少商品数量
+            // 修改点：修复 res.data 为 null 时 NPE（数量=1删除返回null）
+            async cartNumberSubtract(item){
+              // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+              try {
+                let params = {
+                    dishId:item.dishId,
+                    setmealId:item.setmealId,
+                    // 多口味菜按口味精确减（后端据此匹配，避免同一dishId命中多条报错）
+                    dishFlavor:item.dishFlavor,
+                  }
+                  const res = await updateCartApi(params)
+                  if(!res) return
+                  if(res.code === 1){
+                    // 修改点：res.data 可能为 null（后端数量=1时删除返回null），安全取值
+                    const newNum = (res.data && typeof res.data.number === 'number') ? res.data.number : undefined
+                    this.syncCartNumber(item.dishId || item.setmealId, newNum, true)
+                    this.getCartData()
+                  }else{
+                    vant.Toast.fail(res.msg || '操作失败')
+                  }
+              } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
+            },
+            
+            // 修改点：提取通用的购物车数量的菜单同步逻辑，同时同步搜索结果
+            // 修改点：加固null/undefined安全 — 当后端删除返回null时，清空前端数量
+            syncCartNumber(dishId, newNumber, clearOnZero){
+              if(typeof dishId === 'undefined' || dishId === null) return;
+              // 修改点：数量为null或undefined时（后端删除返回null），统一清空为undefined
+              const shouldClear = clearOnZero && (newNumber === 0 || newNumber == null);
+              const finalNum = shouldClear ? undefined : (newNumber == null ? undefined : newNumber);
+              // 同步菜品列表
+              this.dishList.forEach(dish => {
+                if(dish.id === dishId){
+                  dish.number = finalNum;
+                }
+              });
+              // 同步搜索结果
+              this.searchDishList.forEach(dish => {
+                if(dish.id === dishId){
+                  dish.number = finalNum;
+                }
+              });
+              this.searchMealList.forEach(meal => {
+                if(meal.id === dishId){
+                  meal.number = finalNum;
+                }
+              });
+            },
+            
+            //清空购物车
+            async clearCart(){
+              // 修改点(2026-09-18 UX)：清空不可逆，先二次确认防误触（Vant confirm 取消为 reject）
+              try {
+                await vant.Dialog.confirm({
+                  title: '清空购物车',
+                  message: '确定要清空已选商品吗？',
+                  confirmButtonText: '清空',
+                  cancelButtonText: '再想想'
+                })
+              } catch(e) {
+                return
+              }
+              // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+              try {
+                const res = await clearCartApi()
+                if(!res) return
+                if(res.code === 1){
+                  for(let ele of this.dishList){
+                    ele.number = undefined
+                  }
+                  for(let ele of this.searchDishList){
+                    ele.number = undefined
+                  }
+                  for(let ele of this.searchMealList){
+                    ele.number = undefined
+                  }
+                  this.cartData = []
+                  this.cartDialogShow = false
+                }else{
+                  vant.Toast.fail(res.msg || '清空失败')
+                }
+              } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
+            },
+            //点击选择规格
+            chooseFlavorClick(item){
+              // 修改点：移除无效的空对象预赋值，直接设置目标值
+              this.dialogFlavor = {
+                name: item.name,
+                flavors: item.flavors,
+                dishId: item.id,
+                price: item.price,
+                show: true,
+                image: item.image
+              }
+            },
+            // 规格选项解析（带 try-catch，非法 JSON 返回空数组，避免中断渲染）
+            parsedFlavorOptions(flavor){
+              if(!flavor || !flavor.value) return []
+              try {
+                const arr = JSON.parse(flavor.value)
+                return Array.isArray(arr) ? arr : []
+              } catch(e) {
+                console.warn('口味值非法 JSON:', flavor.value)
+                return []
+              }
+            },
+            // 规格选择高亮
+            flavorClick(flavor, item){
+              flavor.dishFlavor = item
+              // 修改点：用$forceUpdate替代show=false→true的hack式强制刷新
+              this.$forceUpdate()
+            },
+            //选择规格加入购物车
+            dialogFlavorAddCart(){
+              const dialogFlavor = this.dialogFlavor
+              let flag = true
+              let dishFlavor = []
+              dialogFlavor.flavors.forEach(item=>{
+                if(item.dishFlavor){
+                  dishFlavor.push(item.dishFlavor)
+                }else{
+                      flag = false
+                      vant.Toast.fail('请选择' + item.name);
+                }
+              })
+              if(flag){
+                // 仅在后端确认加购成功后关闭规格弹窗；失败保持弹窗与已选口味，用户可直接重试
+                this.addCart({
+                  price:dialogFlavor.price,
+                  dishFlavor:dishFlavor.join(","),
+                  id:dialogFlavor.dishId,
+                  flavors:[],
+                  image:dialogFlavor.image,
+                  name:dialogFlavor.name
+                }).then(function(ok){
+                  if(ok) this.dialogFlavor.show = false
+                }.bind(this))
+              }
+
+            },
+            //跳转到去结算界面
+            toAddOrderPage(){
+              // 修改点：未登录时跳转登录页
+              if(!this.userPhone){
+                goLogin()
+                return
+              }
+              if(this.cartData.length > 0){
+                window.requestAnimationFrame(()=>{
+                  window.location.href ='/front/page/add-order.html'
+                })
+              }
+            },
+            toUserPage(){
+              window.requestAnimationFrame(()=>{
+                window.location.href= '/front/page/user.html'
+              })
+            },
+            async dishDetails(item){
+              // 停售商品不进入详情弹窗（UI 已置灰，此处兜底防御）
+              if(item && Number(item.status) === 0) return
+              //先清除对象数据，如果不行的话dialog使用v-if
+              this.detailsDialog.item = {}
+              this.setMealDialog.item = {}
+              // 修改点(2026-09-14)：优先按显式 type 判断菜品/套餐；
+              // 无 type 时回退旧的「有 flavors 数组即菜品」逻辑（兼容菜品列表/套餐列表数据）
+              var isSetmeal = (item.type === 'setmeal') ? true
+                            : (item.type === 'dish') ? false
+                            : !Array.isArray(item.flavors)
+              if(!isSetmeal){
+                // 用浅拷贝副本：评价字段经 $set 挂到副本，不污染菜单列表中的原 item
+                this.detailsDialog.item = Object.assign({}, item)
+                this.detailsDialog.show = true
+                // 加载菜品评价数据
+                this.loadDishEvaluations(item.id)
+              }else{
+                // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
+                try {
+                  //显示套餐的数据
+                  const res = await setMealDishDetailsApi(item.id)
+                  if(!res) return
+                  if(res.code === 1){
+                    this.setMealDialog.item = {...item,list:res.data}
+                    this.setMealDialog.show = true
+                  }else{
+                    vant.Toast.fail(res.msg || '加载套餐详情失败')
+                  }
+                } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
+              }
+            },
+
+            // 加载菜品评价数据
+            async loadDishEvaluations(dishId) {
+              try {
+                const [statsRes, listRes] = await Promise.all([
+                  getDishRatingStats(dishId),
+                  getDishEvaluations(dishId, 1, 3)
+                ])
+                // Vue2 无法侦测对对象"新增属性"，必须用 $set 声明响应式字段，否则评价区永不渲染
+                if (statsRes.code === 1) {
+                  this.$set(this.detailsDialog.item, 'evalStats', statsRes.data || {})
+                }
+                if (listRes.code === 1) {
+                  this.$set(this.detailsDialog.item, 'evalList', listRes.data.records || [])
+                }
+              } catch (e) {
+                // 静默失败，不影响菜品详情展示
+              }
+            },
+
+            // 格式化日期
+            formatDate(dateStr) {
+              if (!dateStr) return ''
+              return dateStr.replace('T', ' ').substring(0, 19)
+            },
+            // 修改点：底部 Tab 切换（0=点餐 1=订单 2=我的）
+            onTabChange(active){
+              if(active === 0){
+                // 已在点餐页：仅保持选中态，不重复跳转
+                if(window.location.pathname.indexOf('index.html') > -1) return
+                window.requestAnimationFrame(()=>{ window.location.href = '/front/index.html' })
+                return
+              }
+              const urlMap = { 1: '/front/page/order.html', 2: '/front/page/user.html' }
+              const url = urlMap[active]
+              if(!url) return
+              window.requestAnimationFrame(()=>{ window.location.href = url })
+            }
+
+          }
+      })
+  </script>
+  </html>

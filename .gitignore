@@ -1,0 +1,114 @@
+# ============================================
+# Reggie 外卖系统 - Git 忽略规则
+# 只保留 docs/ src/ printer-agent/ README.md LICENSE pom.xml
+# ============================================
+
+# ===== IDE 和编辑器 =====
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+
+# ===== Claude / AI 工具 =====
+.claude/
+.claudeignore
+CLAUDE.md
+AGENTS.md
+PROJECT_ANALYSIS_REPORT.md
+.codebuddy/
+.joycode/
+.qoder/
+.rtk/
+.atomcode/
+.review/
+.workbuddy/
+.serena/
+design-review/
+# 第三方分析工具生成的竞品文档（本地留档，非项目交付物）
+docs/竞品与市场分析_竞析_2026.md
+
+# ===== 构建产物 =====
+target/
+build/
+*.class
+*.jar
+*.war
+*.ear
+logs/
+*.log
+
+# ===== 依赖和缓存 =====
+.m2/
+.mvn/
+node_modules/
+.npm/
+.yarn/
+
+# ===== 前端工具配置 =====
+.eslintrc.js
+.stylelintrc.json
+.prettierrc
+postcss.config.js
+
+# ===== 数据库 =====
+# db/ 整体仅本地保留，不随开源仓库发布（含全量导出 reggie.sql / 增量迁移，2026-10-02）。
+# 例外：seed-minimal.sql 是「自助建表」路径的必需文件（README 快速开始引用），必须发布，
+# 否则 clone 后的用户建完表没有任何可登录账号。全量演示库仍需联系作者获取。
+db/*
+!db/seed-minimal.sql
+
+# ===== 交付物（仅本地） =====
+# 产品策略/分析等内部文档不对外发布（2026-10-02）
+deliverables/product-strategy/
+
+# ===== 脚本和工具 =====
+# scripts/ 仅本地保留（数据生成/审计/巡检等开发期工具，不随开源仓库发布，2026-10-02）。
+# 例外：lint-ui-conventions.js 是 UI 规范 git hook 门禁的依赖（hooks/pre-commit 调用），必须发布
+scripts/*
+!scripts/lint-ui-conventions.js
+tools/
+tests/
+
+# ===== Wiki 草稿（用于批量导入 Gitee Wiki，不随主仓库发布，2026-10-06） =====
+wiki/
+
+# ===== 数据库备份产物（docker/backup.sh 及测试前手动备份输出，2026-10-06） =====
+backups/
+
+# ===== 上传文件 =====
+# 图片资源入库（菜品/套餐/头像/门店logo/执照/系统默认图），
+# 应用通过 CommonController.download 以 baseDir+路径 拼接读取，DB 存 images/... 相对路径
+uploads/**
+!uploads/images/
+!uploads/images/**
+
+# ===== 其他 =====
+.gitignore
+.env
+.env.*
+!.env.example
+*.tmp
+*.bak
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# ===== 保留的文件（不忽略） =====
+!docs/
+!src/
+!printer-agent/
+!README.md
+!LICENSE
+!pom.xml
+
+# ===== 测试/工具产物（不入库） =====
+.playwright-cli/
+src/main/resources/backend/.playwright-cli/
+PAGES.md
+scripts_version_api.js
+nul

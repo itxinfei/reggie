@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>未接单监控大屏 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <style>
+    /* ========== 页面基础布局 ========== */
+    body { background: var(--bg-page); margin: 0; }
+    .monitor-wrap { max-width: 1700px; margin: 0 auto; padding: var(--space-4) var(--space-5); }
+    /* ========== 顶部工具栏 ========== */
+    .top-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-5); }
+    .top-bar__title { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
+    .top-bar__title i { color: var(--color-danger-dark); margin-right: var(--space-2); }
+    .top-bar__tools { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+    .meta-chip { font-size: var(--font-size-sm); color: var(--text-secondary); background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-full); padding: var(--space-1) 14px; }
+    .meta-chip b { color: var(--text-primary); }
+    .sound-btn { cursor: pointer; border: none; border-radius: var(--radius-full); padding: var(--space-2) 18px; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); }
+    .sound-btn.on { background: var(--color-success-dark); color: var(--text-inverse); }
+    /* P1：--text-secondary(#656b78) 压浅灰底 #e3e7eb 只有 4.32:1，改用更深的灰阶文字 */
+    .sound-btn.off { background: var(--border-default); color: var(--color-gray-600); }
+
+    /* 统计卡片统一使用 <stat-cards> 组件默认样式（原本页 .stat-row 死规则与
+       .stat-card / .stat-card__* 页级覆盖层已删除：BEM 名与组件实际 class 不匹配，
+       紧凑 padding 回归组件标准，保证与全站统计卡一致） */
+
+    /* ========== 订单卡片网格 ========== */
+    .order-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: var(--space-4); }
+    .order-card { background: var(--bg-surface); border-radius: var(--radius-md, 10px); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,.08)); padding: var(--space-4) var(--space-5); border-left: 6px solid var(--border-default); transition: box-shadow .2s; }
+    .order-card.level-NORMAL { border-left-color: var(--color-success); }
+    .order-card.level-WARNING { border-left-color: var(--color-warning); }
+    .order-card.level-ALARM { border-left-color: var(--color-danger); animation: pulse 1.1s infinite; }
+    .order-card.level-MISSED { border-left-color: var(--color-danger-dark); border: 2px solid var(--color-danger-dark); animation: pulse-missed .5s infinite; }
+    /* ========== 动画效果 ========== */
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(245,108,108,.5); } 70% { box-shadow: 0 0 0 14px rgba(245,108,108,0); } 100% { box-shadow: 0 0 0 0 rgba(245,108,108,0); } }
+    @keyframes pulse-missed { 0% { box-shadow: 0 0 0 0 rgba(196,86,86,.6); background: var(--color-danger-light); } 50% { box-shadow: 0 0 0 16px rgba(196,86,86,0); } 100% { box-shadow: 0 0 0 0 rgba(196,86,86,0); background: var(--bg-surface); } }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+    .order-card__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-2); }
+    .order-card__no { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+    .order-card__level { font-size: var(--font-size-xs); padding: 2px 10px; border-radius: var(--radius-full); font-weight: var(--font-weight-medium); }
+    .order-card__level.ALARM { background: var(--color-danger-light); color: var(--color-danger-dark); }
+    .order-card__level.MISSED { background: var(--color-danger-dark); color: var(--bg-surface); animation: blink 1s infinite; }
+    .order-card__level.WARNING { background: var(--color-warning-light); color: var(--color-warning-dark); }
+    .order-card__level.NORMAL { background: var(--color-success-light); color: var(--color-success-dark); }
+    .order-card__wait { font-size: var(--font-size-display); font-weight: var(--font-weight-bold); color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .order-card__wait small { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-secondary); }
+    .order-card__row { font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--space-1); }
+    .order-card__dishes { font-size: var(--font-size-sm); color: var(--text-primary); margin-top: var(--space-2); }
+    /* ========== 空状态 ========== */
+    .empty-state { text-align: center; padding: var(--space-6); color: var(--text-secondary); font-size: var(--font-size-lg); }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="dashboard-container">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
+      <h1 class="sr-only" id="page-title">未接单监控大屏</h1>
+      <div id="app">
+    <div class="monitor-wrap">
+      <!-- ========== 顶部工具栏：标题/更新时间/预警阈值/语音开关/全屏 ========== -->
+      <div class="top-bar">
+        <div class="top-bar__title"><i class="ri-alarm-warning-line"></i>未接单监控大屏</div>
+        <div class="top-bar__tools">
+          <span class="meta-chip">最后更新 <b>{{ lastUpdate || '--' }}</b></span>
+          <span class="meta-chip" v-if="thresholds.goldenMinutes">预警 <b>{{ thresholds.goldenMinutes }}</b>分 / 告警 <b>{{ thresholds.alarmMinutes }}</b>分</span>
+          <button class="sound-btn on" v-if="soundOn" @click="toggleSound"><i class="ri-volume-up-line"></i> 语音提醒 开</button>
+          <button class="sound-btn off" v-else @click="toggleSound"><i class="ri-volume-mute-line"></i> 语音提醒 关</button>
+          <button class="sound-btn off" @click="fullscreen"><i class="ri-fullscreen-line"></i> 全屏</button>
+        </div>
+      </div>
+
+      <!-- 加载失败提示：监控大屏不能静默停留陈旧数据；5秒轮询自动重试，也可手动立即重试 -->
+      <el-alert
+        v-if="loadError"
+        title="监控数据加载失败，将自动重试…"
+        type="error"
+        show-icon
+        :closable="false"
+        style="margin-bottom:10px"
+      >
+        <el-button type="primary" size="small" @click="loadData">立即重试</el-button>
+      </el-alert>
+
+      <!-- ========== 统计卡片：统一 stat-cards 组件，≤4 张 ========== -->
+      <stat-cards :cards="statsCards"></stat-cards>
+
+      <!-- ========== 订单卡片网格：按等待时长分级展示 ========== -->
+      <div class="order-grid" v-if="list.length">
+        <div class="order-card" v-for="o in list" :key="o.id" :class="'level-' + o.level">
+          <div class="order-card__head">
+            <span class="order-card__no">#{{ tail(o.orderNo) }}</span>
+            <span class="order-card__level" :class="o.level">{{ levelText(o.level) }}</span>
+          </div>
+          <div class="order-card__wait">{{ o.waitMinutes }}<small> 分钟</small></div>
+          <div class="order-card__row" v-if="o.customerName">{{ o.customerName }} · {{ o.phone }}</div>
+          <div class="order-card__row" v-if="o.amount">¥ {{ o.amount }} <span v-if="o.source">· {{ sourceText(o.source) }}</span></div>
+          <div class="order-card__row" v-if="o.tableNo && o.tableNo !== '--'">桌台 {{ o.tableNo }}</div>
+          <div class="order-card__dishes">{{ o.dishNames || '--' }}</div>
+          <!-- 修改点：订单卡片增加操作按钮，店员可直接接单/拒绝，无需跳转订单列表 -->
+          <div class="order-card__actions" style="margin-top:var(--space-3);display:flex;gap:var(--space-2)">
+            <el-button type="success" size="small" @click="confirmOne(o)" :loading="o._confirming" :aria-label="'接单 ' + (o.orderNo || '')">
+              <i class="ri-check-line"></i> 接单
+            </el-button>
+            <el-button type="text" size="small" @click="rejectOne(o)" :loading="o._rejecting" :aria-label="'拒绝 ' + (o.orderNo || '')">
+              <i class="ri-close-line"></i> 拒绝
+            </el-button>
+          </div>
+        </div>
+      </div>
+      <!-- ========== 空状态：无待接单订单 ========== -->
+      <div class="empty-state" v-else>
+        <i class="ri-checkbox-circle-line" style="font-size:2.5rem;color:var(--color-success)"></i>
+        <div>暂无待接单订单，接单很及时 <i class="ri-thumb-up-line emoji-inline" aria-hidden="true"></i></div>
+      </div>
+    </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../api/urgency.js?v=20260926"></script>
+  <script src="../../api/order.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data: function () {
+        return {
+          stats: {},
+          list: [],
+          thresholds: {},
+          soundOn: true,
+          lastUpdate: '',
+          loadError: false,
+          pollTimer: null,
+          reqSeq: 0,
+          spokenIds: {}
+        }
+      },
+      mounted: function () {
+        var self = this
+        this.loadData()
+        this.pollTimer = setInterval(function () { self.loadData() }, 5000)
+      },
+      beforeDestroy: function () {
+        if (this.pollTimer) clearInterval(this.pollTimer)
+      },
+      computed: {
+        // 顶部统计卡（全站 ≤4 张，统一 stat-cards 组件；正常/平均等待由订单卡 waitMinutes 承载）
+        statsCards: function () {
+          var s = this.stats
+          return [
+            { key: 'total', icon: 'ri-file-list-3-line', label: '待接单总数', value: s.total || 0, color: 'primary' },
+            { key: 'warning', icon: 'ri-time-line', label: '预警', value: s.warning || 0, color: 'warning' },
+            { key: 'alarm', icon: 'ri-alarm-warning-line', label: '告警', value: s.alarm || 0, color: 'danger' },
+            { key: 'missed', icon: 'ri-error-warning-line', label: '漏单', value: s.missed || 0, color: 'info' }
+          ]
+        }
+      },
+      methods: {
+        /* ========== 数据加载与轮询 ========== */
+        loadData: function () {
+          var self = this
+          // 请求序号守卫：每次加载递增，响应回来时只采纳最新一次，过期响应丢弃（慢网络防竞态）
+          var seq = ++this.reqSeq
+          getUnacceptedMonitor()
+            .then(function (res) {
+              if (seq !== self.reqSeq) return
+              self.loadError = false
+              var d = (res && res.data) || {}
+              self.stats = d.stats || {}
+              self.list = d.list || []
+              self.thresholds = d.thresholds || {}
+              self.lastUpdate = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+              self.speakAlarms()
+            })
+            .catch(function (err) {
+              if (seq !== self.reqSeq) return
+              console.warn('[order-monitor] 加载监控数据失败:', err)
+              self.loadError = true
+            })
+        },
+        /* ========== 语音播报 ========== */
+        speakAlarms: function () {
+          if (!this.soundOn) return
+          if (!('speechSynthesis' in window)) return
+          var self = this
+          this.list.forEach(function (o) {
+            if (!self.spokenIds[o.id]) {
+              if (o.level === 'MISSED') {
+                self.speak('订单' + self.tail(o.orderNo) + '已等待' + o.waitMinutes + '分钟，已漏单，请立即处理')
+                self.spokenIds[o.id] = true
+              } else if (o.level === 'ALARM') {
+                self.speak('订单' + self.tail(o.orderNo) + '已等待' + o.waitMinutes + '分钟，请尽快接单')
+                self.spokenIds[o.id] = true
+              }
+            }
+          })
+          var present = {}
+          self.list.forEach(function (o) { present[o.id] = true })
+          Object.keys(self.spokenIds).forEach(function (k) {
+            if (!present[k]) delete self.spokenIds[k]
+          })
+        },
+        speak: function (text) {
+          try {
+            var u = new SpeechSynthesisUtterance(text)
+            u.lang = 'zh-CN'
+            u.rate = 1.05
+            u.volume = 1
+            speechSynthesis.speak(u)
+          } catch (e) {}
+        },
+        /* ========== 工具方法 ========== */
+        toggleSound: function () {
+          this.soundOn = !this.soundOn
+          if (!this.soundOn) {
+            try { speechSynthesis.cancel() } catch (e) {}
+          } else {
+            this.speak('语音提醒已开启')
+          }
+        },
+        fullscreen: function () {
+          var el = document.documentElement
+          if (!document.fullscreenElement && el.requestFullscreen) {
+            el.requestFullscreen()
+          } else if (document.exitFullscreen) {
+            document.exitFullscreen()
+          }
+        },
+        tail: function (no) {
+          if (!no) return '--'
+          var s = '' + no
+          return s.length <= 6 ? s : s.substring(s.length - 6)
+        },
+        levelText: function (l) {
+          if (l === 'MISSED') return '漏单'
+          if (l === 'ALARM') return '告警'
+          if (l === 'WARNING') return '预警'
+          return '正常'
+        },
+        sourceText: function (s) {
+          if (s === 'TAKEOUT') return '外卖'
+          if (s === 'EAT_IN') return '堂食'
+          if (s === 'QUEUE') return '排队'
+          if (s === 'RESERVATION') return '预订'
+          return s || ''
+        },
+        /* 修改点：接单操作 — 直接在监控卡片上完成，无需跳转订单列表 */
+        confirmOne: function (o) {
+          if (o._confirming) return
+          var self = this
+          this.$set(o, '_confirming', true)
+          confirmOrderApi({ id: o.id }).then(function (res) {
+            if (res && res.code === 1) {
+              ReggieUI.success('接单成功')
+              self.loadData()
+            } else {
+              ReggieUI.error((res && res.msg) || '接单失败')
+            }
+          }).catch(function (err) {
+            ReggieUI.error('接单请求失败')
+            console.warn('[order-monitor] 接单失败:', err)
+          }).finally(function () { self.$set(o, '_confirming', false) })
+        },
+        rejectOne: function (o) {
+          if (o._rejecting) return
+          var self = this
+          ReggieUI.confirm('确认拒绝订单 #' + this.tail(o.orderNo) + '？拒绝后不可恢复。', '拒绝确认', {
+            confirmButtonText: '确认拒绝', cancelButtonText: '取消', type: 'warning'
+          }).then(function () {
+            self.$set(o, '_rejecting', true)
+            rejectOrderApi({ id: o.id }).then(function (res) {
+              if (res && res.code === 1) {
+                ReggieUI.success('已拒绝')
+                self.loadData()
+              } else {
+                ReggieUI.error((res && res.msg) || '拒绝失败')
+              }
+            }).catch(function (err) {
+              ReggieUI.error('拒绝请求失败')
+              console.warn('[order-monitor] 拒绝失败:', err)
+            }).finally(function () { self.$set(o, '_rejecting', false) })
+          }).catch(function () { /* 用户取消 */ })
+        }
+      }
+    })
+  </script>
+</body>
+</html>

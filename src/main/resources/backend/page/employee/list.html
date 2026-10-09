@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>员工管理 - 瑞吉外卖管理端</title>
+  <!-- 引入样式 -->
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <style>
+    /* ===== 电子工牌弹窗（原内联 px 样式收口；字号/间距/圆角走令牌） ===== */
+    .badge-wrap { text-align: center; }
+    .badge-avatar { width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-full); border: 1px solid var(--border-default); margin-bottom: var(--space-3); }
+    .badge-avatar-ph { width: 72px; height: 72px; display: inline-flex; align-items: center; justify-content: center; background: var(--bg-page); border-radius: var(--radius-full); color: var(--text-muted); font-size: var(--font-size-3xl); margin-bottom: var(--space-3); }
+    .badge-name { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-3); }
+    .badge-info { margin-bottom: var(--space-3); font-size: var(--font-size-sm); border: 1px solid var(--border-default); border-radius: var(--radius-sm); overflow: hidden; text-align: left; }
+    .badge-info__row { display: flex; }
+    .badge-info__label { width: 70px; padding: 6px 10px; background: var(--bg-page); color: var(--text-muted); }
+    .badge-info__value { flex: 1; padding: 6px 10px; }
+    /* 除最后一行外的行底分隔线（替代每行内联 border-bottom） */
+    .badge-info__row:not(:last-child) .badge-info__label,
+    .badge-info__row:not(:last-child) .badge-info__value { border-bottom: 1px solid var(--border-default); }
+    .badge-qrcode { width: 160px; height: 160px; }
+    .badge-qrcode--fail { color: var(--text-muted); font-size: var(--font-size-xs); }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
+  <div class="dashboard-container" id="employee-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
+      <h1 class="sr-only" id="page-title">员工管理</h1>
+      <!-- ========== 数据统计卡片（统一组件） ========== -->
+      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
+
+      <!-- 修改点：使用 <table-bar> 统一组件替代手写 HTML -->
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="tableActions"
+        :show-refresh="true"
+        @search="handleQuery"
+        @reset="reset"
+        @action="onTableAction"
+        @refresh="fetchData(false)">
+        <template slot="search-extra">
+          <el-select v-model="input" placeholder="请选择员工姓名" class="el-select--narrow-xs" clearable filterable size="small"
+            :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @visible-change="onFilterDropdownVisible">
+            <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+          </el-select>
+        </template>
+      </table-bar>
+      <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :loading="loading"
+        :selection="true"
+        row-key="id"
+        :show-actions="true"
+        :actions-width="240"
+        :batch-delete="doBatchDelete"
+        @selection-change="onSelectionChange"
+        @batch-deleted="onBatchDeleted"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-avatar="{ row }">
+          <el-image
+            v-if="row.avatar"
+            :src="imgUrl(row.avatar)"
+            :alt="(row.name ? row.name + ' 的' : '') + '头像'"
+            :preview-src-list="[imgUrl(row.avatar)]"
+            style="width:36px;height:36px;object-fit:cover;border-radius:50%;border:1px solid var(--border-default);cursor:pointer;vertical-align:middle;">
+          </el-image>
+          <span
+            v-else
+            :style="{width:'36px',height:'36px',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'var(--bg-page)',borderRadius:'50%',color:'var(--text-muted)',fontSize:'13px'}">
+            {{ row.name ? row.name.charAt(0) : '员' }}
+          </span>
+        </template>
+        <template #col-departmentId="{ row }">
+          <span>{{ departmentName(row.departmentId) }}</span>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="String(row.status) === '0' ? 'danger' : 'success'" size="small">
+            {{ String(row.status) === '0' ? '已禁用' : '正常' }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button
+            type="text"
+            size="small"
+            class="btn-view"
+            @click="viewMemberHandle(row.id)"
+          >查看</el-button>
+          <el-button
+            type="text"
+            size="small"
+            class="btn-view"
+            @click="addMemberHandle(row.id)"
+          >编辑</el-button>
+          <el-button
+            type="text"
+            size="small"
+            :class="row.status == '1' ? 'btn-warning' : 'btn-success'"
+            @click="statusHandle(row)"
+          >{{ row.status == '1' ? '禁用' : '启用' }}</el-button>
+          <el-dropdown trigger="click" @command="(cmd) => { if (cmd === 'badge') { openBadge(row); } else if (cmd === 'delete') { deleteHandle(row); } }" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="badge" icon="ri-id-card-line">工牌</el-dropdown-item>
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- 新增/修改员工弹窗 -->
+    <!-- 修改点：使用 <crud-dialog :show-submit="true" :show-cancel="true"> 统一组件替代手写 el-dialog，footer 插槽保留"保存并继续添加" -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :title="memberDialog.title"
+      :visible.sync="memberDialog.visible"
+      size="md"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        ref="memberForm"
+        :model="memberForm"
+        :rules="memberRules"
+        label-width="100px"
+      >
+        <el-form-item label="账号:" prop="username">
+          <el-input v-model="memberForm.username" placeholder="请输入账号" maxlength="20" :disabled="memberDialog.actionType === 'view'" ></el-input>
+        </el-form-item>
+        <el-form-item label="员工姓名:" prop="name">
+          <el-input v-model="memberForm.name" placeholder="请输入员工姓名" maxlength="20" :disabled="memberDialog.actionType === 'view'" ></el-input>
+        </el-form-item>
+        <el-form-item label="手机号:" prop="phone">
+          <el-input v-model="memberForm.phone" placeholder="请输入手机号" maxlength="20" :disabled="memberDialog.actionType === 'view'" ></el-input>
+        </el-form-item>
+        <el-form-item label="性别:" prop="sex">
+          <el-radio-group v-model="memberForm.sex" :disabled="memberDialog.actionType === 'view'">
+            <el-radio label="男">男</el-radio>
+            <el-radio label="女">女</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="身份证号:" prop="idNumber">
+          <el-input v-model="memberForm.idNumber" placeholder="请输入身份证号" maxlength="20" :disabled="memberDialog.actionType === 'view'" ></el-input>
+        </el-form-item>
+        <el-form-item label="工号:">
+          <el-input v-model="memberForm.jobNumber" placeholder="请输入工号（可选，租户内唯一）" maxlength="32" :disabled="memberDialog.actionType === 'view'" ></el-input>
+        </el-form-item>
+        <el-form-item label="岗位:">
+          <el-input v-model="memberForm.position" placeholder="请输入岗位（可选）" maxlength="32" :disabled="memberDialog.actionType === 'view'" ></el-input>
+        </el-form-item>
+        <el-form-item label="部门:">
+          <el-select v-model="memberForm.departmentId" placeholder="选择部门（可选）" clearable filterable
+            style="width:100%" :disabled="memberDialog.actionType === 'view'">
+            <el-option v-for="d in departments" :key="d.id" :label="d.name" :value="d.id"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="头像:">
+          <rg-image-uploader v-model="memberForm.avatar" biz-type="avatar" :single="true" :round="true" :max="1" :disabled="memberDialog.actionType === 'view'"></rg-image-uploader>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="handleDialogClose">取 消</el-button>
+        <el-button v-if="memberDialog.actionType !== 'view'" type="primary" :loading="submitting" @click="submitMemberForm()">确 定</el-button>
+        <el-button v-if="memberDialog.actionType == 'add'" type="primary" class="continue" :loading="submitting" @click="submitMemberForm('continue')">保存并继续添加</el-button>
+      </template>
+    </crud-dialog>
+
+    <!-- 电子工牌弹窗：身份信息 + 工号二维码（后端生成 base64） -->
+    <crud-dialog
+      title="电子工牌"
+      :visible.sync="badgeDialog.visible"
+      size="sm"
+      :show-submit="false"
+      :close-on-click-modal="false"
+      @close="badgeDialog.visible = false"
+    >
+      <div v-if="badgeRow" class="badge-wrap">
+        <img
+          v-if="badgeRow.avatar"
+          :src="imgUrl(badgeRow.avatar)"
+          alt="头像"
+          class="badge-avatar">
+        <span v-else class="badge-avatar-ph">
+          {{ badgeRow.name ? badgeRow.name.charAt(0) : '员' }}
+        </span>
+        <div class="badge-name">{{ badgeRow.name }}</div>
+        <div class="badge-info">
+          <div class="badge-info__row">
+            <div class="badge-info__label">工号</div>
+            <div class="badge-info__value">{{ badgeRow.jobNumber || '—' }}</div>
+          </div>
+          <div class="badge-info__row">
+            <div class="badge-info__label">岗位</div>
+            <div class="badge-info__value">{{ badgeRow.position || '—' }}</div>
+          </div>
+          <div class="badge-info__row">
+            <div class="badge-info__label">手机号</div>
+            <div class="badge-info__value">{{ badgeRow.phone || '—' }}</div>
+          </div>
+        </div>
+        <div v-loading="badgeDialog.loading">
+          <img v-if="badgeDialog.qrcode" :src="badgeDialog.qrcode" alt="工牌二维码" class="badge-qrcode">
+          <div v-else-if="!badgeDialog.loading" class="badge-qrcode--fail">二维码加载失败</div>
+        </div>
+      </div>
+    </crud-dialog>
+
+    <!-- 批量导入员工：下载模板 → 选文件自动上传 → 展示初始密码与失败明细 -->
+    <crud-dialog title="批量导入员工" :visible.sync="importDialog.visible" size="md"
+      show-close :show-submit="false" :show-cancel="true" cancel-text="关 闭"
+      @close="onImportDialogClose">
+      <ol style="margin: 0 0 var(--space-3); padding-left: var(--space-5); color: var(--text-secondary); font-size: var(--font-size-base); line-height: 1.8;">
+        <li>先 <a href="/employee/import/template" style="color: var(--color-brand-700);">下载导入模板</a>，按表头填写（带 * 为必填）；</li>
+        <li>账号 4-20 位且不能与已有员工重复，手机号、身份证需真实有效，性别填 男/女；</li>
+        <li>单次最多 1000 条、文件不超过 1MB，仅支持 .xlsx；初始密码随机生成，导入成功后请在下方查看并分发给员工。</li>
+      </ol>
+      <el-upload
+        action="/employee/import"
+        :headers="uploadHeaders()"
+        name="file"
+        accept=".xlsx"
+        :show-file-list="false"
+        :before-upload="beforeImportUpload"
+        :on-success="onImportSuccess"
+        :on-error="onImportError"
+      >
+        <el-button type="primary" icon="ri-upload-line" :loading="importLoading">选择文件并导入</el-button>
+      </el-upload>
+
+      <div v-if="importResult" style="margin-top: var(--space-3);">
+        <el-alert
+          :title="importResult.failCount > 0 ? ('成功 ' + importResult.successCount + ' 条，失败 ' + importResult.failCount + ' 条') : ('成功导入 ' + importResult.successCount + ' 名员工')"
+          :type="importResult.failCount > 0 ? 'warning' : 'success'"
+          :closable="false"
+          show-icon
+          style="margin-bottom: var(--space-2);"
+        ></el-alert>
+        <el-table v-if="importResult.accounts && importResult.accounts.length" :data="importResult.accounts" size="small" border stripe style="width: 100%;" max-height="200">
+          <el-table-column prop="username" label="账号" width="140" align="center" :header-align="'center'"></el-table-column>
+          <el-table-column prop="name" label="姓名" width="120" align="center" :header-align="'center'"></el-table-column>
+          <el-table-column prop="password" label="初始密码" align="center" :header-align="'center'">
+            <template slot-scope="scope">
+              <span style="font-family: monospace; letter-spacing: 1px;">{{ scope.row.password }}</span>
+            </template>
+          </el-table-column>
+        </el-table>
+        <el-table v-if="importResult.failures && importResult.failures.length" :data="importResult.failures" size="small" border stripe style="width: 100%; margin-top: var(--space-2);" max-height="200">
+          <el-table-column label="Excel 行号" width="100" align="center" :header-align="'center'">
+            <template slot-scope="scope">{{ scope.row.row || '—' }}</template>
+          </el-table-column>
+          <el-table-column prop="username" label="账号" width="140" align="center" :header-align="'center'"></el-table-column>
+          <el-table-column prop="reason" label="失败原因" align="center" :header-align="'center'"></el-table-column>
+        </el-table>
+      </div>
+    </crud-dialog>
+  </div>
+    <!-- 开发环境版本，包含了有帮助的命令行警告 -->
+    <script src="../../plugins/vue/vue.js"></script>
+    <!-- 引入组件库 -->
+    <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+    <!-- 引入axios -->
+    <script src="../../plugins/axios/axios.min.js"></script>
+    <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+    <script src="../../api/employee.js?v=20260922"></script>
+    <script src="../../api/sys.js?v=20261006"></script>
+    <script src="../../api/export.js?v=20260926"></script>
+    <script src="../../js/validate.js?v=20260926"></script>
+    <script src="../../js/components.js?v=20261002"></script>
+    <script>
+      new Vue({
+        el: '#employee-app',
+      // 修改点：引入列表页通用 Mixin，自动提供分页(page/pageSize/counts/loading)与翻页处理
+      mixins: [window.ReggieListMixin],
+        data() {
+          return {
+             input: '',
+             submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
+             // 修改点：搜索下拉框动态选项（从数据库加载员工姓名）
+             filterOptions: { names: [] },
+             optionsLoading: false,
+             optionsLoadError: false,
+             counts: 0,
+             page: 1,
+             pageSize: 10,
+             tableData : [],
+             // 修改点：<table-bar> 组件配置
+             tableSearchItems: [],
+          tableActions: [
+            { key: 'add', text: '+ 添加员工', type: 'primary' },
+            { key: 'import', text: '导入', type: 'warning', icon: 'ri-upload-line' },
+            { key: 'export', text: '导出', type: 'success', icon: 'ri-download-line', disabled: true }
+          ],
+          // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
+          columns: [
+            { prop: 'avatar', label: '头像', width: 70, align: 'center', slot: true },
+            { prop: 'name', label: '员工姓名', width: 100 },
+            { prop: 'jobNumber', label: '工号', width: 100, align: 'center' },
+            { prop: 'position', label: '岗位', minWidth: 90 },
+            { prop: 'departmentId', label: '部门', minWidth: 90, slot: true },
+            { prop: 'username', label: '账号', width: 100 },
+            { prop: 'phone', label: '手机号', width: 120, align: 'center' },
+            // 修改点(P1-1)：RBAC 角色（由 employee_role 关联回填；不再展示已失效的 role 数字字段）
+            { prop: 'roleNames', label: '角色', minWidth: 120, align: 'center', slot: true },
+            { prop: 'status', label: '状态', width: 80, align: 'center', slot: true }
+          ],
+             // 数据统计
+             stats: {
+               totalEmployees: 0,
+               activeEmployees: 0,
+               disabledEmployees: 0,
+               newThisMonth: 0      // 修改点：本月新入职员工数
+             },
+             // 修改点：当前激活的筛选器值，空字符串=全部
+             activeFilter: '',
+             // 勾选行 ID（跨翻页保留）；为空时导出按当前筛选
+             selectedIds: [],
+             // 员工弹窗相关
+             memberDialog: {
+               title: '添加员工',
+               visible: false,
+               actionType: 'add',
+               loading: false
+             },
+             // 批量导入弹窗
+             importDialog: { visible: false },
+             importLoading: false,
+             importResult: null,
+             memberForm: {
+               username: '',
+               name: '',
+               phone: '',
+               sex: '男',
+               idNumber: '',
+               jobNumber: '',
+               position: '',
+               departmentId: null,
+               avatar: ''
+             },
+             // 部门下拉（企业组织架构，来自 /sys/department/list）
+             departments: [],
+             // 电子工牌弹窗
+             badgeDialog: { visible: false, loading: false, qrcode: '' },
+             badgeRow: null
+          }
+        },
+        computed: {
+          memberRules() {
+            return {
+              username: [
+                {required: true, validator: checkUserName, trigger: 'blur'}
+              ],
+              name: [
+                {required: true, validator: checkName, trigger: 'blur'}
+              ],
+              phone: [
+                {required: true, validator: checkPhone, trigger: 'blur'}
+              ],
+              idNumber: [
+                {required: true, validator: validID, trigger: 'blur'}
+              ]
+            }
+          },
+          // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+          statsCards() {
+            const self = this
+            return [
+              { key: '',  icon: 'ri-group-line', label: '员工总数', value: self.stats.totalEmployees || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+              { key: '1', icon: 'ri-checkbox-circle-line', label: '在职员工', value: self.stats.activeEmployees || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
+              { key: '0', icon: 'ri-forbid-line', label: '已禁用', value: self.stats.disabledEmployees || 0, color: 'danger', clickable: true, active: self.activeFilter === '0' },
+              { key: '新增', icon: 'ri-user-add-line', label: '本月新入职', value: self.stats.newThisMonth || 0, color: 'info', clickable: false }
+            ]
+          }
+        },
+        created() {
+          this.loadFilterOptions()
+          this.loadDepartments()
+          this.fetchData(true)
+        },
+        methods: {
+          // 操作列按钮（编辑/启用禁用/删除）不再按前端角色遮蔽：
+          // 能进入员工管理页即可看到完整操作，是否允许执行由后端
+          // @RequiresAdmin + isAdmin 双重校验统一把关（无权限时返回"权限不足"）。
+          // 原 localStorage.role===1 判定在 RBAC 改造后 role 字段语义已变（全员为 2），
+          // 会把真实管理员的操作按钮误隐藏。
+          /* ── 部门下拉加载（企业组织架构） ── */
+          async loadDepartments() {
+            try {
+              const res = await sysApi.departmentList()
+              if (res && res.code === 1) {
+                this.departments = res.data || []
+              }
+            } catch (err) {
+              console.warn('加载部门列表失败:', err)
+            }
+          },
+          // 表格里部门 ID → 名称
+          departmentName(id) {
+            if (!id) return '—'
+            const d = (this.departments || []).find(function(x) { return x.id === id })
+            return d ? d.name : ('#' + id)
+          },
+          /* ── 筛选选项加载 ── */
+          async loadFilterOptions() {
+            this.optionsLoading = true            this.optionsLoadError = false
+            try {
+              const res = await employeeOptions()
+              if (String(res.code) === '1' && res.data) {
+                this.filterOptions.names = res.data.names || []
+              } else {
+                this.optionsLoadError = true
+                ReggieUI.warning('加载员工选项失败：' + (res.msg || '接口返回异常'))
+              }
+            } catch (err) {
+              // 修改点：NOTLOGIN 错误已在全局拦截器处理（跳转登录页），无需重复提示
+              if (err.message === 'NOTLOGIN') {
+                return
+              }
+              this.optionsLoadError = true
+              ReggieUI.error('加载筛选选项失败，请刷新页面重试')
+            } finally {
+              this.optionsLoading = false
+            }
+          },
+          // 修改点：下拉框打开时若之前加载失败，自动重试
+          onFilterDropdownVisible(visible) {
+              if (visible && this.optionsLoadError) {
+                  this.loadFilterOptions()
+              }
+          },
+          /* ── 数据加载 ── */
+          async fetchData(reloadStats = true) {
+          // 修改点：loading 状态管理（原未设置，crud-table 骨架屏不生效）
+          this.loading = true
+          try {
+            // 修改点：传递 activeFilter 状态参数到后端
+            const params = {
+              page: this.page,
+              pageSize: this.pageSize,
+              name: this.input ? this.input : undefined
+            }
+            if (this.activeFilter) { params.status = this.activeFilter }
+
+            // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
+            const requests = [getEmployeePage(params)]
+            if (reloadStats) { requests.push(this.loadMemberStats()) }
+            const results = await Promise.all(requests)
+            const memberRes = results[0]
+
+            // 处理员工列表数据
+            if (String(memberRes.code) === '1') {
+              this.tableData = memberRes.data.records || []
+              this.counts = memberRes.data.total
+            }
+
+            if (reloadStats) {
+              const statsRes = results[1]
+              // 处理统计数据
+              if (statsRes && String(statsRes.code) === '1') {
+                this.stats = statsRes.data || this.stats
+              }
+            }
+          } catch (err) {
+            console.warn('加载会员列表失败:', err)
+          } finally {
+            this.loading = false
+          }
+        },
+          // 加载员工统计数据
+          // 修改点：改为调用后端 /employee/stats 聚合接口（count 查询），避免 pageSize:1000 全量拉取与截断风险
+          async loadMemberStats() {
+            try {
+              const res = await getEmployeeStats()
+              if (String(res.code) === '1') {
+                return res
+              }
+            } catch (err) {
+              console.warn('加载员工统计数据失败:', err)
+            }
+            return { code: 0 }
+          },
+          /* ── 筛选与分页 ── */
+          handleQuery() {
+            // 修改点：搜索时清空卡片筛选状态
+            this.activeFilter = ''
+            this.clearSelection()
+            this.page = 1;
+            this.fetchData(false);
+          },
+          // 勾选行变化：同步导出按钮禁用态（必须勾选才能导出）
+          onSelectionChange(payload) {
+            this.selectedIds = (payload && payload.ids) ? payload.ids : []
+            this.tableActions[2].disabled = this.selectedIds.length === 0
+          },
+          // 内建批量删除：employee.js 的 deleteEmployee 已兼容数组（内部 join 逗号串）
+          doBatchDelete(payload) {
+            return deleteEmployee(payload.ids)
+          },
+          // 批量删除成功后刷新列表与统计
+          onBatchDeleted() {
+            this.fetchData(true)
+          },
+          clearSelection() {
+            this.selectedIds = []
+            if (this.$refs.crudTable && this.$refs.crudTable.clearSelection) this.$refs.crudTable.clearSelection()
+          },
+          // 修改点：<table-bar> 组件 action 按钮事件处理
+          onTableAction(payload) {
+            if (payload.key === 'add') { this.addMemberHandle('add') }
+            else if (payload.key === 'import') { this.importDialog.visible = true }
+            else if (payload.key === 'export') { this.exportEmployees('excel') }
+          },
+          // 重置搜索条件，恢复表格初始状态
+          reset() {
+            this.input = ''
+            this.activeFilter = ''
+            this.clearSelection()
+            this.page = 1
+            this.fetchData(false)
+          },
+          // 修改点：stat-cards 组件卡片点击事件（替代原 filterBy）
+          onCardClick(payload) {
+            this.activeFilter = payload.activeKey
+            this.input = ''
+            this.clearSelection()
+            this.page = 1
+            this.fetchData(false)
+          },
+          /* ── 员工弹窗（新增/编辑/提交） ── */
+          // 查看员工（只读模式，复用新增/编辑弹窗）
+          imgUrl(name) {
+            return imgPath(name)
+          },
+          // 打开电子工牌：先弹窗再异步取二维码
+          openBadge(row) {
+            const self = this
+            self.badgeRow = row
+            self.badgeDialog.qrcode = ''
+            self.badgeDialog.loading = true
+            self.badgeDialog.visible = true
+            employeeBadgeQrcode(row.id).then(function (res) {
+              self.badgeDialog.loading = false
+              if (res.code === 1) {
+                self.badgeDialog.qrcode = res.data
+              } else {
+                ReggieUI.error(res.msg || '二维码加载失败')
+              }
+            }).catch(function (err) {
+              self.badgeDialog.loading = false
+              ReggieUI.error('请求失败：' + err)
+            })
+          },
+          viewMemberHandle(id) {
+            this.resetMemberForm()
+            this.memberDialog.title = '查看员工'
+            this.memberDialog.actionType = 'view'
+            this.memberDialog.visible = true
+            this.initMemberForm(id)
+          },
+          addMemberHandle (st) {
+            this.resetMemberForm()
+            if (st === 'add') {
+              this.memberDialog.title = '添加员工'
+              this.memberDialog.actionType = 'add'
+              this.memberDialog.visible = true
+            } else {
+              this.memberDialog.title = '修改员工'
+              this.memberDialog.actionType = 'edit'
+              this.memberDialog.visible = true
+              this.initMemberForm(st)
+            }
+          },
+          // 初始化表单（修改时）
+          async initMemberForm(id) {
+            try {
+              const res = await queryEmployeeByIdRaw(id)
+              if (String(res.code) === '1') {
+                const data = res.data
+                this.memberForm = {
+                  id: data.id,
+                  username: data.username,
+                  name: data.name,
+                  phone: data.phone,
+                  sex: data.sex === '0' ? '女' : '男',
+                  idNumber: data.idNumber,
+                  jobNumber: data.jobNumber || '',
+                  position: data.position || '',
+                  departmentId: data.departmentId || null,
+                  avatar: data.avatar || ''
+                }
+              } else {
+                ReggieUI.error(res.msg || '获取员工信息失败')
+              }
+            } catch (err) {
+              ReggieUI.error('请求失败：' + err)
+            }
+          },
+          // 重置表单
+          resetMemberForm() {
+            this.memberForm = {
+              username: '',
+              name: '',
+              phone: '',
+              sex: '男',
+              idNumber: '',
+              jobNumber: '',
+              position: '',
+              departmentId: null,
+              avatar: ''
+            }
+            if (this.$refs.memberForm) {
+              this.$refs.memberForm.resetFields()
+            }
+          },
+          // 关闭弹窗
+          handleDialogClose() {
+            this.memberDialog.visible = false
+            this.resetMemberForm()
+          },
+          // 提交员工表单
+          submitMemberForm(st) {
+            if (this.submitting) return // 提交防重
+            this.$refs.memberForm.validate((valid) => {
+              if (valid) {
+                this.submitting = true
+                const params = {
+                  ...this.memberForm,
+                  sex: this.memberForm.sex === '女' ? '0' : '1'
+                }
+
+                if (this.memberDialog.actionType === 'add') {
+                  addEmployee(params).then(res => {
+                    this.submitting = false
+                    if (res.code === 1) {
+                      ReggieUI.success('员工添加成功！')
+                      this.memberDialog.visible = false
+                      this.handleQuery()
+                      if (st === 'continue') {
+                        this.resetMemberForm()
+                        this.memberDialog.visible = true
+                      }
+                    } else {
+                      ReggieUI.error(res.msg || '操作失败')
+                    }
+                  }).catch(err => {
+                    this.submitting = false
+                    ReggieUI.error('请求失败：' + err)
+                  })
+                } else {
+                  editEmployee(params).then(res => {
+                    this.submitting = false
+                    if (res.code === 1) {
+                      ReggieUI.success('员工信息修改成功！')
+                      this.memberDialog.visible = false
+                      this.handleQuery()
+                    } else {
+                      ReggieUI.error(res.msg || '操作失败')
+                    }
+                  }).catch(err => {
+                    this.submitting = false
+                    ReggieUI.error('请求失败：' + err)
+                  })
+                }
+              }
+            })
+          },
+          //状态修改
+          statusHandle (row) {
+            this.id = row.id
+            this.status = row.status
+            ReggieUI.confirm('确认调整该账号的状态?', '提示', {
+              'confirmButtonText': '确定',
+              'cancelButtonText': '取消',
+              'type': 'warning'
+              }).then(() => {
+              enableOrDisableEmployee({ 'id': this.id, 'status': String(this.status) === '1' ? 0 : 1 }).then(res => {
+                if (String(res.code) === '1') {
+                  ReggieUI.success('账号状态更改成功！')
+                  this.handleQuery()
+                } else {
+                  ReggieUI.error(res.msg || '账号状态更改失败')
+                }
+              }).catch(err => {
+                ReggieUI.error('请求失败：' + err)
+              })
+            }).catch((e) => { console.warn('[member/list.html] 用户取消调整账号状态:', e) })
+          },
+          // 删除员工
+          deleteHandle(row) {
+            ReggieUI.confirm('确认删除员工「' + row.name + '」吗？删除后不可恢复。', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            }).then(async () => {
+              try {
+                const res = await deleteEmployee(row.id)
+                if (String(res.code) === '1') {
+                  ReggieUI.success('删除成功')
+                  this.fetchData(true)
+                } else {
+                  ReggieUI.error(res.msg || '删除失败')
+                }
+              } catch (err) {
+                ReggieUI.error('请求失败：' + err)
+              }
+            }).catch((e) => { console.warn('[member/list.html] 用户取消删除操作:', e) })
+          },
+          // 导出员工数据：仅导出勾选行（未勾选时导出按钮已禁用）
+          async exportEmployees(format) {
+            if (this.selectedIds.length === 0) {
+              ReggieUI.warning('请先勾选要导出的员工')
+              return
+            }
+            const params = { ids: this.selectedIds.join(',') }
+            try {
+              const ext = format === 'excel' ? 'xlsx' : 'pdf'
+              const apiCall = format === 'excel'
+                ? exportApi.exportEmployeesExcel(params)
+                : exportApi.exportEmployeesPdf(params)
+              await exportApi.downloadFile(apiCall, '员工数据.' + ext)
+              ReggieUI.success('已导出选中的 ' + this.selectedIds.length + ' 名员工')
+            } catch (err) {
+              ReggieUI.error('导出失败：' + (err.message || err))
+            }
+          },
+
+          /* ── 批量导入 ── */
+          // el-upload 绕过 axios，手动带 CSRF Token（生产环境 CsrfFilter 校验）
+          uploadHeaders() {
+            var token = (typeof window.getCsrfToken === 'function') ? window.getCsrfToken() : '';
+            return { 'X-CSRF-Token': token || '' };
+          },
+          // el-upload 选完文件自动上传前的校验
+          beforeImportUpload(file) {
+            this.importResult = null
+            if (!/\.xlsx$/i.test(file.name)) {
+              ReggieUI.error('仅支持 .xlsx 格式，请先下载导入模板填写')
+              return false
+            }
+            if (file.size > 1 * 1024 * 1024) {
+              ReggieUI.error('文件不能超过 1MB')
+              return false
+            }
+            this.importLoading = true
+            return true
+          },
+          onImportSuccess(res) {
+            this.importLoading = false
+            // el-upload 不走全局 axios 拦截器，需自行判定业务响应
+            if (!res || String(res.code) !== '1' || !res.data) {
+              if (res && res.msg === 'NOTLOGIN') {
+                if (window.self !== window.top) {
+                  try { window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*') } catch (e) { /* 跨域兜底 */ }
+                } else {
+                  window.location.href = '/backend/page/login/login.html'
+                }
+                return
+              }
+              ReggieUI.error((res && res.msg) || '导入失败')
+              return
+            }
+            this.importResult = res.data
+            if (res.data.successCount > 0) {
+              ReggieUI.success('成功导入 ' + res.data.successCount + ' 名员工')
+              this.fetchData(true)
+            } else {
+              ReggieUI.error('导入未成功，请查看下方失败明细')
+            }
+          },
+          onImportError(err) {
+            this.importLoading = false
+            // 如实展示失败原因，不再统一误报为"网络异常或登录已过期"
+            if (err && err.status === 403) {
+              ReggieUI.error('导入被拒绝（403）：可能登录已过期或安全令牌失效，请刷新页面后重试')
+              return
+            }
+            var msg = (err && err.message) ? err.message : ''
+            ReggieUI.error(msg ? ('导入失败：' + msg) : '导入失败，请重试')
+          },
+          onImportDialogClose() {
+            this.importResult = null
+            this.importLoading = false
+          },
+
+          // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
+        }
+      })
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

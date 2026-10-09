@@ -1,0 +1,80 @@
+package com.reggie.module.inventory.model;
+
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+/**
+ * 供应商
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
+@Data
+@TableName("supplier")
+@Schema(description = "供应商")
+public class Supplier implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    @Schema(description = "供应商ID", example = "1")
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
+
+    @Schema(description = "租户ID", example = "1")
+    @TableField(fill = FieldFill.INSERT)
+    private Long tenantId;
+
+    @Schema(description = "供应商名称", example = "北京蔬菜批发市场")
+    private String name;
+
+    @Schema(description = "联系人", example = "李经理")
+    private String contact;
+
+    @Schema(description = "联系电话", example = "010-12345678")
+    private String phone;
+
+    @Schema(description = "地址", example = "北京市朝阳区xxx")
+    private String address;
+
+    @Schema(description = "资质图片（营业执照等，逗号分隔相对路径，最多5张）")
+    private String licenseImages;
+
+    @Schema(description = "状态：0=禁用，1=正常", example = "1")
+    private Integer status;
+
+    @Schema(description = "创建时间", example = "2026-07-09 10:00:00")
+    @TableField(value = "created_time", fill = FieldFill.INSERT)
+    private LocalDateTime createdTime;
+
+    @Schema(description = "更新时间", example = "2026-07-09 12:00:00")
+    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
+
+    @Schema(description = "逻辑删除：0=未删除，1=已删除")
+    @TableLogic(value = "0", delval = "1")
+    private Integer isDeleted;
+
+    /** 累计采购金额（排除已取消单，关联聚合填充，数据库无此列） */
+    @TableField(exist = false)
+    private java.math.BigDecimal totalPurchaseAmount;
+
+    /** 采购单笔数（排除已取消单，关联聚合填充，数据库无此列） */
+    @TableField(exist = false)
+    private Integer purchaseCount;
+
+    /** 创建人 */
+    @TableField(fill = FieldFill.INSERT)
+    private Long createUser;
+
+    /** 修改人 */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private Long updateUser;
+}

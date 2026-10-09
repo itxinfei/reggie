@@ -1,0 +1,367 @@
+package com.reggie.module.member.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.BaseContext;
+import com.reggie.common.BatchFillHelper;
+import com.reggie.common.CustomException;
+import com.reggie.module.member.mapper.MemberMapper;
+import com.reggie.module.member.model.Member;
+import com.reggie.module.member.model.MemberLevel;
+import com.reggie.module.member.model.PointsRecord;
+import com.reggie.enums.PointsRecordType;
+import com.reggie.module.member.service.MemberLevelService;
+import com.reggie.module.member.service.MemberService;
+import com.reggie.module.member.service.PointsRecordService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * 会员服务实现
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
+@Slf4j
+@Service
+public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> implements MemberService {
+
+    /** 会员等级服务 */
+    @Autowired
+    private MemberLevelService memberLevelService;
+
+    @Autowired
+    private MemberMapper memberMapper;
+
+    /** 积分记录服务 */
+    @Autowired
+    private PointsRecordService pointsRecordService;
+
+    /**
+     * 批量填充会员等级名称（levelName 为逻辑字段，不落库）
+     * 修改点：解决前端 row.levelName 恒为 undefined 导致等级列始终显示“普通会员”的问题，
+     * 由 Controller 在分页/详情查询后调用
+     * @param members 会员列表
+     */
+    public void fillLevelName(List<Member> members) {
+        BatchFillHelper.fillNames(
+                members,
+                Member::getLevelId,
+                ids -> memberLevelService.listByIds(ids).stream()
+                        .collect(Collectors.toMap(MemberLevel::getId, MemberLevel::getName, (a, b) -> a)),
+                Member::setLevelName);
+    }
+
+    /**
+     * 注册 by phone。
+     * @param phone 参数 phone
+     * @param name 参数 name
+     * @return 返回结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Member registerByPhone(String phone, String name) {
+        // 安全加固：查询手机号是否已注册时必须附加租户条件，防止跨租户探测
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Member existing = lambdaQuery()
+                .eq(Member::getPhone, phone)
+                .eq(Member::getTenantId, tenantId)
+                .one();
+        if (existing != null) {
+            throw new CustomException("该手机号已注册");
+        }
+        Member member = new Member();
+        member.setTenantId(BaseContext.getCurrentTenantId());
+        member.setPhone(phone);
+        member.setName(name);
+        member.setPoints(0L);
+        member.setBalance(BigDecimal.ZERO);
+        member.setTotalConsumption(BigDecimal.ZERO);
+        member.setStatus(1);
+        MemberLevel defaultLevel = memberLevelService.getDefaultLevel();
+        if (defaultLevel != null) {
+            member.setLevelId(defaultLevel.getId());
+        }
+        save(member);
+        return member;
+    }
+
+    /**
+     * C端自助开通会员。
+     * @param userId 登录用户ID
+     * @param phone 用户真实手机号
+     * @param name 姓名
+     * @return 新建会员
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Member registerForUser(Long userId, String phone, String name) {
+        if (userId == null) {
+            throw new CustomException("请先登录");
+        }
+        if (phone == null || phone.trim().isEmpty()) {
+            throw new CustomException("当前账号缺少手机号，无法开通会员");
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+        // 该用户已绑定会员 → 无需重复开通
+        if (getByUserId(userId) != null) {
+            throw new CustomException("您已开通会员，无需重复开通");
+        }
+        // 同租户手机号已注册 → 防止重复会员
+        Member existing = lambdaQuery()
+                .eq(Member::getPhone, phone)
+                .eq(Member::getTenantId, tenantId)
+                .one();
+        if (existing != null) {
+            throw new CustomException("该手机号已是会员");
+        }
+        Member member = new Member();
+        member.setTenantId(tenantId);
+        member.setUserId(userId);
+        member.setPhone(phone.trim());
+        member.setName((name == null || name.trim().isEmpty()) ? ("用户" + userId) : name);
+        member.setPoints(0L);
+        member.setBalance(BigDecimal.ZERO);
+        member.setTotalConsumption(BigDecimal.ZERO);
+        member.setStatus(1);
+        MemberLevel defaultLevel = memberLevelService.getDefaultLevel();
+        if (defaultLevel != null) {
+            member.setLevelId(defaultLevel.getId());
+        }
+        save(member);
+        return member;
+    }
+
+    /**
+     * 处理 deduct balance。
+     * @param memberId 参数 memberId
+     * @param amount 参数 amount
+     * @return 返回结果
+     */
+    @Override
+    public boolean deductBalance(Long memberId, BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return false;
+        }
+        // 租户归属校验：防止跨租户盗扣储值
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        Member member = getById(memberId);
+        if (member == null) {
+            return false;
+        }
+        if (currentTenantId != null && !currentTenantId.equals(member.getTenantId())) {
+            throw new CustomException("无权操作其他租户的会员储值");
+        }
+        // 修改点：改用参数化 @Update（deductBalanceById），消除 setSql 字符串拼接；
+        // 原子条件 balance >= #{amount} 由 SQL WHERE 保证，租户条件由 TenantLineInnerInterceptor 注入
+        int rows = baseMapper.deductBalanceById(memberId, amount);
+        return rows > 0;
+    }
+
+    /**
+     * 新增 points。
+     * @param memberId 参数 memberId
+     * @param points 参数 points
+     * @param bizType 参数 bizType
+     * @param bizId 参数 bizId
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void addPoints(Long memberId, int points, String bizType, Long bizId) {
+        if (points <= 0) {
+            return;
+        }
+        // 租户归属校验：防止跨租户越权积分操作
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        Member member = getById(memberId);
+        if (member == null) {
+            throw new CustomException("会员不存在");
+        }
+        if (currentTenantId != null && !currentTenantId.equals(member.getTenantId())) {
+            throw new CustomException("无权操作其他租户的会员积分");
+        }
+
+        // 幂等短路：仅对携带业务ID的发放生效（唯一索引 uq_points_biz 的语义，
+        // bizId=null 的手动调整不受影响，可重复发放）。
+        // 并发窗口：查询存在 → 直接跳过，杜绝重复 increment + 重复流水；
+        // 先查后插的极小竞态窗口（双线程同时查无）由下方 save 的唯一索引冲突兜底，
+        // DuplicateKeyException 触发本方法事务回滚（积分 increment 与流水都不落库），
+        // 最终每个 (bizType,bizId,type) 只落一条 IN 流水、会员积分只累加一次。
+        // 调用方 grantReward 对该异常按"权益发放异常"记录日志但不重抛，
+        // 不影响订单主流程；重放/补偿再次进入本方法时命中短路直接返回。
+        if (bizId != null) {
+            boolean alreadyGranted = pointsRecordService.lambdaQuery()
+                    .eq(PointsRecord::getType, PointsRecordType.IN.getValue())
+                    .eq(PointsRecord::getBizType, bizType)
+                    .eq(PointsRecord::getBizId, bizId)
+                    .count() > 0;
+            if (alreadyGranted) {
+                log.info("积分发放幂等跳过：memberId={}, bizType={}, bizId={}", memberId, bizType, bizId);
+                return;
+            }
+        }
+
+        // 修改点：改用参数化 @Update（incrementPointsById），消除 setSql 字符串拼接；
+        // IFNULL 防止 points 为 NULL 时整条更新无效
+        baseMapper.incrementPointsById(memberId, points);
+
+        // 重新查询更新后的会员（防并发），用于等级判断
+        Member updatedMember = getById(memberId);
+        if (updatedMember == null) {
+            throw new CustomException("会员不存在");
+        }
+
+        // 写入积分流水
+        PointsRecord record = new PointsRecord();
+        record.setMemberId(memberId);
+        record.setType(PointsRecordType.IN.getValue());
+        record.setPoints(points);
+        record.setBizType(bizType);
+        record.setBizId(bizId);
+        // 积分有效期：获取之日起 1 年
+        record.setExpireTime(LocalDateTime.now().plusYears(1));
+        pointsRecordService.save(record);
+
+        // 检查是否升级等级（CAS：条件包含当前 levelId，避免并发升级覆盖）
+        MemberLevel newLevel = memberLevelService.findLevelByPoints(updatedMember.getPoints());
+        if (newLevel != null
+                && (updatedMember.getLevelId() == null || !updatedMember.getLevelId().equals(newLevel.getId()))) {
+            LambdaUpdateWrapper<Member> levelUpdate = new LambdaUpdateWrapper<>();
+            levelUpdate.eq(Member::getId, memberId)
+                    .set(Member::getLevelId, newLevel.getId());
+            // 修复 P1-1：添加 CAS 条件，防止并发升级时覆盖他人已更新的等级
+            if (updatedMember.getLevelId() != null) {
+                levelUpdate.eq(Member::getLevelId, updatedMember.getLevelId());
+            } else {
+                levelUpdate.isNull(Member::getLevelId);
+            }
+            boolean updated = baseMapper.update(new Member(), levelUpdate) > 0;
+            log.info("会员等级更新: memberId={}, oldLevel={}, newLevel={}, updated={}",
+                    memberId, updatedMember.getLevelId(), newLevel.getId(), updated);
+        }
+    }
+
+    /**
+     * 处理 deduct points。
+     * @param memberId 参数 memberId
+     * @param points 参数 points
+     * @param bizType 参数 bizType
+     * @param bizId 参数 bizId
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deductPoints(Long memberId, int points, String bizType, Long bizId) {
+        if (points <= 0) {
+            return;
+        }
+        // 租户归属校验：防止跨租户越权积分回退
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        Member member = getById(memberId);
+        if (member == null) {
+            throw new CustomException("会员不存在");
+        }
+        if (currentTenantId != null && !currentTenantId.equals(member.getTenantId())) {
+            throw new CustomException("无权操作其他租户的会员积分");
+        }
+
+        // 幂等短路：与 addPoints 对齐，仅对携带业务ID的扣减生效（唯一索引 uq_points_biz 语义，
+        // bizId=null 的手动调整不受影响，可重复扣减）。
+        // 已存在相同 (bizType,bizId,OUT) 流水则直接跳过，杜绝消息重投/重试导致的重复扣分；
+        // 先查后插的极小竞态由下方 save 的唯一索引冲突兜底，异常回滚本事务（扣分与流水都不落库）。
+        if (bizId != null) {
+            boolean alreadyDeducted = pointsRecordService.lambdaQuery()
+                    .eq(PointsRecord::getType, PointsRecordType.OUT.getValue())
+                    .eq(PointsRecord::getBizType, bizType)
+                    .eq(PointsRecord::getBizId, bizId)
+                    .count() > 0;
+            if (alreadyDeducted) {
+                log.info("积分扣减幂等跳过：memberId={}, bizType={}, bizId={}", memberId, bizType, bizId);
+                return;
+            }
+        }
+
+        // 原子扣减积分（不低于 0），避免并发回退导致积分为负
+        baseMapper.decrementPointsById(memberId, points);
+
+        // 写入一条 OUT 类型流水，便于对账与追溯
+        PointsRecord record = new PointsRecord();
+        record.setMemberId(memberId);
+        record.setType(PointsRecordType.OUT.getValue());
+        record.setPoints(points);
+        record.setBizType(bizType);
+        record.setBizId(bizId);
+        pointsRecordService.save(record);
+
+        // 积分扣减后检查是否需要降级
+        Member refreshedMember = getById(memberId);
+        if (refreshedMember != null && refreshedMember.getLevelId() != null) {
+            MemberLevel currentLevel = memberLevelService.findLevelByPoints(refreshedMember.getPoints());
+            if (currentLevel != null && !currentLevel.getId().equals(refreshedMember.getLevelId())) {
+                // 当前积分对应的等级低于会员已有等级，执行降级
+                LambdaUpdateWrapper<Member> levelUpdate = new LambdaUpdateWrapper<>();
+                levelUpdate.eq(Member::getId, memberId)
+                        .eq(Member::getLevelId, refreshedMember.getLevelId())
+                        .set(Member::getLevelId, currentLevel.getId());
+                boolean updated = baseMapper.update(new Member(), levelUpdate) > 0;
+                log.info("会员等级降级: memberId={}, oldLevel={}, newLevel={}, updated={}",
+                        memberId, refreshedMember.getLevelId(), currentLevel.getId(), updated);
+            }
+        }
+    }
+
+    /**
+     * 获取 by user id。
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
+    @Override
+    public Member getByUserId(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+        return lambdaQuery()
+                .eq(Member::getUserId, userId)
+                .eq(tenantId != null, Member::getTenantId, tenantId)
+                .one();
+    }
+
+    /**
+     * 统计 by level。
+     * @return 返回结果
+     */
+    @Override
+    public List<Map<String, Object>> countByLevel() {
+        return memberMapper.countByLevel();
+    }
+
+    /**
+     * 计算 discount。
+     * @param memberId 参数 memberId
+     * @param amount 参数 amount
+     * @return 返回结果
+     */
+    @Override
+    public BigDecimal calculateDiscount(Long memberId, BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        Member member = getById(memberId);
+        if (member == null || member.getLevelId() == null) {
+            return amount.setScale(2, RoundingMode.HALF_UP);
+        }
+        MemberLevel level = memberLevelService.getById(member.getLevelId());
+        if (level == null || level.getDiscount() == null || level.getDiscount().compareTo(BigDecimal.ZERO) <= 0) {
+            return amount.setScale(2, RoundingMode.HALF_UP);
+        }
+        return amount.multiply(level.getDiscount()).setScale(2, RoundingMode.HALF_UP);
+    }
+}

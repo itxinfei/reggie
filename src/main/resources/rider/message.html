@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>消息中心</title>
+  <link rel="stylesheet" href="/front/styles/vant.min.css">
+  <link rel="stylesheet" href="/shared/styles/tokens.css?v=20260930b">
+  <link rel="stylesheet" href="/backend/plugins/remixicon/remixicon.css">
+  <link rel="stylesheet" href="/rider/css/rider.css?v=20260930e">
+  <style>
+    .msg-item { margin: 10px 14px; padding: 12px; border-radius: 12px; background: var(--bg-card); box-shadow: var(--shadow-sm); }
+    .msg-item.unread { background: var(--color-primary-tint); }
+    .msg-head { display: flex; align-items: center; justify-content: space-between; }
+    .msg-title { font-size: var(--font-size-md); font-weight: 600; color: var(--color-text-primary); }
+    .msg-time { font-size: var(--font-size-sm); color: var(--color-text-hint); }
+    .msg-content { margin-top: 6px; font-size: var(--font-size-md); color: var(--color-text-secondary); }
+    .msg-foot { margin-top: 8px; display: flex; align-items: center; justify-content: space-between; }
+    .msg-biz { font-size: var(--font-size-sm); color: var(--color-text-hint); }
+    .msg-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; }
+    .msg-unread-tip { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <main id="rider-main">
+      <h1 class="sr-only">消息中心</h1>
+    <van-nav-bar title="消息中心" left-text="返回" left-arrow @click-left="goBack"></van-nav-bar>
+
+    <div class="msg-bar">
+      <span class="msg-unread-tip">共 {{ list.length }} 条，未读 {{ unread }} 条</span>
+      <van-button size="small" type="primary" plain :disabled="unread === 0"
+                  @click="onReadAll">全部已读</van-button>
+    </div>
+
+    <van-pull-refresh v-model="refreshing" @refresh="load" success-text="刷新成功">
+      <div v-if="list.length">
+        <div class="msg-item" v-for="m in list" :key="m.id" :class="{ unread: m.isRead === 0 }"
+             @click="onRead(m)" role="button" tabindex="0" @keyup.enter="onRead(m)" @keyup.space.prevent="onRead(m)">
+          <div class="msg-head">
+            <span class="msg-title">{{ m.title }}</span>
+            <van-tag v-if="m.isRead === 0" type="danger" size="small">未读</van-tag>
+          </div>
+          <div class="msg-content">{{ m.content }}</div>
+          <div class="msg-foot">
+            <span class="msg-biz">{{ typeText(m.type) }}</span>
+            <span class="msg-time">{{ RiderUtil.formatTime(m.createTime) }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="rider-empty" v-else>{{ refreshing ? '加载中…' : '暂无消息' }}</div>
+    </van-pull-refresh>
+  </main>
+  </div>
+
+  <script src="/backend/plugins/vue/vue.js"></script>
+  <script src="/backend/plugins/axios/axios.min.js"></script>
+  <script src="/front/js/vant.min.js"></script>
+  <script src="/rider/js/request.js?v=20260930"></script>
+  <script src="/rider/js/api.js"></script>
+  <script src="/rider/js/util.js?v=20260930"></script>
+  <script>
+    Vue.use(vant);
+    new Vue({
+      data: function () {
+        return { list: [], unread: 0, refreshing: false };
+      },
+      created: function () {
+        this.RiderUtil = window.RiderUtil;
+      },
+      mounted: function () {
+        this.load();
+      },
+      methods: {
+        load: function () {
+          var vm = this;
+          vm.refreshing = true;
+          RiderApi.myMessages(1, 100).then(function (res) {
+            var page = res.data || {};
+            vm.list = page.records || [];
+          }).catch(function () { /* 提示已统一 */ }).then(function () {
+            vm.loadUnread();
+          });
+        },
+        loadUnread: function () {
+          var vm = this;
+          RiderApi.unreadCount().then(function (res) {
+            var d = (res && res.data) ? res.data : {};
+            vm.unread = d.count || 0;
+          }).catch(function () { /* 忽略 */ }).then(function () {
+            vm.refreshing = false;
+          });
+        },
+        onRead: function (m) {
+          var vm = this;
+          if (!m || m.isRead === 1) { return; }
+          RiderApi.markRead(m.id).then(function (res) {
+            if (res && res.code === 1) {
+              m.isRead = 1;
+              if (vm.unread > 0) { vm.unread -= 1; }
+            } else {
+              vant.Toast.fail((res && res.msg) || '操作失败');
+            }
+          }).catch(function () { /* 提示已统一 */ });
+        },
+        onReadAll: function () {
+          var vm = this;
+          if (vm.unread === 0) { return; }
+          RiderApi.markAllRead().then(function (res) {
+            if (res && res.code === 1) {
+              vant.Toast.success('已全部标记已读');
+              vm.unread = 0;
+              vm.load();
+            } else {
+              vant.Toast.fail((res && res.msg) || '操作失败');
+            }
+          }).catch(function () { /* 提示已统一 */ });
+        },
+        typeText: function (t) {
+          var map = { 1: '派单提醒', 2: '催单提醒', 3: '异常处理', 4: '系统公告', 5: '其他' };
+          return map[t] || '消息';
+        },
+        goBack: function () {
+          RiderUtil.back();
+        }
+      }
+    }).$mount('#app');
+  </script>
+</body>
+</html>

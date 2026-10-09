@@ -1,0 +1,60 @@
+package com.reggie.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
+
+import java.util.Arrays;
+
+/**
+ * <p>
+ * 跨域配置类
+ * </p>
+ *
+ * @author 心飞为你飞
+ * @since 2026-07-09
+ */
+@Configuration
+public class CorsConfig {
+
+    /**
+     * 配置跨域过滤器
+     * 允许受信域名访问，支持GET、POST、PUT、DELETE、OPTIONS请求
+     *
+     * @return 跨域过滤器
+     */
+    @Bean
+    public CorsFilter corsFilter() {
+        CorsConfiguration config = new CorsConfiguration();
+        // 仅允许受信域名访问，防止任意源携带凭证进行 CSRF 攻击
+        // 开发环境允许常用开发服务器端口
+        config.setAllowedOriginPatterns(Arrays.asList(
+            "http://localhost:8080",
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:8080",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:5173"
+        ));
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(Arrays.asList(
+            "Content-Type",
+            "Authorization",
+            "X-Requested-With",
+            "Accept",
+            "Origin",
+            "X-CSRF-Token"
+        ));
+        // 允许前端读取响应头中的 CSRF Token
+        config.setExposedHeaders(Arrays.asList("X-CSRF-Token"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+
+        return new CorsFilter(source);
+    }
+}

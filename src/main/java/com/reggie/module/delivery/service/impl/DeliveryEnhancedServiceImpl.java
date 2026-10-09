@@ -1,0 +1,623 @@
+package com.reggie.module.delivery.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
+import com.reggie.module.delivery.mapper.DeliveryRangeRuleMapper;
+import com.reggie.module.delivery.model.DeliveryRangeRule;
+import com.reggie.module.delivery.model.DeliveryFeeStep;
+import com.reggie.module.delivery.mapper.DeliveryFeeStepMapper;
+import com.reggie.module.delivery.service.DeliveryEnhancedService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 配送增强服务实现
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
+@Slf4j
+@Service
+public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMapper, DeliveryRangeRule> 
+        implements DeliveryEnhancedService {
+
+    @Autowired
+    private DeliveryRangeRuleMapper rangeRuleMapper;
+
+    @Autowired
+    private DeliveryFeeStepMapper feeStepMapper;
+
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    // ==================== 配送范围管理 ====================
+
+    /**
+     * 获取 range rules。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
+    @Override
+    public List<DeliveryRangeRule> getRangeRules(Long tenantId) {
+        LambdaQueryWrapper<DeliveryRangeRule> qw = new LambdaQueryWrapper<>();
+        if (tenantId != null) {
+            qw.eq(DeliveryRangeRule::getTenantId, tenantId);
+        }
+        qw.eq(DeliveryRangeRule::getStatus, 1);
+        qw.orderByAsc(DeliveryRangeRule::getSortOrder);
+        return rangeRuleMapper.selectList(qw);
+    }
+
+    /**
+     * 获取 range rule by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
+    @Override
+    public DeliveryRangeRule getRangeRuleById(Long id) {
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId == null) {
+            return rangeRuleMapper.selectById(id);
+        }
+        LambdaQueryWrapper<DeliveryRangeRule> qw = new LambdaQueryWrapper<>();
+        qw.eq(DeliveryRangeRule::getId, id)
+                .eq(DeliveryRangeRule::getTenantId, currentTenantId);
+        return rangeRuleMapper.selectOne(qw);
+    }
+
+    /**
+     * 保存 or update range rule。
+     * @param rule 参数 rule
+     * @return 返回结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean saveOrUpdateRangeRule(DeliveryRangeRule rule) {
+        // 半径单位防御：单位为米（与后台表单 min=100/max=50000 同口径），
+        // 拦截把公里值（如 3）直接写入——历史上该脏数据导致所有地址被误判不在配送范围
+        if (rule.getRadius() != null
+                && (rule.getRadius().compareTo(new BigDecimal("100")) < 0
+                || rule.getRadius().compareTo(new BigDecimal("50000")) > 0)) {
+            throw new CustomException("配送半径单位为米，范围 100~50000，请确认不是按公里填写（如 3 公里应填 3000）");
+        }
+        if (rule.getId() == null) {
+            rule.setCreateTime(LocalDateTime.now());
+            rule.setUpdateTime(LocalDateTime.now());
+            rule.setTenantId(BaseContext.getCurrentTenantId());
+            return rangeRuleMapper.insert(rule) > 0;
+        } else {
+            // 租户归属校验：防止跨租户篡改配送范围
+            Long currentTenantId = BaseContext.getCurrentTenantId();
+            DeliveryRangeRule existing = rangeRuleMapper.selectById(rule.getId());
+            if (existing == null) {
+                return false;
+            }
+            if (currentTenantId != null && !currentTenantId.equals(existing.getTenantId())) {
+                throw new CustomException("无权操作其他租户的配送范围规则");
+            }
+            rule.setUpdateTime(LocalDateTime.now());
+            rule.setTenantId(existing.getTenantId());
+            return rangeRuleMapper.updateById(rule) > 0;
+        }
+    }
+
+    /**
+     * 以门店坐标重配圆形规则圆心。
+     * @param tenantId 租户ID
+     * @return 实际更新条数
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int realignCircleCenters(Long tenantId) {
+        // 取每个租户主门店（该租户 id 最小门店）坐标。delivery 模块不依赖 store 模块，
+        // 直接用 JdbcTemplate 查询以避免跨模块 Java 依赖；裸 SQL 也不受 MP 租户插件影响
+        Map<Long, BigDecimal[]> storeCenter = new HashMap<Long, BigDecimal[]>();
+        List<Map<String, Object>> stores = jdbcTemplate.queryForList(
+                "SELECT s.tenant_id AS tid, s.longitude AS lng, s.latitude AS lat "
+                        + "FROM store_info s INNER JOIN (SELECT tenant_id, MIN(id) AS min_id "
+                        + "FROM store_info GROUP BY tenant_id) m ON s.id = m.min_id");
+        for (Map<String, Object> row : stores) {
+            Object tid = row.get("tid");
+            Object lng = row.get("lng");
+            Object lat = row.get("lat");
+            if (tid == null || lng == null || lat == null) {
+                continue;
+            }
+            storeCenter.put(((Number) tid).longValue(), new BigDecimal[]{
+                    new BigDecimal(lng.toString()), new BigDecimal(lat.toString())});
+        }
+
+        // 只处理圆形规则：多边形无单一圆心
+        LambdaQueryWrapper<DeliveryRangeRule> qw = new LambdaQueryWrapper<DeliveryRangeRule>();
+        qw.eq(DeliveryRangeRule::getRangeType, DeliveryRangeRule.TYPE_CIRCLE);
+        if (tenantId != null) {
+            qw.eq(DeliveryRangeRule::getTenantId, tenantId);
+        }
+        List<DeliveryRangeRule> rules = rangeRuleMapper.selectList(qw);
+
+        int updated = 0;
+        for (DeliveryRangeRule rule : rules) {
+            BigDecimal[] center = storeCenter.get(rule.getTenantId());
+            if (center == null) {
+                // 该租户无门店坐标，无法围绕门店重配
+                continue;
+            }
+            rule.setCenterLongitude(center[0]);
+            rule.setCenterLatitude(center[1]);
+            updated += rangeRuleMapper.updateById(rule);
+        }
+        return updated;
+    }
+
+    /**
+     * 删除 range rule。
+     * @param id 参数 id
+     * @return 返回结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteRangeRule(Long id) {
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        DeliveryRangeRule rule = rangeRuleMapper.selectById(id);
+        if (rule == null) {
+            return false;
+        }
+        if (currentTenantId != null && !currentTenantId.equals(rule.getTenantId())) {
+            throw new CustomException("无权操作其他租户的配送范围规则");
+        }
+        return rangeRuleMapper.deleteById(id) > 0;
+    }
+
+    // ==================== 配送费阶梯管理 ====================
+
+    /**
+     * 获取 fee steps。
+     * @param ruleId 参数 ruleId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
+    @Override
+    public List<DeliveryFeeStep> getFeeSteps(Long ruleId, Long tenantId) {
+        LambdaQueryWrapper<DeliveryFeeStep> qw = new LambdaQueryWrapper<>();
+        if (ruleId != null) {
+            qw.eq(DeliveryFeeStep::getRuleId, ruleId);
+        }
+        if (tenantId != null) {
+            qw.eq(DeliveryFeeStep::getTenantId, tenantId);
+        }
+        qw.orderByAsc(DeliveryFeeStep::getSortOrder);
+        return feeStepMapper.selectList(qw);
+    }
+
+    /**
+     * 保存 or update fee step。
+     * @param step 参数 step
+     * @return 返回结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean saveOrUpdateFeeStep(DeliveryFeeStep step) {
+        if (step.getId() == null) {
+            step.setCreateTime(LocalDateTime.now());
+            step.setUpdateTime(LocalDateTime.now());
+            step.setTenantId(BaseContext.getCurrentTenantId());
+            return feeStepMapper.insert(step) > 0;
+        } else {
+            // 租户归属校验：防止跨租户篡改配送费阶梯
+            Long currentTenantId = BaseContext.getCurrentTenantId();
+            DeliveryFeeStep existing = feeStepMapper.selectById(step.getId());
+            if (existing == null) {
+                return false;
+            }
+            if (currentTenantId != null && !currentTenantId.equals(existing.getTenantId())) {
+                throw new CustomException("无权操作其他租户的配送费阶梯");
+            }
+            step.setUpdateTime(LocalDateTime.now());
+            step.setTenantId(existing.getTenantId());
+            return feeStepMapper.updateById(step) > 0;
+        }
+    }
+
+    /**
+     * 删除 fee step。
+     * @param id 参数 id
+     * @return 返回结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteFeeStep(Long id) {
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        DeliveryFeeStep step = feeStepMapper.selectById(id);
+        if (step == null) {
+            return false;
+        }
+        if (currentTenantId != null && !currentTenantId.equals(step.getTenantId())) {
+            throw new CustomException("无权操作其他租户的配送费阶梯");
+        }
+        return feeStepMapper.deleteById(id) > 0;
+    }
+
+    /**
+     * 批量处理 save fee steps。
+     * @param steps 参数 steps
+     * @return 返回结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean batchSaveFeeSteps(List<DeliveryFeeStep> steps) {
+        if (steps == null || steps.isEmpty()) {
+            return true;
+        }
+        for (DeliveryFeeStep step : steps) {
+            saveOrUpdateFeeStep(step);
+        }
+        return true;
+    }
+
+    // ==================== 配送范围校验 ====================
+
+    /**
+     * 判断 in range。
+     * @param ruleId 参数 ruleId
+     * @param longitude 参数 longitude
+     * @param latitude 参数 latitude
+     * @return 返回结果
+     */
+    @Override
+    public boolean isInRange(Long ruleId, BigDecimal longitude, BigDecimal latitude) {
+        DeliveryRangeRule rule = rangeRuleMapper.selectById(ruleId);
+        if (rule == null || rule.getStatus() != 1) {
+            return false;
+        }
+
+        if (rule.getRangeType() == DeliveryRangeRule.TYPE_CIRCLE) {
+            // 圆形范围校验
+            return isPointInCircle(longitude, latitude, 
+                    rule.getCenterLongitude(), rule.getCenterLatitude(), rule.getRadius());
+        } else if (rule.getRangeType() == DeliveryRangeRule.TYPE_POLYGON) {
+            // 多边形范围校验
+            return isPointInPolygon(longitude, latitude, rule.getPolygonPoints());
+        }
+
+        return false;
+    }
+
+    /**
+     * 查找 matching rule。
+     * @param longitude 参数 longitude
+     * @param latitude 参数 latitude
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
+    @Override
+    public Long findMatchingRule(BigDecimal longitude, BigDecimal latitude, Long tenantId) {
+        List<DeliveryRangeRule> rules = getRangeRules(tenantId);
+        for (DeliveryRangeRule rule : rules) {
+            if (isInRange(rule.getId(), longitude, latitude)) {
+                return rule.getId();
+            }
+        }
+        return null;
+    }
+
+    // ==================== 配送费计算 ====================
+
+    /**
+     * 计算 delivery fee。
+     * @param ruleId 参数 ruleId
+     * @param distance 参数 distance
+     * @param orderAmount 参数 orderAmount
+     * @return 返回结果
+     */
+    @Override
+    public BigDecimal calculateDeliveryFee(Long ruleId, BigDecimal distance, BigDecimal orderAmount) {
+        if (ruleId == null) {
+            return BigDecimal.ZERO;
+        }
+        DeliveryRangeRule rule = rangeRuleMapper.selectById(ruleId);
+        if (rule == null) {
+            return BigDecimal.ZERO;
+        }
+
+        if (distance == null) {
+            distance = BigDecimal.ZERO;
+        }
+
+        // 检查是否满足免费配送条件
+        if (rule.getFreeThreshold() != null && orderAmount != null
+                && orderAmount.compareTo(rule.getFreeThreshold()) >= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal fee = BigDecimal.ZERO;
+
+        if (rule.getFeeType() == 1) {
+            // 固定配送费
+            fee = rule.getBaseFee() != null ? rule.getBaseFee() : BigDecimal.ZERO;
+        } else if (rule.getFeeType() == 2) {
+            // 距离阶梯配送费
+            fee = calculateStepFee(ruleId, distance);
+        } else if (rule.getFeeType() == 3) {
+            // 基础费 + 距离费
+            BigDecimal baseFee = rule.getBaseFee() != null ? rule.getBaseFee() : BigDecimal.ZERO;
+            BigDecimal distanceFee = BigDecimal.ZERO;
+            if (rule.getFeePerKm() != null && distance.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal distanceKm = distance.divide(new BigDecimal("1000"), 4, RoundingMode.HALF_UP);
+                distanceFee = distanceKm.multiply(rule.getFeePerKm());
+            }
+            fee = baseFee.add(distanceFee);
+        }
+
+        // 限制最低和最高配送费
+        if (rule.getMinFee() != null && fee.compareTo(rule.getMinFee()) < 0) {
+            fee = rule.getMinFee();
+        }
+        if (rule.getMaxFee() != null && fee.compareTo(rule.getMaxFee()) > 0) {
+            fee = rule.getMaxFee();
+        }
+
+        return fee.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * 计算 fee。
+     * @param longitude 参数 longitude
+     * @param latitude 参数 latitude
+     * @param distance 参数 distance
+     * @param orderAmount 参数 orderAmount
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
+    @Override
+    public Map<String, Object> calculateFee(BigDecimal longitude, BigDecimal latitude, BigDecimal distance,
+                                            BigDecimal orderAmount, Long tenantId) {
+        Map<String, Object> result = new HashMap<>();
+
+        // 查找匹配的配送范围规则
+        Long ruleId = findMatchingRule(longitude, latitude, tenantId);
+        if (ruleId == null) {
+            result.put("inRange", false);
+            result.put("fee", BigDecimal.ZERO);
+            result.put("message", "地址不在配送范围内");
+            return result;
+        }
+
+        DeliveryRangeRule rule = rangeRuleMapper.selectById(ruleId);
+        BigDecimal fee = calculateDeliveryFee(ruleId, distance, orderAmount);
+
+        result.put("inRange", true);
+        result.put("ruleId", ruleId);
+        result.put("ruleName", rule.getRuleName());
+        result.put("distance", distance);
+        result.put("fee", fee);
+        result.put("freeThreshold", rule.getFreeThreshold());
+        result.put("isFree", fee.compareTo(BigDecimal.ZERO) == 0);
+
+        return result;
+    }
+
+    /**
+     * 计算 distance。
+     * @param lon1 参数 lon1
+     * @param lat1 参数 lat1
+     * @param lon2 参数 lon2
+     * @param lat2 参数 lat2
+     * @return 返回结果
+     */
+    @Override
+    public BigDecimal calculateDistance(BigDecimal lon1, BigDecimal lat1, BigDecimal lon2, BigDecimal lat2) {
+        // 防御性 null 检查：坐标参数来自用户输入或数据库，可能为 null
+        if (lon1 == null || lat1 == null || lon2 == null || lat2 == null) {
+            return BigDecimal.ZERO;
+        }
+        // 使用 Haversine 公式计算两点间距离
+        double earthRadius = 6371000; // 地球半径（米）
+        double dLat = Math.toRadians(lat2.doubleValue() - lat1.doubleValue());
+        double dLon = Math.toRadians(lon2.doubleValue() - lon1.doubleValue());
+
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                   Math.cos(Math.toRadians(lat1.doubleValue())) * Math.cos(Math.toRadians(lat2.doubleValue())) *
+                   Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        double distance = earthRadius * c;
+
+        return BigDecimal.valueOf(distance).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    // ==================== 统计分析 ====================
+
+    /**
+     * 获取 delivery statistics。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
+    @Override
+    public Map<String, Object> getDeliveryStatistics(Long tenantId) {
+        Map<String, Object> result = new HashMap<>();
+
+        LambdaQueryWrapper<DeliveryRangeRule> qw = new LambdaQueryWrapper<>();
+        if (tenantId != null) {
+            qw.eq(DeliveryRangeRule::getTenantId, tenantId);
+        }
+        List<DeliveryRangeRule> rules = rangeRuleMapper.selectList(qw);
+
+        int totalRules = rules.size();
+        int activeRules = 0;
+        int circleRules = 0;
+        int polygonRules = 0;
+
+        for (DeliveryRangeRule rule : rules) {
+            if (rule.getStatus() == 1) {
+                activeRules++;
+            }
+            if (rule.getRangeType() == DeliveryRangeRule.TYPE_CIRCLE) {
+                circleRules++;
+            } else if (rule.getRangeType() == DeliveryRangeRule.TYPE_POLYGON) {
+                polygonRules++;
+            }
+        }
+
+        result.put("totalRules", totalRules);
+        result.put("activeRules", activeRules);
+        result.put("circleRules", circleRules);
+        result.put("polygonRules", polygonRules);
+
+        return result;
+    }
+
+    /**
+     * 获取 range coverage。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
+    @Override
+    public Map<String, Object> getRangeCoverage(Long tenantId) {
+        Map<String, Object> result = new HashMap<>();
+
+        List<DeliveryRangeRule> rules = getRangeRules(tenantId);
+        List<Map<String, Object>> coverageList = new ArrayList<>();
+
+        for (DeliveryRangeRule rule : rules) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", rule.getId());
+            item.put("ruleName", rule.getRuleName());
+            item.put("rangeType", rule.getRangeType());
+            item.put("rangeTypeName", rule.getRangeType() == 1 ? "圆形" : "多边形");
+
+            if (rule.getRangeType() == DeliveryRangeRule.TYPE_CIRCLE && rule.getRadius() != null) {
+                // 计算圆形面积（平方米）
+                double area = Math.PI * rule.getRadius().doubleValue() * rule.getRadius().doubleValue();
+                item.put("area", new BigDecimal(area).setScale(2, RoundingMode.HALF_UP));
+                item.put("radius", rule.getRadius());
+            }
+
+            coverageList.add(item);
+        }
+
+        result.put("rules", coverageList);
+        result.put("totalRules", rules.size());
+
+        return result;
+    }
+
+    // ==================== 私有方法 ====================
+
+    /**
+     * 判断点是否在圆形范围内
+     */
+    private boolean isPointInCircle(BigDecimal pointLon, BigDecimal pointLat,
+                                     BigDecimal centerLon, BigDecimal centerLat, BigDecimal radius) {
+        // 规则配置不完整（圆心/半径缺失）或地址无坐标：按不匹配处理，
+        // 跳过该规则继续匹配下一条，避免 compareTo(null) 抛 NPE 导致结算 500
+        if (pointLon == null || pointLat == null
+                || centerLon == null || centerLat == null || radius == null) {
+            return false;
+        }
+        BigDecimal distance = calculateDistance(pointLon, pointLat, centerLon, centerLat);
+        return distance.compareTo(radius) <= 0;
+    }
+
+    /**
+     * 判断点是否在多边形范围内（射线法）
+     */
+    private boolean isPointInPolygon(BigDecimal pointLon, BigDecimal pointLat, String polygonPointsJson) {
+        if (pointLon == null || pointLat == null) {
+            return false;
+        }
+        if (polygonPointsJson == null || polygonPointsJson.isEmpty()) {
+            return false;
+        }
+
+        // 解析多边形坐标点
+        // 格式：[[lon1,lat1],[lon2,lat2],...]
+        try {
+            String[] points = polygonPointsJson.replace("],[", "|")
+                    .replace("[[", "").replace("]]", "").split("\\|");
+
+            int n = points.length;
+            if (n < 3) {
+                return false;
+            }
+
+            boolean inside = false;
+            double testX = pointLon.doubleValue();
+            double testY = pointLat.doubleValue();
+
+            for (int i = 0, j = n - 1; i < n; j = i++) {
+                String[] pointI = points[i].split(",");
+                String[] pointJ = points[j].split(",");
+
+                double xi = Double.parseDouble(pointI[0]);
+                double yi = Double.parseDouble(pointI[1]);
+                double xj = Double.parseDouble(pointJ[0]);
+                double yj = Double.parseDouble(pointJ[1]);
+
+                if (((yi > testY) != (yj > testY)) &&
+                    (testX < (xj - xi) * (testY - yi) / (yj - yi) + xi)) {
+                    inside = !inside;
+                }
+            }
+
+            return inside;
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.error("解析多边形坐标失败", e);
+            return false;
+        }
+    }
+
+    /**
+     * 计算阶梯配送费
+     */
+    private BigDecimal calculateStepFee(Long ruleId, BigDecimal distance) {
+        List<DeliveryFeeStep> steps = getFeeSteps(ruleId, null);
+        if (steps.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        if (distance == null) {
+            distance = BigDecimal.ZERO;
+        }
+
+        for (DeliveryFeeStep step : steps) {
+            if (step.getStartDistance() != null && step.getEndDistance() != null) {
+                if (distance.compareTo(step.getStartDistance()) >= 0 &&
+                    distance.compareTo(step.getEndDistance()) <= 0) {
+                    BigDecimal fee = step.getFee() != null ? step.getFee() : BigDecimal.ZERO;
+                    // 计算超出部分的费用
+                    // 防御性 null 检查：incrementDistance 可能在数据库中为 null 或 0（历史数据或绕过校验）
+                    if (step.getIncrementDistance() != null
+                            && step.getIncrementDistance().compareTo(BigDecimal.ZERO) > 0
+                            && step.getIncrementFee() != null) {
+                        BigDecimal extraDistance = distance.subtract(step.getStartDistance());
+                        if (extraDistance.compareTo(BigDecimal.ZERO) > 0) {
+                            BigDecimal increments = extraDistance.divide(step.getIncrementDistance(), 0, RoundingMode
+                                    .CEILING);
+                            fee = fee.add(increments.multiply(step.getIncrementFee()));
+                        }
+                    }
+                    return fee;
+                }
+            }
+        }
+
+        // 如果没有匹配的阶梯，使用最后一个阶梯的费用
+        DeliveryFeeStep lastStep = steps.get(steps.size() - 1);
+        return lastStep.getFee() != null ? lastStep.getFee() : BigDecimal.ZERO;
+    }
+}
+

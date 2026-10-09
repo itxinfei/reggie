@@ -1,0 +1,93 @@
+package com.reggie.module.platform.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.transaction.annotation.Transactional;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.transaction.annotation.Transactional;
+import com.reggie.module.platform.mapper.DishPlatformMappingMapper;
+import org.springframework.transaction.annotation.Transactional;
+import com.reggie.module.platform.model.DishPlatformMapping;
+import org.springframework.transaction.annotation.Transactional;
+import com.reggie.module.platform.service.DishPlatformMappingService;
+import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * 商品平台映射服务实现
+ *
+ * @author reggie
+ * @since 2026-08-24
+ */
+@Slf4j
+@Service
+@Transactional(rollbackFor = Exception.class)
+public class DishPlatformMappingServiceImpl extends ServiceImpl<DishPlatformMappingMapper,
+        DishPlatformMapping> implements DishPlatformMappingService {
+
+    /**
+     * 查询列表 by dish id。
+     * @param dishId 参数 dishId
+     * @return 返回结果
+     */
+    @Override
+    public List<DishPlatformMapping> listByDishId(Long dishId) {
+        LambdaQueryWrapper<DishPlatformMapping> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(DishPlatformMapping::getDishId, dishId)
+                .eq(DishPlatformMapping::getIsDeleted, 0)
+                .orderByDesc(DishPlatformMapping::getUpdateTime);
+        return this.list(wrapper);
+    }
+
+    /**
+     * 查询列表 by platform type。
+     * @param platformType 参数 platformType
+     * @return 返回结果
+     */
+    @Override
+    public List<DishPlatformMapping> listByPlatformType(String platformType) {
+        LambdaQueryWrapper<DishPlatformMapping> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(DishPlatformMapping::getPlatformType, platformType)
+                .eq(DishPlatformMapping::getIsDeleted, 0)
+                .orderByDesc(DishPlatformMapping::getUpdateTime);
+        return this.list(wrapper);
+    }
+
+    /**
+     * 查询列表 by dish id and platform type。
+     * @param dishId 参数 dishId
+     * @param platformType 参数 platformType
+     * @return 返回结果
+     */
+    @Override
+    public List<DishPlatformMapping> listByDishIdAndPlatformType(Long dishId, String platformType) {
+        LambdaQueryWrapper<DishPlatformMapping> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(DishPlatformMapping::getDishId, dishId)
+                .eq(DishPlatformMapping::getPlatformType, platformType)
+                .eq(DishPlatformMapping::getIsDeleted, 0);
+        return this.list(wrapper);
+    }
+
+    /**
+     * 获取 by platform dish id。
+     * @param platformType 参数 platformType
+     * @param platformShopId 参数 platformShopId
+     * @param platformDishId 参数 platformDishId
+     * @return 返回结果
+     */
+    @Override
+    public DishPlatformMapping getByPlatformDishId(String platformType, String platformShopId, String platformDishId) {
+        LambdaQueryWrapper<DishPlatformMapping> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(DishPlatformMapping::getPlatformType, platformType)
+                .eq(DishPlatformMapping::getPlatformShopId, platformShopId)
+                .eq(DishPlatformMapping::getPlatformDishId, platformDishId)
+                .eq(DishPlatformMapping::getIsDeleted, 0)
+                .last("LIMIT 1");
+        return this.getOne(wrapper, false);
+    }
+}

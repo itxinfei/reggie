@@ -1,0 +1,1758 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-rem-flat>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>AI智能点餐助手</title>
+    <!-- 修改点：base.js 前置，确保 rem 基准正确计算 -->
+    <script src="../js/base.js?v=20260930"></script>
+    <link rel="stylesheet" href="../styles/vant.min.css">
+    <link rel="stylesheet" href="../styles/index.css?v=20260930b">
+    <link rel="stylesheet" href="../styles/skeleton.css?v=20260930" />
+    <!-- 修改点：补充加载完整 remixicon.css（此前仅加载 fallback，ri-moon-line/ri-menu-line/ri-close-line 等 header 图标不渲染） -->
+    <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css">
+    <script src="../js/icon-fallback.js?v=20260917"></script>
+    <link rel="stylesheet" href="../styles/ai-assistant.css?v=20260930">
+
+</head>
+<body>
+    <div id="ai-app" class="ai-container" :class="{ 'dark-mode': darkModeEnabled }">
+        <!-- 2026-09-26 头部收敛到 cend-shell：白底轻导航，右侧保留暗色/历史，返回走 close -->
+        <cend-shell title="AI 智能点餐助手" light :show-back="true">
+          <template #right>
+            <span class="ai-header-btn" @click="toggleDarkMode" aria-label="切换暗色模式"><i class="ri-moon-line" aria-hidden="true"></i></span>
+            <span class="ai-header-btn" @click="toggleSidebar" aria-label="对话历史"><i class="ri-menu-line" aria-hidden="true"></i></span>
+          </template>
+
+        <!-- 网络状态提示条 -->
+        <div class="network-banner" :class="{ visible: !isOnline }">
+            <span><i class="ri-alert-line" aria-hidden="true"></i> 当前处于离线状态，请检查网络连接</span>
+        </div>
+
+        <!-- 对话管理侧边栏 -->
+        <div class="sidebar-overlay" :class="{active: sidebarOpen}" @click="toggleSidebar(false)"></div>
+        <!-- 修改点(2026-09-17)：可访问性——历史抽屉为非模态补充区域，用 complementary 语义并标注名称 -->
+        <div class="conversation-sidebar" :class="{active: sidebarOpen}"
+             role="complementary" aria-label="对话历史">
+            <div class="sidebar-header">
+                <h3><i class="ri-chat-1-line" aria-hidden="true"></i> 对话历史</h3>
+                <button class="new-chat-btn" @click="newConversation">+ 新对话</button>
+            </div>
+            <div class="sidebar-list">
+                <div v-if="sidebarLoading" class="sidebar-loading">加载中...</div>
+                <div v-else-if="conversations.length === 0" class="empty-sidebar">
+                    <div class="empty-icon"><i class="ri-chat-1-line" aria-hidden="true"></i></div>
+                    <p>暂无对话记录</p>
+                </div>
+                <div v-for="conv in conversations" :key="conv.id"
+                     :class="['sidebar-item', {active: currentConversationId === conv.id}]"
+                     @click="switchConversation(conv.id)">
+                    <div class="conv-title">{{ conv.title || '新对话' }}</div>
+                    <div class="conv-time">{{ conv.timeText || '' }}</div>
+                    <span class="conv-delete" @click.stop="deleteConversation(conv)" title="删除"><i class="ri-delete-bin-6-line" aria-hidden="true"></i></span>
+                </div>
+            </div>
+            <div class="sidebar-footer" v-if="conversations.length > 0">
+                <button class="clear-all-btn" @click="clearAllConversations"><i class="ri-delete-bin-6-line" aria-hidden="true"></i> 清空全部对话</button>
+            </div>
+        </div>
+
+        <!-- 场景切换标签 -->
+        <div class="scene-tabs">
+            <span v-for="scene in scenes" :key="scene.value"
+                  :class="['scene-tab', { active: currentScene === scene.value }]"
+                  @click="switchScene(scene.value)">
+                <i :class="scene.icon" aria-hidden="true"></i> {{ scene.label }}
+            </span>
+        </div>
+
+        <!-- 快捷提示 -->
+        <div class="quick-tips" v-if="messages.length === 0">
+            <span v-for="tag in userProfileTags" :key="tag"
+                  class="quick-tip profile-tag"
+                  @click="sendQuickTip(tag)">
+                {{ tag }}
+            </span>
+            <span class="quick-tip" v-for="tip in currentQuickTips" :key="tip"
+                  @click="sendQuickTip(tip)">
+                {{ tip }}
+            </span>
+        </div>
+
+        <!-- 聊天区域 -->
+        <div class="chat-area" ref="chatArea">
+            <!-- 欢迎消息 -->
+            <div class="chat-msg assistant" v-if="messages.length === 0">
+                <div class="chat-avatar"><i class="ri-robot-line" aria-hidden="true"></i></div>
+                <div class="chat-bubble">
+                    <template v-if="currentScene === 'dish_desc'">
+                        你好！我是小吉，美食文案专家 <i class="ri-pencil-ruler-2-line" aria-hidden="true"></i><br><br>
+                        输入菜名，我帮你写出让人流口水的美食描述！<br><br>
+                        <i class="ri-lightbulb-line tip-icon" aria-hidden="true"></i> <b>试试输入：</b><br>
+                        · "红烧肉"<br>
+                        · "清蒸鲈鱼"<br>
+                        · "麻辣香锅"
+                    </template>
+                    <template v-else-if="currentScene === 'marketing'">
+                        你好！我是小吉，营销策略顾问 <i class="ri-megaphone-line" aria-hidden="true"></i><br><br>
+                        告诉我你的需求，我帮你写活动文案和促销方案！<br><br>
+                        <i class="ri-lightbulb-line tip-icon" aria-hidden="true"></i> <b>试试这样说：</b><br>
+                        · "帮我写一个满减活动文案"<br>
+                        · "新店开业的促销方案"<br>
+                        · "会员日专属优惠文案"
+                    </template>
+                    <template v-else>
+                        <p class="welcome-line">{{ orderWelcome }}</p>
+                        告诉我你想吃什么，我来帮你推荐最合适的菜品！<br><br>
+                        <i class="ri-lightbulb-line tip-icon" aria-hidden="true"></i> <b>试试这样说：</b><br>
+                        · "我想吃辣的，2个人"<br>
+                        · "有没有清淡一点的菜"<br>
+                        · "帮我推荐100以内的套餐"
+                    </template>
+                </div>
+            </div>
+
+            <!-- 对话消息 -->
+            <template v-for="(msg, idx) in messages">
+                <div :class="'chat-msg ' + msg.role" :key="msg.key || (msg.role + '-' + idx)"
+                     @contextmenu.prevent="showMsgMenu($event, msg)"
+                     @touchstart="onMsgTouchStart($event, msg)"
+                     @touchend="onMsgTouchEnd"
+                     @touchmove="onMsgTouchMove">
+                    <div class="chat-avatar">
+                        <i v-if="msg.role === 'assistant'" class="ri-robot-line"></i>
+                        <img v-else-if="userInfo && userAvatar" :src="userAvatar" alt="avatar" @error="userAvatar=''" />
+                        <i v-else class="ri-user-line"></i>
+                    </div>
+                    <div class="msg-body">
+                        <div class="chat-bubble" :class="{'streaming-cursor': msg.streaming && !!msg.content}">
+                            <!-- 等待首字：三点动画 -->
+                            <div v-if="msg.role === 'assistant' && msg.streaming && !msg.content" class="typing-indicator">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <!-- AI 回复：安全 Markdown 渲染（内核先转义后白名单替换） -->
+                            <div v-else-if="msg.role === 'assistant'" class="md-body" v-html="renderMarkdown(msg.content)"></div>
+                            <!-- 用户消息：图片 + 文本（纯图片消息可无文本） -->
+                            <div v-else class="user-bubble-inner">
+                                <div class="msg-images" v-if="msg.attachments && msg.attachments.length">
+                                    <a v-for="(att, aIdx) in msg.attachments" :key="att.attachmentId || aIdx"
+                                       :href="att.url" target="_blank" @click="openImagePreview($event, att.url)">
+                                        <img :src="att.url" class="msg-image" loading="lazy" width="150" height="120" alt="聊天图片">
+                                    </a>
+                                </div>
+                                <span class="user-text" v-if="msg.content">{{ msg.content }}</span>
+                            </div>
+                        </div>
+                        <!-- P4 经营数据工具调用状态条（模型查实时报表时展示「正在查询→完成」） -->
+                        <div class="ai-tool-bar" v-if="msg.tools && msg.tools.length">
+                            <div class="ai-tool-item" v-for="tool in msg.tools" :key="tool.name" :class="'is-' + tool.status">
+                                <i class="ai-tool-icon" :class="toolStatusIcon(tool.status)" aria-hidden="true"></i>
+                                <span class="ai-tool-label">{{ tool.label || tool.name }}</span>
+                                <span class="ai-tool-summary" v-if="tool.summary">{{ tool.summary }}</span>
+                            </div>
+                        </div>
+                        <!-- 已停止标记 -->
+                        <div class="stopped-badge" v-if="msg.stopped && !msg.streaming">
+                            <i class="ri-stop-circle-line" aria-hidden="true"></i> 已停止，内容为部分回复
+                        </div>
+                        <!-- 消息操作：重新生成 / 复制（纯图片消息也可重新生成，复制按钮无文本时由内部 v-if 隐藏） -->
+                        <div class="msg-actions" v-if="!msg.streaming && (msg.content || (msg.attachments && msg.attachments.length)) && !msg.error">
+                            <button class="copy-btn" v-if="canRegenerate(msg)"
+                                    @click="regenerateMessage(msg)" title="重新生成" aria-label="重新生成">
+                                <i class="ri-refresh-line" aria-hidden="true"></i>
+                            </button>
+                            <button class="copy-btn" v-if="msg.content" @click="copyMessage(msg)" :title="msg.copied ? '已复制' : '复制'" aria-label="复制">
+                                <span v-if="msg.copied"><i class="ri-check-line" aria-hidden="true"></i></span>
+                                <span v-else><i class="ri-file-copy-line" aria-hidden="true"></i></span>
+                            </button>
+                        </div>
+                        <!-- 推荐菜品卡片 -->
+                        <div class="dish-recommendations" v-if="msg.dishes && msg.dishes.length > 0">
+                            <div class="dish-card" v-for="dish in msg.dishes" :key="dish.dishId || dish.name" @click="addToCart(dish)">
+                                <img :src="dish.image ? imgPath(dish.image) : '/front/images/noImg.png'" loading="lazy" width="56" height="56" :alt="dish.name" @error="imgError">
+                                <div class="dish-info">
+                                    <div class="dish-name">{{ dish.name }}</div>
+                                    <div class="dish-reason" v-if="dish.reason">{{ dish.reason }}</div>
+                                    <div class="dish-price">¥{{ (dish.price ? Number(dish.price).toFixed(2) : '0.00') }}</div>
+                                </div>
+                                <button class="add-btn" @click.stop="addToCart(dish)">+</button>
+                            </div>
+                        </div>
+                        <!-- 反馈按钮（仅服务端已落库的回复可反馈） -->
+                        <div class="feedback-bar" v-if="msg.role === 'assistant' && msg.dbMessageId && !msg.streaming">
+                            <button :class="['feedback-btn', msg.feedback === 'good' ? 'active-good' : '']"
+                                    @click="sendFeedback(msg, 'good')"><i class="ri-thumb-up-line" aria-hidden="true"></i> 有用</button>
+                            <button :class="['feedback-btn', msg.feedback === 'bad' ? 'active-bad' : '']"
+                                    @click="sendFeedback(msg, 'bad')"><i class="ri-thumb-down-line" aria-hidden="true"></i> 没用</button>
+                        </div>
+                        <!-- 错误重试 -->
+                        <div class="retry-bar" v-if="msg.role === 'assistant' && msg.error">
+                            <button class="retry-btn" @click="retryMessage(msg)"><i class="ri-refresh-line" aria-hidden="true"></i> 重新生成</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- 输入区：豆包风格统一输入卡片——自适应多行、左工具组（语音/图片）、右圆形发送/停止钮 -->
+        <div class="input-area">
+            <div class="composer">
+                <!-- 待发送图片缩略图（卡片内顶部） -->
+                <div class="attach-bar" v-if="pendingAttachments.length">
+                    <div class="attach-thumb" v-for="(item, aIdx) in pendingAttachments" :key="item.uid">
+                        <img :src="item.localUrl" alt="待发送图片">
+                        <div class="attach-mask" v-if="item.uploading">
+                            <i class="ri-loader-4-line ai-attach-spin" aria-hidden="true"></i>
+                        </div>
+                        <button type="button" class="attach-remove" @click="removePendingImage(aIdx)" aria-label="移除图片">
+                            <i class="ri-close-line" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 智能输入提示（搜索联想模式）：防抖拉取候选，点选回填输入框不自动发送 -->
+                <div class="sug-panel" v-if="sugVisible && suggestions.length" role="listbox" aria-label="输入建议">
+                    <button type="button" v-for="(s, sIdx) in suggestions" :key="sIdx"
+                            class="sug-item" :class="{ active: sIdx === sugActive }"
+                            @mousedown.prevent="applySuggestion(s)"
+                            @touchend.prevent="applySuggestion(s)"
+                            role="option" :aria-selected="sIdx === sugActive ? 'true' : 'false'">
+                        <i :class="sugIconClass(s.source)" aria-hidden="true"></i>
+                        <span class="sug-text">{{ s.text }}</span>
+                        <span class="sug-src">{{ sugSourceLabel(s.source) }}</span>
+                    </button>
+                </div>
+
+                <!-- 多行输入：自适应增高（最高 180px 后滚动），物理键盘 Enter 发送 / 移动端回车换行 -->
+                <textarea
+                    ref="inputArea"
+                    v-model="inputText"
+                    :placeholder="inputPlaceholder"
+                    @keydown="onInputKeydown"
+                    @input="autoResizeInput"
+                    @paste="onPasteImage"
+                    @focus="onInputFocus"
+                    @blur="onInputBlur"
+                    rows="1"
+                    maxlength="4000"
+                    class="composer-input"
+                ></textarea>
+
+                <!-- 底部工具条：左工具组、右发送组 -->
+                <div class="composer-footer">
+                    <div class="composer-tools">
+                        <button type="button" class="tool-icon voice-btn"
+                                :class="{'recording': isRecording}"
+                                @click="toggleVoice" title="语音输入" aria-label="语音输入">
+                            <i class="ri-mic-line" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" class="tool-icon image-btn"
+                                :class="{'is-off': !visionEnabled}"
+                                :disabled="loading" :title="imageButtonTitle"
+                                @click="pickImage" aria-label="发送图片">
+                            <i class="ri-image-line" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="composer-send">
+                        <span class="char-count" v-show="inputText.length > 3600"
+                              :class="{ over: inputText.length >= 4000 }">{{ inputText.length }}/4000</span>
+                        <button v-if="!loading" type="button" class="send-btn"
+                                @click="sendMessage()" :disabled="!canSend" aria-label="发送">
+                            <i class="ri-arrow-up-line" aria-hidden="true"></i>
+                        </button>
+                        <button v-else type="button" class="stop-btn"
+                                @click="stopGenerate" aria-label="停止生成">
+                            <i class="ri-stop-fill" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- 原生选文件（隐藏），accept 随上传器白名单走 -->
+            <input ref="imageInput" type="file" class="native-file-input"
+                   :accept="imageAccept" multiple @change="onImagePicked">
+        </div>
+
+        <!-- 消息操作菜单 -->
+        <div class="msg-context-menu" :class="{visible: menuVisible}"
+             :style="{top: menuY + 'px', left: menuX + 'px'}"
+             v-if="menuTarget">
+            <div class="menu-item" @click="copyMenuTarget"><i class="ri-file-copy-line" aria-hidden="true"></i> 复制</div>
+            <div class="menu-item" @click="deleteMenuTarget" v-if="menuTarget.role === 'user'"><i class="ri-delete-bin-6-line" aria-hidden="true"></i> 删除</div>
+            <div class="menu-item menu-cancel" @click="menuVisible = false">取消</div>
+        </div>
+
+        <!-- 图片全屏预览 -->
+        <div class="image-lightbox" v-if="previewImageUrl" @click.self="closeImagePreview">
+            <img :src="previewImageUrl" alt="图片预览">
+            <button type="button" class="lightbox-close" @click="closeImagePreview" aria-label="关闭预览">
+                <i class="ri-close-line" aria-hidden="true"></i>
+            </button>
+        </div>
+        </cend-shell>
+    </div>
+
+    <!-- Scripts -->
+    <!-- 修改点：改为相对路径，与其他C端页面（order/user）保持一致。
+         绝对路径 /backend/... 在子路径部署时会失效，且在 file:// 下无法解析。 -->
+    <script src="../../backend/plugins/vue/vue.js"></script>
+    <script src="../../backend/plugins/axios/axios.min.js"></script>
+    <script src="../js/vant.min.js"></script>
+    <script src="../js/request.js?v=20260930"></script>
+    <!-- 公共聊天内核：POST+SSE 客户端 / 安全 Markdown / 消息工厂（与管理后台同一份） -->
+    <script src="../../backend/js/ai/ai-chat-core.js?v=20260930"></script>
+    <script src="../api/ai.js?v=20260930"></script>
+    <!-- 修复(2026-09-23 P2-3/P2-4)：引入 common.js 提供 goLogin()/imgPath()；
+         须在 vue.js 之后、new Vue 之前，installReggieVueHelpers 才能把 imgPath 注入实例 -->
+    <script src="../js/common.js?v=20260930b"></script>
+    <script src="../js/components-cend.js?v=20260922"></script>
+    <script>
+    (function() {
+        'use strict';
+
+        // ==================== 工具函数 ====================
+        function formatTime(timestamp) {
+            var now = new Date();
+            var date = new Date(timestamp);
+            var diff = now - date;
+            if (diff < 60000) return '刚刚';
+            if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+            if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+            if (diff < 172800000) return '昨天';
+            return (date.getMonth() + 1) + '月' + date.getDate() + '日';
+        }
+
+        /** 未登录跳转（fetch 链路无法走 axios 拦截器）：立即跳登录页，不提示不延迟（2026-09-26） */
+        var notLoginHandled = false;
+        function redirectToLogin() {
+            try { sessionStorage.removeItem('csrfToken'); } catch (e) { /* noop */ }
+            if (notLoginHandled) { return; }
+            notLoginHandled = true;
+            var back = window.location.pathname + window.location.search;
+            window.location.replace('/front/page/login.html?redirect=' + encodeURIComponent(back));
+        }
+
+        // ==================== Vue App ====================
+        new Vue({
+            el: '#ai-app',
+            data: {
+                inputText: '',
+                loading: false,
+
+                /* 智能输入提示（搜索联想模式） */
+                suggestions: [],
+                sugVisible: false,
+                sugActive: -1,
+                sugTimer: null,
+                sugRequestId: 0,
+                sugSuppressed: false,
+
+                messages: [],
+                currentScene: 'order_assistant',
+                scenes: [
+                    { label: '点餐推荐', icon: 'ri-restaurant-2-line', value: 'order_assistant' },
+                    { label: '菜品描述', icon: 'ri-pencil-ruler-2-line', value: 'dish_desc' },
+                    { label: '营销文案', icon: 'ri-megaphone-line', value: 'marketing' }
+                ],
+                quickTipsMap: {
+                    order_assistant: ['我想吃辣的', '推荐清淡的菜', '2个人，预算100', '有什么招牌菜', '适合小孩吃的', '帮我搭配一个套餐'],
+                    dish_desc: ['红烧肉', '麻辣香锅', '清蒸鲈鱼', '宫保鸡丁'],
+                    marketing: ['满减活动文案', '新店开业促销', '会员日专属优惠', '节假日活动方案']
+                },
+                sidebarOpen: false,
+                sidebarLoading: false,
+                conversations: [],
+                currentConversationId: null,
+                currentRequestId: 0,
+                isRecording: false,
+                recognition: null,
+                userInfo: null,
+                userAvatar: '',
+                cartData: [],
+                addressData: null,
+                userProfileTags: [],
+                inputPlaceholder: '告诉小吉你想吃什么...',
+                // 网络状态
+                isOnline: navigator.onLine !== false,
+                // 暗色模式
+                darkModeEnabled: false,
+                // 消息操作菜单
+                menuVisible: false,
+                menuX: 0,
+                menuY: 0,
+                menuTarget: null,
+                // 流式客户端（POST+SSE，支持停止生成）
+                streamClient: null,
+                // 场景配置（来自 /api/ai/scene-config，失败用本地兜底）
+                sceneConfig: { welcome: '', quickQuestions: [] },
+                // 供应商能力（进页面 scene-config 初值，每次 SSE capabilities 事件实时覆盖）
+                capabilities: { chat: true, vision: false, tools: false },
+                // 待发送图片（本地预览 + 上传后附件 VO；发送/切会话时清空并释放 objectURL）
+                pendingAttachments: [],
+                // 图片全屏预览地址
+                previewImageUrl: '',
+                // 触屏设备标记：移动端软键盘回车不拦截发送，避免误触
+                touchDevice: ('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0,
+                // 移动端长按计时器状态（见 onMsgTouchStart）
+                msgPressTimer: null,
+                msgPressT0: 0,
+                _msgPressEndHandler: null,
+                _scrollQueued: false
+            },
+            computed: {
+                currentQuickTips: function() {
+                    if (this.currentScene === 'order_assistant'
+                        && this.sceneConfig.quickQuestions
+                        && this.sceneConfig.quickQuestions.length) {
+                        return this.sceneConfig.quickQuestions;
+                    }
+                    return this.quickTipsMap[this.currentScene] || [];
+                },
+                orderWelcome: function() {
+                    return this.sceneConfig.welcome
+                        || '你好！我是小吉，你的智能点餐助手';
+                },
+                // 当前供应商是否支持视觉（能力开关：不支持时图片入口禁用并提示）
+                visionEnabled: function() {
+                    return !!(this.capabilities && this.capabilities.vision === true);
+                },
+                uploadingCount: function() {
+                    return this.pendingAttachments.filter(function(a) { return !!a.uploading; }).length;
+                },
+                readyAttachments: function() {
+                    return this.pendingAttachments.filter(function(a) { return !a.uploading && a.attachmentId; });
+                },
+                imageAccept: function() {
+                    var core = window.AiChatCore;
+                    return (core && core.AttachmentUploader && core.AttachmentUploader.ACCEPT) || 'image/jpeg,image/png,image/webp';
+                },
+                imageButtonTitle: function() {
+                    if (!this.visionEnabled) return '当前 AI 模型不支持图片';
+                    if (this.pendingAttachments.length >= 3) return '最多发送 3 张图片';
+                    return '发送图片（可粘贴/点选，最多 3 张）';
+                },
+                // 文本或就绪图片其一即可发送；上传中/超长/生成中禁发
+                canSend: function() {
+                    if (this.loading || this.uploadingCount > 0) return false;
+                    var hasText = !!(this.inputText && this.inputText.trim());
+                    var hasImage = this.readyAttachments.length > 0;
+                    return (hasText || hasImage) && this.inputText.length <= 4000;
+                }
+            },
+            watch: {
+                /* 输入联想：输入变化防抖 250ms 拉取候选（抖音搜索 sug 模式） */
+                inputText: function() {
+                    this.scheduleSuggestions();
+                }
+            },
+            created: function() {
+                this.loadUserInfo();
+                this.loadConversations();
+                this.loadUserProfileTags();
+                this.loadCartContext();
+                this.loadAddressContext();
+                this.loadDarkModePreference();
+                if (this.conversations.length === 0) {
+                    this.newConversation(true);
+                } else {
+                    this.switchConversation(this.conversations[0].id);
+                }
+                if (this.userInfo) {
+                    this.syncConversationsFromBackend();
+                    this.loadSceneConfig();
+                }
+                // 监听网络变化
+                var self = this;
+                window.addEventListener('online', function() { self.isOnline = true; });
+                window.addEventListener('offline', function() { self.isOnline = false; });
+            },
+            mounted: function() {
+                // 返回按钮（cend-shell）走 close：先保存会话再回首页
+                var self = this;
+                window.goBack = function(){ self.close(); };
+                this.initVoice();
+                this.scrollToBottom();
+                this._handleEscKey = function(e) {
+                    if (e.key !== 'Escape' && e.key !== 'Esc') return;
+                    if (this.previewImageUrl) {
+                        this.closeImagePreview();
+                        return;
+                    }
+                    if (this.sidebarOpen) {
+                        this.toggleSidebar(false);
+                    }
+                    if (this.menuVisible) {
+                        this.menuVisible = false;
+                    }
+                }.bind(this);
+                document.addEventListener('keydown', this._handleEscKey);
+                // 点击其他地方关闭菜单
+                document.addEventListener('click', function() { this.menuVisible = false; }.bind(this));
+                // 侧边栏手势
+                this.initSwipeGesture();
+            },
+            beforeDestroy: function() {
+                if (this._handleEscKey) document.removeEventListener('keydown', this._handleEscKey);
+                // 修改点：清理长按计时器与取消监听
+                if (this.msgPressTimer) clearTimeout(this.msgPressTimer);
+                if (this._msgPressEndHandler) document.removeEventListener('touchstart', this._msgPressEndHandler);
+                if (this.streamClient) { try { this.streamClient.stop(); } catch (e) { /* noop */ } }
+                // 释放待发送图片的本地 objectURL
+                this.clearPendingAttachments();
+            },
+            methods: {
+                // ==================== 场景配置 ====================
+                loadSceneConfig: function() {
+                    var self = this;
+                    if (typeof aiApi === 'undefined' || !aiApi.getSceneConfig) return;
+                    // C 端仅点餐场景下发配置；员工场景对顾客强制 order_assistant，拉了也无意义
+                    aiApi.getSceneConfig('order_assistant').then(function(res) {
+                        var data = (res && res.code === 1) ? res.data : null;
+                        if (!data) return;
+                        if (data.welcome) self.$set(self.sceneConfig, 'welcome', data.welcome);
+                        if (data.quickQuestions && data.quickQuestions.length) {
+                            self.$set(self.sceneConfig, 'quickQuestions', data.quickQuestions);
+                        }
+                        // 供应商能力（视觉开关）；SSE 首帧还会实时下发覆盖
+                        if (data.capabilities) self.capabilities = data.capabilities;
+                    }).catch(function(e) { console.warn('[ai-assistant] 场景配置加载失败:', e); });
+                },
+
+                // ==================== 网络检测 ====================
+                checkNetwork: function() {
+                    if (!this.isOnline) {
+                        vant.Notify({ type: 'warning', message: '当前处于离线状态，请检查网络', duration: 3000 });
+                        return false;
+                    }
+                    return true;
+                },
+
+                // ==================== 暗色模式 ====================
+                loadDarkModePreference: function() {
+                    try {
+                        var saved = localStorage.getItem('ai_dark_mode');
+                        if (saved === 'true') {
+                            this.darkModeEnabled = true;
+                        } else if (saved === 'false') {
+                            this.darkModeEnabled = false;
+                        } else {
+                            // 跟随系统
+                            this.darkModeEnabled = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                        }
+                    } catch(e) {}
+                },
+                toggleDarkMode: function() {
+                    this.darkModeEnabled = !this.darkModeEnabled;
+                    try { localStorage.setItem('ai_dark_mode', this.darkModeEnabled.toString()); } catch(e) {}
+                },
+
+                // ==================== 侧边栏手势 ====================
+                initSwipeGesture: function() {
+                    var startX = 0, startY = 0, moving = false;
+                    var self = this;
+                    var sidebar = document.querySelector('.conversation-sidebar');
+                    if (!sidebar) return;
+                    sidebar.addEventListener('touchstart', function(e) {
+                        startX = e.touches[0].clientX;
+                        startY = e.touches[0].clientY;
+                        moving = false;
+                    }, { passive: true });
+                    sidebar.addEventListener('touchmove', function(e) {
+                        var dx = e.touches[0].clientX - startX;
+                        var dy = Math.abs(e.touches[0].clientY - startY);
+                        if (dy > 10) return; // 垂直滚动优先
+                        if (Math.abs(dx) > 10) moving = true;
+                        if (moving && dx > 0 && self.sidebarOpen) {
+                            sidebar.style.transform = 'translateX(' + (-sidebar.offsetWidth + dx) + 'px)';
+                        }
+                    }, { passive: true });
+                    sidebar.addEventListener('touchend', function() {
+                        if (moving) {
+                            var sidebarEl = document.querySelector('.conversation-sidebar');
+                            if (sidebarEl) sidebarEl.style.transform = '';
+                            if (self.sidebarOpen) self.toggleSidebar(false);
+                        }
+                    });
+                    // 左边缘滑动唤出
+                    var overlay = document.querySelector('.sidebar-overlay');
+                    if (overlay) {
+                        overlay.addEventListener('touchstart', function(e) {
+                            startX = e.touches[0].clientX;
+                            startY = e.touches[0].clientY;
+                            moving = false;
+                        }, { passive: true });
+                        overlay.addEventListener('touchmove', function(e) {
+                            var dx = e.touches[0].clientX - startX;
+                            if (dx > 30 && !self.sidebarOpen) {
+                                self.toggleSidebar(true);
+                            }
+                        }, { passive: true });
+                    }
+                },
+
+                // ==================== 消息操作菜单 ====================
+                // 修改点：移动端长按无法触发原生 contextmenu，
+                // 改用 touchstart 启动 600ms 计时器，touchend/touchmove 取消。
+                onMsgTouchStart: function(e, msg) {
+                    var self = this;
+                    if (e.touches && e.touches.length > 1) return; // 多指触摸（缩放手势）不处理
+                    if (this.msgPressTimer) clearTimeout(this.msgPressTimer);
+                    this.msgPressT0 = Date.now();
+                    this.msgPressTimer = setTimeout(function() {
+                        self.msgPressTimer = null;
+                        self.showMsgMenuFromTouch(msg, e);
+                    }, 600);
+                },
+                onMsgTouchMove: function() {
+                    if (this.msgPressTimer) { clearTimeout(this.msgPressTimer); this.msgPressTimer = null; }
+                },
+                onMsgTouchEnd: function() {
+                    if (this.msgPressTimer) { clearTimeout(this.msgPressTimer); this.msgPressTimer = null; }
+                },
+                // 由 touchstart 计时器触发（长按成功）；e 为触发长按的触摸事件
+                showMsgMenuFromTouch: function(msg, e) {
+                    var self = this;
+                    this.menuTarget = msg;
+                    this.menuVisible = true;
+                    var touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+                    var x = (touch && touch.clientX) || window.innerWidth / 2;
+                    var y = (touch && touch.clientY) || window.innerHeight / 2;
+                    this.menuX = Math.min(x, window.innerWidth - 160);
+                    this.menuY = Math.min(y, window.innerHeight - 140);
+                    // 延迟设置取消回调，避免本次 touchend 立即关闭菜单
+                    setTimeout(function() {
+                        self.msgPressT0 = Date.now();
+                        self._msgPressEndHandler = function(ev) {
+                            var isMenuTap = ev.target && ev.target.closest && ev.target.closest('.msg-context-menu');
+                            if (isMenuTap) return;
+                            self.menuVisible = false;
+                            document.removeEventListener('touchstart', self._msgPressEndHandler);
+                        };
+                        document.addEventListener('touchstart', self._msgPressEndHandler, { passive: true });
+                    }, 30);
+                },
+                showMsgMenu: function(e, msg) {
+                    // 只在非移动端通过右键触发
+                    if (e.type === 'contextmenu' && e.button !== 2) return;
+                    this.menuTarget = msg;
+                    this.menuVisible = true;
+                    var x = e.clientX || (e.touches && e.touches[0].clientX) || 100;
+                    var y = e.clientY || (e.touches && e.touches[0].clientY) || 100;
+                    this.menuX = Math.min(x, window.innerWidth - 160);
+                    this.menuY = Math.min(y, window.innerHeight - 120);
+                },
+                copyMenuTarget: function() {
+                    if (this.menuTarget) {
+                        this.copyMessage(this.menuTarget);
+                    }
+                    this.menuVisible = false;
+                },
+                // 修改点(2026-09-20)：单条删除同步到后端（新 DELETE 端点 + 失效上下文缓存），
+                // 本地临时会话（未与服务端关联）仅删本地
+                deleteMenuTarget: function() {
+                    if (!this.menuTarget) { this.menuVisible = false; return; }
+                    var self = this;
+                    var msg = this.menuTarget;
+                    var conv = this.getCurrentConversation();
+                    var removeLocal = function() {
+                        var idx = self.messages.indexOf(msg);
+                        if (idx >= 0) self.messages.splice(idx, 1);
+                        self.saveConversations();
+                        self.menuVisible = false;
+                    };
+                    if (msg.dbMessageId && conv && conv.serverBacked) {
+                        aiApi.deleteMessage(conv.id, msg.dbMessageId).then(function(res) {
+                            if (res && res.code === 1) {
+                                removeLocal();
+                            } else {
+                                vant.Notify({ type: 'danger', message: (res && res.msg) || '删除失败' });
+                            }
+                        }).catch(function(e) {
+                            console.warn('[ai-assistant] 删除消息失败:', e);
+                        });
+                    } else {
+                        removeLocal();
+                    }
+                },
+
+                // ==================== 消息复制 ====================
+                copyMessage: function(msg) {
+                    var text = msg.content || '';
+                    if (!text) return;
+                    window.AiChatCore.copyText(text).then(function() {
+                        msg.copied = true;
+                        vant.Notify({ type: 'success', message: '已复制到剪贴板', duration: 1500 });
+                        setTimeout(function() { msg.copied = false; }, 2000);
+                    }).catch(function() {
+                        vant.Notify({ type: 'warning', message: '复制失败，请长按文本手动复制', duration: 2000 });
+                    });
+                },
+
+                // ==================== Markdown 渲染 ====================
+                renderMarkdown: function(content) {
+                    return window.AiChatCore.Markdown.render(content || '');
+                },
+
+                // ==================== 输入框 ====================
+                // 修复 @keydown.enter.exact.prevent 在移动端软键盘上误发送：
+                // 触屏设备回车一律走换行；物理键盘 Enter 发送、Shift+Enter 换行；中文组词期间不拦截
+                onInputKeydown: function(e) {
+                    if (this.touchDevice) return;
+                    // 联想面板键盘导航：↑↓ 选择、Enter 回填、Esc 关闭（优先于发送逻辑）
+                    if (this.sugVisible && this.suggestions.length) {
+                        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            var delta = e.key === 'ArrowDown' ? 1 : -1;
+                            var len = this.suggestions.length;
+                            this.sugActive = (this.sugActive + delta + len) % len;
+                            return;
+                        }
+                        if (e.key === 'Escape') {
+                            e.preventDefault();
+                            this.hideSuggestions();
+                            return;
+                        }
+                        if (e.key === 'Enter' && this.sugActive >= 0 && !e.shiftKey
+                                && !e.isComposing && e.keyCode !== 229) {
+                            e.preventDefault();
+                            this.applySuggestion(this.suggestions[this.sugActive]);
+                            return;
+                        }
+                    }
+                    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                },
+
+                // ==================== 智能输入提示（搜索联想模式） ====================
+
+                /** 输入变化防抖 250ms 拉取联想候选 */
+                scheduleSuggestions: function() {
+                    var self = this;
+                    if (self.sugTimer) clearTimeout(self.sugTimer);
+                    self.sugTimer = setTimeout(function() {
+                        self.fetchSuggestions();
+                    }, 250);
+                },
+
+                fetchSuggestions: function() {
+                    var self = this;
+                    if (self.sugSuppressed) return;
+                    var reqId = ++self.sugRequestId;
+                    aiApi.getInputSuggestions(self.inputText, self.currentScene).then(function(res) {
+                        // 竞态守卫：只采纳最新一次输入的候选
+                        if (reqId !== self.sugRequestId) return;
+                        var data = (res && res.code === 1) ? (res.data || []) : [];
+                        self.suggestions = data;
+                        self.sugActive = -1;
+                        self.sugVisible = data.length > 0;
+                    }).catch(function() {
+                        if (reqId === self.sugRequestId) {
+                            self.suggestions = [];
+                            self.sugVisible = false;
+                        }
+                    });
+                },
+
+                /** 点选候选：回填输入框（不自动发送） */
+                applySuggestion: function(s) {
+                    if (!s || !s.text) return;
+                    this.inputText = s.text;
+                    this.hideSuggestions();
+                    var self = this;
+                    this.$nextTick(function() {
+                        self.autoResizeInput();
+                        if (self.$refs.inputArea) self.$refs.inputArea.focus();
+                    });
+                },
+
+                hideSuggestions: function() {
+                    this.sugVisible = false;
+                    this.sugActive = -1;
+                    if (this.sugTimer) {
+                        clearTimeout(this.sugTimer);
+                        this.sugTimer = null;
+                    }
+                },
+
+                onInputFocus: function() {
+                    this.sugSuppressed = false;
+                    this.scheduleSuggestions();
+                },
+
+                onInputBlur: function() {
+                    // 点选候选经 mousedown/touchend prevent 不会触发 blur；blur 只在其他区域点击时发生
+                    this.hideSuggestions();
+                },
+
+                sugIconClass: function(source) {
+                    var map = {
+                        quick: 'ri-lightbulb-flash-line',
+                        dish: 'ri-restaurant-line',
+                        mine: 'ri-history-line',
+                        hot: 'ri-fire-line'
+                    };
+                    return map[source] || 'ri-chat-smile-2-line';
+                },
+
+                sugSourceLabel: function(source) {
+                    var map = { quick: '快捷', dish: '菜品', mine: '我问过', hot: '热点' };
+                    return map[source] || '';
+                },
+                autoResizeInput: function() {
+                    var el = this.$refs.inputArea;
+                    if (!el) return;
+                    el.style.height = 'auto';
+                    var newHeight = Math.min(el.scrollHeight, 180);
+                    el.style.height = newHeight + 'px';
+                },
+                resetInputHeight: function() {
+                    var el = this.$refs.inputArea;
+                    if (el) el.style.height = 'auto';
+                },
+
+                // ==================== 对话管理 ====================
+                newConversation: function(silent) {
+                    // 用户主动新建（非 silent）时若 AI 仍在流式回复，阻止切换：
+                    // 否则后续 SSE 片段会 push 到新会话造成串台
+                    if (!silent && this.loading) {
+                        vant.Toast('AI 正在回复，请先停止当前生成');
+                        return;
+                    }
+                    var conv = {
+                        id: window.AiChatCore.genId('local'),
+                        title: '',
+                        messages: [],
+                        scene: this.currentScene,
+                        serverBacked: false,
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                        timeText: '刚刚'
+                    };
+                    this.conversations.unshift(conv);
+                    this.currentConversationId = conv.id;
+                    this.messages = [];
+                    // 新会话不带走上个会话未发送的图片/文字
+                    this.clearPendingAttachments();
+                    this.inputText = '';
+                    this.resetInputHeight();
+                    if (!silent) {
+                        this.saveConversations();
+                        this.toggleSidebar(false);
+                    }
+                },
+                switchConversation: function(id) {
+                    if (this.loading) {
+                        vant.Toast('AI 正在回复，请先停止当前生成');
+                        return;
+                    }
+                    var conv = this.conversations.find(function(c) { return c.id === id; });
+                    if (!conv) return;
+                    this.currentConversationId = id;
+                    this.currentScene = conv.scene || 'order_assistant';
+                    this.inputPlaceholder = this.getScenePlaceholder(this.currentScene);
+                    this.messages = conv.messages || [];
+                    // 切换会话清空未发送的图片/文字，避免发错对话
+                    this.clearPendingAttachments();
+                    this.inputText = '';
+                    this.resetInputHeight();
+                    this.toggleSidebar(false);
+                    // 服务端会话：本地无消息时拉取历史（含真实 messageId，可反馈）
+                    if (conv.serverBacked && (!conv.messages || conv.messages.length === 0)) {
+                        this.loadHistoryMessages(conv);
+                    } else {
+                        this.scrollToBottom();
+                    }
+                },
+                loadHistoryMessages: function(conv) {
+                    var self = this;
+                    aiApi.getConversation(conv.id).then(function(res) {
+                        if (self.currentConversationId !== conv.id) return;
+                        var records = (res && res.code === 1) ? res.data : res;
+                        if (!Array.isArray(records)) { self.messages = []; return; }
+                        var mapped = records.map(function(record) {
+                            var msg = window.AiChatCore.MessageFactory.fromRecord(record);
+                            // 后端反馈值 positive/negative → 本地按钮态 good/bad
+                            if (msg.feedback === 'positive') msg.feedback = 'good';
+                            else if (msg.feedback === 'negative') msg.feedback = 'bad';
+                            return msg;
+                        });
+                        conv.messages = mapped;
+                        self.messages = mapped;
+                        self.scrollToBottom();
+                    }).catch(function(e) {
+                        console.warn('[ai-assistant] 加载历史消息失败:', e);
+                        self.messages = [];
+                    });
+                },
+                deleteConversation: function(convOrId) {
+                    var self = this;
+                    var conv = (typeof convOrId === 'object') ? convOrId :
+                        this.conversations.find(function(c) { return c.id === convOrId; });
+                    if (!conv) return;
+                    vant.Dialog.confirm({
+                        title: '删除对话',
+                        message: '确定要删除这个对话吗？此操作不可恢复。'
+                    }).then(function() {
+                        // 仅已落库会话调后端删除；本地临时会话直接清本地
+                        var backendPromise = (conv.serverBacked && typeof aiApi !== 'undefined' && aiApi.deleteConversation)
+                            ? aiApi.deleteConversation(conv.id)
+                            : Promise.resolve({ code: 1 });
+                        return backendPromise.then(function(res) {
+                            if (res && res.code === 1) return true;
+                            throw new Error((res && res.msg) || '删除失败');
+                        });
+                    }).then(function() {
+                        self.conversations = self.conversations.filter(function(c) { return c.id !== conv.id; });
+                        if (self.currentConversationId === conv.id) {
+                            if (self.conversations.length > 0) {
+                                self.switchConversation(self.conversations[0].id);
+                            } else {
+                                self.newConversation(true);
+                            }
+                        }
+                        self.saveConversations();
+                        vant.Toast.success('对话已删除');
+                    }).catch(function(e) {
+                        if (e && e.message) console.warn('[ai-assistant.html] 删除对话失败:', e.message);
+                    });
+                },
+                toggleSidebar: function(force) {
+                    if (typeof force === 'boolean') {
+                        this.sidebarOpen = force;
+                    } else {
+                        this.sidebarOpen = !this.sidebarOpen;
+                    }
+                },
+                saveConversations: function() {
+                    try {
+                        var currentConv = this.getCurrentConversation();
+                        if (currentConv) {
+                            // 持久化前净化：过滤请求进行中 content 仍为空的 streaming 占位气泡，
+                            // 重进页面不会永久残留"思考中"气泡
+                            var cleanMessages = this.messages
+                                .filter(function(m) {
+                                    return !(m.role === 'assistant' && m.streaming === true && !m.content);
+                                })
+                                .map(function(m) {
+                                    var copy = Object.assign({}, m);
+                                    if (copy.streaming === true) copy.streaming = false;
+                                    return copy;
+                                });
+                            currentConv.messages = cleanMessages.slice(0, 100);
+                            currentConv.updatedAt = Date.now();
+                            currentConv.timeText = formatTime(Date.now());
+                            if (currentConv.messages.length > 0) {
+                                var firstUserMsg = currentConv.messages.find(function(m) { return m.role === 'user'; });
+                                if (firstUserMsg) {
+                                    // 纯图片消息无文本，用图片占位文案做会话标题
+                                    currentConv.title = firstUserMsg.content
+                                        ? firstUserMsg.content.substring(0, 30)
+                                        : ((firstUserMsg.attachments && firstUserMsg.attachments.length) ? '[图片]' : '新对话');
+                                }
+                            }
+                        }
+                        localStorage.setItem('ai_conversations', JSON.stringify(this.conversations.slice(0, 50)));
+                    } catch (e) { console.warn('保存对话失败:', e); }
+                },
+                loadConversations: function() {
+                    try {
+                        var raw = localStorage.getItem('ai_conversations');
+                        if (raw) {
+                            var data = JSON.parse(raw);
+                            if (Array.isArray(data)) {
+                                this.conversations = data.slice(0, 50).map(function(c) {
+                                    c.timeText = formatTime(c.updatedAt || c.createdAt || Date.now());
+                                    // 兜底旧版本脏数据：剔除永久残留的"思考中"占位气泡
+                                    if (Array.isArray(c.messages)) {
+                                        c.messages = c.messages.filter(function(m) {
+                                            return !(m.role === 'assistant' && m.streaming === true && !m.content);
+                                        }).map(function(m) {
+                                            if (m.streaming === true) m.streaming = false;
+                                            return m;
+                                        });
+                                    }
+                                    return c;
+                                });
+                            }
+                        }
+                    } catch (e) { this.conversations = []; }
+                },
+                getCurrentConversation: function() {
+                    return this.conversations.find(function(c) { return c.id === this.currentConversationId; }.bind(this));
+                },
+                /** 首轮回复后把本地临时会话绑定到服务端真实 conversationId */
+                bindServerConversation: function(conv, serverCid) {
+                    if (!conv || !serverCid) return;
+                    if (conv.serverBacked) { conv.id = serverCid; this.currentConversationId = serverCid; return; }
+                    conv.serverBacked = true;
+                    conv.id = serverCid;
+                    this.currentConversationId = serverCid;
+                    this.saveConversations();
+                },
+                syncConversationsFromBackend: function() {
+                    var self = this;
+                    if (typeof aiApi === 'undefined' || !aiApi.getConversations) return;
+                    aiApi.getConversations(1, 50).then(function(res) {
+                        var backendList = (res && res.code === 1) ? res.data : res;
+                        if (!Array.isArray(backendList) || backendList.length === 0) return;
+                        backendList.forEach(function(backendConv) {
+                            var localIdx = -1;
+                            for (var i = 0; i < self.conversations.length; i++) {
+                                if (self.conversations[i].id === backendConv.conversationId) { localIdx = i; break; }
+                            }
+                            var conv = {
+                                id: backendConv.conversationId,
+                                title: backendConv.title || '对话',
+                                scene: backendConv.scene || 'order_assistant',
+                                messages: [],
+                                serverBacked: true,
+                                createdAt: backendConv.createTime ? new Date(backendConv.createTime).getTime() : Date.now(),
+                                updatedAt: backendConv.updateTime ? new Date(backendConv.updateTime).getTime() : Date.now(),
+                                timeText: formatTime(backendConv.updateTime || backendConv.createTime || Date.now()),
+                                messageCount: backendConv.messageCount || 0
+                            };
+                            if (localIdx >= 0) {
+                                conv.messages = self.conversations[localIdx].messages || [];
+                                self.conversations.splice(localIdx, 1, conv);
+                            } else {
+                                self.conversations.push(conv);
+                            }
+                        });
+                        self.conversations.sort(function(a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
+                        self.saveConversations();
+                    }).catch(function(e) { console.warn('[ai-assistant.html] 同步后端对话列表失败:', e); });
+                },
+                clearAllConversations: function() {
+                    var self = this;
+                    vant.Dialog.confirm({
+                        title: '清空对话',
+                        message: '确定要清空全部对话记录吗？此操作不可恢复。'
+                    }).then(function() {
+                        // 仅删除已落库会话；本地临时会话随 localStorage 一起清掉
+                        var serverConvs = self.conversations.filter(function(c) { return !!c.serverBacked; });
+                        var backendPromise = (typeof aiApi !== 'undefined' && aiApi.deleteConversation && serverConvs.length > 0)
+                            ? Promise.all(serverConvs.map(function(c) { return aiApi.deleteConversation(c.id); }))
+                            : Promise.resolve([]);
+                        return backendPromise;
+                    }).then(function() {
+                        self.conversations = [];
+                        self.currentConversationId = null;
+                        self.messages = [];
+                        localStorage.removeItem('ai_conversations');
+                        self.newConversation(true);
+                        vant.Toast.success('对话已清空');
+                    }).catch(function(e) { console.warn('[ai-assistant.html] 清空对话失败:', e); });
+                },
+                switchScene: function(scene) {
+                    if (this.currentScene === scene) return;
+                    this.currentScene = scene;
+                    this.saveConversations();
+                    this.newConversation(true);
+                    this.inputPlaceholder = this.getScenePlaceholder(scene);
+                    if (scene === 'order_assistant' && this.userInfo) this.loadSceneConfig();
+                },
+                getScenePlaceholder: function(scene) {
+                    var map = {
+                        order_assistant: '告诉小吉你想吃什么...',
+                        dish_desc: '输入菜名，AI帮你写美食描述...',
+                        marketing: '输入营销需求，例：满减活动文案...'
+                    };
+                    return map[scene] || '输入消息...';
+                },
+
+                // ==================== 用户上下文 ====================
+                loadUserInfo: function() {
+                    try {
+                        var userInfo = sessionStorage.getItem('userInfo') || localStorage.getItem('userInfo');
+                        if (userInfo) {
+                            this.userInfo = JSON.parse(userInfo);
+                            this.userAvatar = this.userInfo.avatar || '';
+                        }
+                        var name = sessionStorage.getItem('userName');
+                        if (name) { this.userInfo = this.userInfo || {}; this.userInfo.name = name; }
+                        var avatar = sessionStorage.getItem('userAvatar');
+                        if (avatar) this.userAvatar = avatar;
+                    } catch (e) {}
+                },
+                loadUserProfileTags: function() {
+                    var self = this;
+                    try {
+                        var cached = localStorage.getItem('ai_profile_tags');
+                        if (cached) { try { self.userProfileTags = JSON.parse(cached); } catch(e) {} }
+                        if (!self.userInfo) return;
+                        if (typeof aiApi !== 'undefined' && aiApi.getProfileSummary) {
+                            aiApi.getProfileSummary().then(function(res) {
+                                var result = (res && res.code === 1) ? res.data : res;
+                                if (result && result.tags && result.tags.length > 0) {
+                                    self.userProfileTags = result.tags.slice(0, 5);
+                                    try { localStorage.setItem('ai_profile_tags', JSON.stringify(self.userProfileTags)); } catch(e) {}
+                                }
+                            }).catch(function(e) { console.warn('[ai-assistant.html] 加载用户画像标签失败:', e); });
+                        }
+                    } catch (e) {}
+                },
+                loadCartContext: function() {
+                    var self = this;
+                    try {
+                        // 未登录不预取：请求会被过滤器判为 NOTLOGIN 并重定向登录页，游客打开 AI 页会被强行跳走
+                        if (!sessionStorage.getItem('userId')) return;
+                        // 从购物车接口拉取最新数据（sessionStorage 里的 cartData 可能过期，导致 AI 上下文把空车当有货）
+                        $axios({ url: '/shopping-cart/list', method: 'get' })
+                            .then(function(res) {
+                                if (res && res.code === 1 && Array.isArray(res.data)) {
+                                    self.cartData = res.data;
+                                    try { sessionStorage.setItem('cartData', JSON.stringify(res.data)); } catch (e) {}
+                                }
+                            })
+                            .catch(function(e) { console.warn('[ai-assistant.html] 刷新购物车上下文失败:', e); });
+                    } catch (e) { console.warn('[ai-assistant.html] 加载购物车上下文异常:', e); }
+                },
+                // 默认地址仅在登录态下预取（未登录调用会被拦截器重定向到登录页）
+                loadAddressContext: function() {
+                    var self = this;
+                    try {
+                        if (!sessionStorage.getItem('userId')) return;
+                        $axios({ url: '/address-book/default', method: 'get' })
+                            .then(function(res) {
+                                if (res && res.code === 1 && res.data) self.addressData = res.data;
+                            })
+                            .catch(function() { /* 无默认地址属正常情况，静默 */ });
+                    } catch (e) { /* noop */ }
+                },
+                // 真实随请求提交的 context（购物车 + 地址摘要 + 脱敏用户信息）
+                buildContext: function() {
+                    var context = {};
+                    if (this.userInfo) {
+                        context.user = { name: this.userInfo.name || '', phone: this.maskPhone(this.userInfo.phone || '') };
+                    }
+                    if (this.cartData && this.cartData.length > 0) {
+                        var totalNumber = this.cartData.reduce(function(sum, item) { return sum + (item.number || 0); }, 0);
+                        context.cart = {
+                            itemKinds: this.cartData.length,
+                            totalNumber: totalNumber,
+                            items: this.cartData.slice(0, 5).map(function(item) {
+                                return { name: item.name, quantity: item.number };
+                            })
+                        };
+                    }
+                    if (this.addressData) {
+                        var addr = this.addressData;
+                        // 结构化地址：统一走 composeAddressText（省市区去重 + 剥离 detail 自带前缀）；旧数据无 districtName 时回退 district
+                        var addrDetail = composeAddressText({
+                            provinceName: addr.provinceName,
+                            cityName: addr.cityName,
+                            districtName: addr.districtName || addr.district,
+                            detail: addr.detail
+                        });
+                        context.address = {
+                            consignee: addr.consignee || '',
+                            detail: addrDetail
+                        };
+                    }
+                    return context;
+                },
+                maskPhone: function(phone) {
+                    if (!phone || phone.length !== 11) return phone || '';
+                    return phone.substring(0, 3) + '****' + phone.substring(7);
+                },
+
+                // ==================== 消息发送（POST + SSE） ====================
+
+                /**
+                 * 发送消息。
+                 * @param {string} [overrideText] 快捷问题/重试时外部传入文本
+                 * @param {Array} [overrideAttachments] 重试时复用原消息附件 VO
+                 */
+                sendMessage: function(overrideText, overrideAttachments) {
+                    if (this.loading) return;
+                    // 修改点(P2-13)：未登录不发起 AI 对话，引导登录（否则无效调用，也无法关联购物车/地址上下文）
+                    // 修复：新标签页本地登录态丢失但 cookie 会话可能仍有效，先静默恢复（userId/userPhone 都会回填）
+                    var self = this;
+                    var sendArgs = arguments;
+                    restoreUserSession().then(function(ok) {
+                        if (!ok) {
+                            vant.Dialog.confirm({
+                                title: '未登录',
+                                message: '请先登录后再与助手对话',
+                                confirmButtonText: '去登录'
+                            }).then(function(){
+                                redirectToLogin();
+                            }).catch(function(e){ console.warn('[ai-assistant.html] 用户取消登录跳转:', e); });
+                            return;
+                        }
+                        self.doSendMessage(sendArgs);
+                    });
+                },
+                doSendMessage: function(sendArgs) {
+                    var hasOverride = sendArgs.length > 0;
+                    var overrideText = sendArgs[0];
+                    var overrideAttachments = sendArgs[1];
+                    var text;
+                    var views;
+                    if (hasOverride) {
+                        text = overrideText != null ? String(overrideText).trim() : '';
+                        views = this.normalizeAttachments(overrideAttachments);
+                    } else {
+                        text = this.inputText.trim();
+                        if (this.uploadingCount > 0) {
+                            vant.Notify({ type: 'warning', message: '图片正在上传，请稍候', duration: 2000 });
+                            return;
+                        }
+                        views = this.normalizeAttachments(this.readyAttachments);
+                    }
+                    // 纯图片消息允许无文本；超长拦截
+                    if ((!text && !views.length) || this.inputText.length > 4000) return;
+                    // 网络检测
+                    if (!this.checkNetwork()) return;
+
+                    // 后台静默刷新购物车（本轮使用已加载数据，下一轮生效）
+                    this.loadCartContext();
+
+                    var userMsg = window.AiChatCore.MessageFactory.createUserMessage(
+                        text, { attachments: views.length ? views : null });
+                    var aiMsg = window.AiChatCore.MessageFactory.createAssistantMessage();
+                    this.messages.push(userMsg);
+                    this.messages.push(aiMsg);
+
+                    if (!hasOverride) {
+                        this.clearPendingAttachments();
+                        // 发送后抑制联想面板（重新聚焦输入框时恢复）
+                        this.sugSuppressed = true;
+                        this.hideSuggestions();
+                        this.inputText = '';
+                        this.resetInputHeight();
+                    }
+                    this.loading = true;
+                    this.scrollToBottom();
+
+                    this.runStream(userMsg, aiMsg, {
+                        regenerate: false,
+                        fallbackUsed: false,
+                        text: text,
+                        attachments: views
+                    });
+                },
+
+                /** 规整附件参数：只保留含 attachmentId 的后端 VO 形态（防前端伪造字段） */
+                normalizeAttachments: function(list) {
+                    var out = [];
+                    if (!list || !list.length) return out;
+                    list.forEach(function(a) {
+                        if (a && a.attachmentId) {
+                            out.push({
+                                attachmentId: a.attachmentId,
+                                type: a.type || 'image',
+                                mime: a.mime || '',
+                                url: a.url,
+                                width: a.width || null,
+                                height: a.height || null,
+                                fileSize: a.fileSize || null
+                            });
+                        }
+                    });
+                    return out;
+                },
+
+                /**
+                 * 发起 POST 流式请求（AiChatCore.ChatClient 内部 fetch + ReadableStream）
+                 */
+                runStream: function(userMsg, aiMsg, opts) {
+                    var self = this;
+                    this.currentRequestId++;
+                    var requestId = this.currentRequestId;
+                    var conv = this.getCurrentConversation();
+                    var serverCid = (conv && conv.serverBacked) ? conv.id : null;
+
+                    var body = { scene: this.currentScene };
+                    if (serverCid) body.conversationId = serverCid;
+                    if (opts.regenerate) {
+                        body.regenerate = true;
+                    } else {
+                        body.message = userMsg.content;
+                        body.clientMsgId = userMsg.clientMsgId;
+                        if (opts.attachments && opts.attachments.length) {
+                            body.attachments = opts.attachments.map(function(a) {
+                                return String(a.attachmentId);
+                            });
+                        }
+                        var ctx = this.buildContext();
+                        if (Object.keys(ctx).length > 0) body.context = ctx;
+                    }
+
+                    var client = new window.AiChatCore.ChatClient();
+                    this.streamClient = client;
+                    client.stream({
+                        url: aiApi.streamUrl,
+                        body: body,
+                        onCapabilities: function(caps) {
+                            if (requestId !== self.currentRequestId) return;
+                            // SSE 实时能力优先于进页面时的 scene-config（商家刚改配置也能立即生效）
+                            if (caps) self.capabilities = caps;
+                        },
+                        onToken: function(token) {
+                            if (requestId !== self.currentRequestId) return;
+                            aiMsg.content += token;
+                            self.scheduleScroll();
+                        },
+                        onDishes: function(dishes) {
+                            if (requestId !== self.currentRequestId) return;
+                            aiMsg.dishes = dishes;
+                        },
+                        onTool: function(tool) {
+                            // P4 经营数据工具调用状态：{name,label,status:running|done|error,summary}
+                            if (requestId !== self.currentRequestId || !tool || !tool.name) return;
+                            self.applyToolEvent(aiMsg, tool);
+                        },
+                        onDone: function(data) {
+                            if (requestId !== self.currentRequestId) return;
+                            if (data.messageId) aiMsg.dbMessageId = data.messageId;
+                            if (data.conversationId) self.bindServerConversation(conv, data.conversationId);
+                            self.finishTurn(aiMsg, { stopped: data.stopped === true });
+                        },
+                        onAbort: function() {
+                            if (requestId !== self.currentRequestId) return;
+                            // 用户主动停止：保留已生成片段（服务端同步以 stopped 落库）
+                            self.finishTurn(aiMsg, { stopped: true });
+                        },
+                        onError: function(message, info) {
+                            if (requestId !== self.currentRequestId) return;
+                            info = info || {};
+                            if (info.notLogin) {
+                                aiMsg.streaming = false;
+                                self.loading = false;
+                                self.streamClient = null;
+                                redirectToLogin();
+                                return;
+                            }
+                            // 网络失败且尚无内容：自动降级一次非流式接口
+                            if (!opts.regenerate && !opts.fallbackUsed && info.network && !aiMsg.content) {
+                                opts.fallbackUsed = true;
+                                self.fallbackNonStream(userMsg, aiMsg, serverCid, opts.attachments);
+                                return;
+                            }
+                            aiMsg.streaming = false;
+                            aiMsg.error = true;
+                            aiMsg.retryData = opts.regenerate
+                                ? { regenerate: true }
+                                : {
+                                    message: userMsg ? userMsg.content : '',
+                                    attachments: opts.attachments || null
+                                };
+                            if (!aiMsg.content) aiMsg.content = message || '抱歉，请求失败，请重试。';
+                            self.loading = false;
+                            self.streamClient = null;
+                            self.scrollToBottom();
+                            self.saveConversations();
+                        },
+                        onComplete: function() {
+                            // 服务端未发 done 即断流的兜底：有内容正常收尾，无内容标错显示重试
+                            if (requestId !== self.currentRequestId) return;
+                            if (aiMsg.streaming) {
+                                self.finishTurn(aiMsg, { stopped: !aiMsg.content });
+                            }
+                        }
+                    });
+                },
+
+                /** P4 工具事件按 name 合并到状态条（running→done/error 保留同一条） */
+                applyToolEvent: function(aiMsg, tool) {
+                    if (!aiMsg.tools) this.$set(aiMsg, 'tools', []);
+                    var hit = null;
+                    for (var i = 0; i < aiMsg.tools.length; i++) {
+                        if (aiMsg.tools[i].name === tool.name) { hit = aiMsg.tools[i]; break; }
+                    }
+                    if (!hit) {
+                        hit = { name: tool.name, label: tool.label || tool.name, status: tool.status, summary: tool.summary || '' };
+                        aiMsg.tools.push(hit);
+                    } else {
+                        this.$set(hit, 'status', tool.status);
+                        if (tool.label) this.$set(hit, 'label', tool.label);
+                        if (tool.summary) this.$set(hit, 'summary', tool.summary);
+                    }
+                    this.scheduleScroll();
+                },
+
+                /** 工具状态 → RemixIcon 类名 */
+                toolStatusIcon: function(status) {
+                    if (status === 'done') return 'ri-checkbox-circle-line';
+                    if (status === 'error') return 'ri-error-warning-line';
+                    return 'ri-loader-4-line ai-tool-spin';
+                },
+
+                /** 流式不可用时的非流式降级（点餐走 order-assistant，其余走通用 chat；附件随降级通道透传） */
+                fallbackNonStream: function(userMsg, aiMsg, serverCid, attachments) {
+                    var self = this;
+                    var text = userMsg.content;
+                    var attachmentIds = [];
+                    (attachments || []).forEach(function(a) {
+                        if (a && a.attachmentId) attachmentIds.push(String(a.attachmentId));
+                    });
+                    var promise = (this.currentScene === 'order_assistant')
+                        ? aiApi.orderAssistant(text, null, serverCid, attachmentIds)
+                        : aiApi.chat(text, this.currentScene, serverCid, attachmentIds);
+                    promise.then(function(res) {
+                        var payload = (res && res.code === 1) ? res.data : null;
+                        if (!payload) { throw new Error((res && res.msg) || '服务异常'); }
+                        aiMsg.content = payload.content || '抱歉，我没理解您的意思，换个说法试试？';
+                        aiMsg.dishes = (self.currentScene === 'order_assistant' && payload.dishes) ? payload.dishes : [];
+                        var meta = payload.data || {};
+                        var conv = self.getCurrentConversation();
+                        if (meta.conversationId) self.bindServerConversation(conv, meta.conversationId);
+                        self.finishTurn(aiMsg, { stopped: false });
+                    }).catch(function(e) {
+                        console.warn('[ai-assistant] 非流式降级失败:', e);
+                        aiMsg.content = '抱歉，请求失败，请重试。';
+                        aiMsg.streaming = false;
+                        aiMsg.error = true;
+                        aiMsg.retryData = { message: text, attachments: attachments || null };
+                        self.loading = false;
+                        self.streamClient = null;
+                        self.scrollToBottom();
+                        self.saveConversations();
+                    });
+                },
+
+                /** 用户点击停止 */
+                stopGenerate: function() {
+                    if (this.streamClient) {
+                        try { this.streamClient.stop(); } catch (e) { /* noop */ }
+                    }
+                },
+
+                // ==================== 图片附件（P2 视觉多模态） ====================
+
+                /** 点击图片按钮：无视觉能力给明确提示，否则打开文件选择 */
+                pickImage: function() {
+                    if (this.loading) return;
+                    if (!this.visionEnabled) {
+                        vant.Notify({ type: 'warning', message: '当前 AI 模型不支持图片', duration: 2000 });
+                        return;
+                    }
+                    if (this.pendingAttachments.length >= 3) {
+                        vant.Notify({ type: 'warning', message: '每条消息最多发送 3 张图片', duration: 2000 });
+                        return;
+                    }
+                    var input = this.$refs.imageInput;
+                    if (input) { input.value = ''; input.click(); }
+                },
+
+                /** 文件选择回调（多选，逐张校验+压缩+上传） */
+                onImagePicked: function(e) {
+                    var files = e.target && e.target.files;
+                    if (files && files.length) this.addImageFiles(files);
+                },
+
+                /** textarea 粘贴图片（截图/复制图片直接粘贴） */
+                onPasteImage: function(e) {
+                    if (!this.visionEnabled || !e.clipboardData) return;
+                    var items = e.clipboardData.items;
+                    if (!items) return;
+                    var imageFiles = [];
+                    for (var i = 0; i < items.length; i++) {
+                        if (items[i].kind === 'file' && items[i].type.indexOf('image/') === 0) {
+                            var f = items[i].getAsFile();
+                            if (f) imageFiles.push(f);
+                        }
+                    }
+                    if (imageFiles.length) {
+                        e.preventDefault();
+                        this.addImageFiles(imageFiles);
+                    }
+                },
+
+                /**
+                 * 批量加入图片：数量控制 → 本地预览占位 → 压缩上传 → 成功合并后端权威 VO。
+                 * 上传期间不阻断继续输入；发送按钮等待全部上传完成。
+                 */
+                addImageFiles: function(fileList) {
+                    var self = this;
+                    var uploader = window.AiChatCore.AttachmentUploader;
+                    var files = Array.prototype.slice.call(fileList);
+                    files.forEach(function(file) {
+                        if (self.pendingAttachments.length >= uploader.MAX_IMAGES) {
+                            vant.Notify({ type: 'warning', message: '每条消息最多发送 ' + uploader.MAX_IMAGES + ' 张图片', duration: 2000 });
+                            return;
+                        }
+                        var check = uploader.validateFile(file);
+                        if (!check.ok) {
+                            vant.Notify({ type: 'warning', message: check.message, duration: 2500 });
+                            return;
+                        }
+                        var item = {
+                            uid: window.AiChatCore.genId('att'),
+                            localUrl: window.URL ? window.URL.createObjectURL(file) : '',
+                            url: '',
+                            uploading: true
+                        };
+                        self.pendingAttachments.push(item);
+                        uploader.upload(file, self.currentScene).then(function(vo) {
+                            // 合并后端权威 VO，保留本地预览地址直到消息发出
+                            Object.keys(vo).forEach(function(k) {
+                                self.$set(item, k, vo[k]);
+                            });
+                            self.$set(item, 'uploading', false);
+                        }).catch(function(err) {
+                            if (err && err.notLogin) {
+                                redirectToLogin();
+                                return;
+                            }
+                            vant.Notify({ type: 'danger', message: (err && err.message) || '图片上传失败', duration: 2500 });
+                            self.removePendingItem(item);
+                        });
+                    });
+                },
+
+                removePendingImage: function(idx) {
+                    var item = this.pendingAttachments[idx];
+                    this.pendingAttachments.splice(idx, 1);
+                    this.revokeLocalUrl(item);
+                },
+
+                /** 上传失败按对象移除（索引可能已变化） */
+                removePendingItem: function(item) {
+                    var idx = this.pendingAttachments.indexOf(item);
+                    if (idx >= 0) this.pendingAttachments.splice(idx, 1);
+                    this.revokeLocalUrl(item);
+                },
+
+                /** 发送/切换会话时清空全部待发图片并释放本地预览 URL */
+                clearPendingAttachments: function() {
+                    if (this.pendingAttachments && this.pendingAttachments.length) {
+                        this.pendingAttachments.forEach(this.revokeLocalUrl);
+                    }
+                    this.pendingAttachments = [];
+                },
+
+                revokeLocalUrl: function(item) {
+                    if (item && item.localUrl && window.URL) {
+                        try { window.URL.revokeObjectURL(item.localUrl); } catch (e) { /* noop */ }
+                    }
+                },
+
+                /** 点击聊天图片：自建 lightbox 放大（鉴权图同域带 cookie，可直接显示） */
+                openImagePreview: function(e, url) {
+                    e.preventDefault();
+                    this.previewImageUrl = url;
+                },
+
+                closeImagePreview: function() {
+                    this.previewImageUrl = '';
+                },
+
+                /** 统一收尾 AI 占位消息 */
+                finishTurn: function(aiMsg, opts) {
+                    opts = opts || {};
+                    aiMsg.streaming = false;
+                    aiMsg.stopped = !!opts.stopped;
+                    this.loading = false;
+                    this.streamClient = null;
+                    var conv = this.getCurrentConversation();
+                    if (conv) {
+                        conv.updatedAt = Date.now();
+                        conv.timeText = formatTime(Date.now());
+                    }
+                    this.scrollToBottom();
+                    this.saveConversations();
+                },
+
+                // ==================== 重试 / 重生成 / 复制 ====================
+                /** 错误气泡重试：原文重发或重新生成 */
+                retryMessage: function(msg) {
+                    if (!msg.retryData) return;
+                    var idx = this.messages.indexOf(msg);
+                    if (msg.retryData.regenerate) {
+                        if (idx >= 0) this.messages.splice(idx, 1);
+                        var aiMsg = window.AiChatCore.MessageFactory.createAssistantMessage();
+                        this.messages.push(aiMsg);
+                        this.loading = true;
+                        this.scrollToBottom();
+                        this.runStream(null, aiMsg, { regenerate: true, fallbackUsed: false });
+                        return;
+                    }
+                    var text = msg.retryData.message;
+                    var views = this.normalizeAttachments(msg.retryData.attachments);
+                    // 删除失败 AI 消息与其用户消息，用原文/原图重新发送（新 clientMsgId 走幂等）
+                    if (idx > 0) this.messages.splice(idx - 1, 2);
+                    this.sendMessage(text || '', views);
+                },
+                canRegenerate: function(msg) {
+                    if (this.loading) return false;
+                    var conv = this.getCurrentConversation();
+                    if (!conv || !conv.serverBacked) return false;
+                    return this.messages[this.messages.length - 1] === msg
+                        && msg.role === 'assistant' && !!msg.content;
+                },
+                /** 重新生成最后一条回复（服务端重放最后一条用户消息） */
+                regenerateMessage: function(msg) {
+                    if (this.loading || !this.canRegenerate(msg)) return;
+                    var idx = this.messages.indexOf(msg);
+                    this.messages.splice(idx, 1);
+                    var aiMsg = window.AiChatCore.MessageFactory.createAssistantMessage();
+                    this.messages.push(aiMsg);
+                    this.loading = true;
+                    this.scrollToBottom();
+                    this.runStream(null, aiMsg, { regenerate: true, fallbackUsed: false });
+                },
+                sendQuickTip: function(tip) {
+                    if (this.loading) return;
+                    // 参数式发送，避免带上输入区里尚未发送的图片
+                    this.sendMessage(tip);
+                },
+
+                // ==================== 推荐菜品 ====================
+                addToCart: function(dish) {
+                    var self = this;
+                    var dishId = dish.dishId || dish.id || 0;
+                    if (!dishId) {
+                        vant.Notify({ type: 'warning', message: '菜品信息不完整' });
+                        return;
+                    }
+                    if (!sessionStorage.getItem('userId')) {
+                        vant.Dialog.confirm({
+                            title: '未登录',
+                            message: '请先登录后再添加购物车',
+                            confirmButtonText: '去登录'
+                        }).then(function() {
+                            goLogin();
+                        }).catch(function(e) { console.warn('[ai-assistant.html] 用户取消登录跳转:', e); });
+                        return;
+                    }
+                    // 在飞防重：同一菜品请求未返回前连点只发一次，避免购物车重复加多行
+                    if (!self._cartLoadingMap) self._cartLoadingMap = {};
+                    if (self._cartLoadingMap[dishId]) return;
+                    self._cartLoadingMap[dishId] = true;
+                    // 真实加购：AI 推荐仅提供菜品（dishId），userId/价格由服务端从登录态与菜品表绑定，防篡改
+                    var payload = {
+                        dishId: dishId,
+                        name: dish.name,
+                        image: dish.image || '',
+                        amount: dish.price ? Number(dish.price) : 0,
+                        number: 1
+                    };
+                    $axios({ url: '/shopping-cart/add', method: 'post', data: payload })
+                        .then(function(res) {
+                            if (res && res.code === 1) {
+                                // 成功提示可点击直达结算页，补齐 AI 加购后的转化出口
+                                var cartNotify = vant.Notify({
+                                    type: 'success',
+                                    message: '已添加「' + dish.name + '」到购物车，点击去结算',
+                                    duration: 2500,
+                                    onClick: function() {
+                                        cartNotify.close();
+                                        window.location.href = '/front/page/add-order.html';
+                                    }
+                                });
+                            } else {
+                                vant.Notify({ type: 'warning', message: (res && res.msg) || '添加失败' });
+                            }
+                        })
+                        .catch(function(e) {
+                            console.warn('[ai-assistant.html] 加购失败:', e);
+                            vant.Notify({ type: 'danger', message: '加购失败，请稍后重试' });
+                        })
+                        .finally(function() {
+                            self._cartLoadingMap[dishId] = false;
+                        });
+                },
+
+                // ==================== 反馈 ====================
+                sendFeedback: function(msg, type) {
+                    if (!msg.dbMessageId) return;
+                    var self = this;
+                    var prev = msg.feedback;
+                    msg.feedback = type;
+                    try {
+                        if (typeof aiApi !== 'undefined' && aiApi.recordFeedback) {
+                            aiApi.recordFeedback({
+                                // 使用 done 事件回填的真实 messageId（原前端临时 id 后端无法关联）
+                                messageId: msg.dbMessageId,
+                                // 后端校验只接受 positive/negative（UI 本地状态用 good/bad）
+                                feedbackType: type === 'good' ? 'positive' : 'negative',
+                                scene: this.currentScene
+                            }).catch(function(e) {
+                                // 乐观更新失败回滚，避免本地状态与后端永久不一致
+                                msg.feedback = prev;
+                                self.saveConversations();
+                                console.warn('[ai-assistant] recordFeedback 失败:', e);
+                            });
+                        }
+                    } catch (e) { console.warn('[ai-assistant] recordFeedback 异常:', e); }
+                    this.saveConversations();
+                },
+
+                // ==================== 语音输入 ====================
+                initVoice: function() {
+                    var self = this;
+                    try {
+                        var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                        if (!SR) return;
+                        this.recognition = new SR();
+                        this.recognition.lang = 'zh-CN';
+                        this.recognition.interimResults = false;
+                        this.recognition.maxAlternatives = 1;
+                        this.recognition.onresult = function(event) {
+                            self.inputText = event.results[0][0].transcript;
+                            self.isRecording = false;
+                        };
+                        this.recognition.onerror = function(event) {
+                            self.isRecording = false;
+                            if (event.error === 'not-allowed') vant.Notify({ type: 'warning', message: '请允许麦克风权限' });
+                        };
+                        this.recognition.onend = function() { self.isRecording = false; };
+                    } catch (e) { console.warn('语音初始化失败:', e); }
+                },
+                toggleVoice: function() {
+                    if (!this.recognition) {
+                        vant.Notify({ type: 'warning', message: '您的浏览器不支持语音输入' });
+                        return;
+                    }
+                    if (this.isRecording) {
+                        try { this.recognition.stop(); } catch (e) { console.warn('语音停止异常:', e); }
+                        this.isRecording = false;
+                    } else {
+                        // start() 为异步且可能抛 InvalidStateError（连点/上一次未结束），try-catch 防卡态
+                        try {
+                            this.recognition.start();
+                            this.isRecording = true;
+                            vant.Notify({ type: 'success', message: '请说话...', duration: 2000 });
+                        } catch (e) {
+                            console.warn('语音启动异常:', e);
+                            this.isRecording = false;
+                            vant.Notify({ type: 'warning', message: '语音启动中，请稍候再试' });
+                        }
+                    }
+                },
+
+                // ==================== 工具方法 ====================
+                scheduleScroll: function() {
+                    var self = this;
+                    if (this._scrollQueued) return;
+                    this._scrollQueued = true;
+                    var raf = window.requestAnimationFrame || function(cb) { return setTimeout(cb, 60); };
+                    raf(function() {
+                        self._scrollQueued = false;
+                        self.scrollToBottom();
+                    });
+                },
+                scrollToBottom: function() {
+                    var self = this;
+                    this.$nextTick(function() {
+                        var el = self.$refs.chatArea;
+                        if (el) el.scrollTop = el.scrollHeight;
+                    });
+                },
+                imgError: function(e) {
+                    if (e.target.src.indexOf('/front/images/noImg.png') >= 0) return;
+                    e.target.src = '/front/images/noImg.png';
+                },
+                close: function() {
+                    this.saveConversations();
+                    window.location.replace('/front/index.html');
+                }
+            }
+        });
+    })();
+    </script>
+</body>
+</html>

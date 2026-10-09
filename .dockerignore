@@ -1,0 +1,22 @@
+# 构建上下文瘦身：只保留 pom.xml 与 src/
+.git
+.gitignore
+.gitattributes
+.idea
+.vscode
+.codebuddy
+target
+node_modules
+logs
+uploads
+tests
+tools
+scripts
+docs
+design-review
+deliverables
+db
+docker
+*.md
+Dockerfile
+docker-compose.yml

@@ -1,0 +1,79 @@
+package com.reggie.module.printer.service.impl;
+
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import org.springframework.transaction.annotation.Transactional;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.transaction.annotation.Transactional;
+import com.reggie.common.utils.PageUtils;
+import org.springframework.transaction.annotation.Transactional;
+import com.reggie.module.printer.mapper.PrintTaskMapper;
+import org.springframework.transaction.annotation.Transactional;
+import com.reggie.module.printer.model.PrintTask;
+import org.springframework.transaction.annotation.Transactional;
+import com.reggie.module.printer.service.PrintTaskService;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.Arrays;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.HashMap;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.Map;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * 打印任务服务实现（管理端任务查询 / 统计）
+ *
+ * <p>统计走自定义 {@code @InterceptorIgnore(tenantLine = "true")} 的 countBy，
+ * 支持门店员工（tenantId 非空）与总部超管（tenantId 为空=跨门店全部）两种视角。</p>
+ *
+ * @author AI
+ * @since 2026-08-30
+ */
+@Service
+@Transactional(rollbackFor = Exception.class)
+public class PrintTaskServiceImpl extends ServiceImpl<PrintTaskMapper, PrintTask> implements PrintTaskService {
+
+    /**
+     * 处理 stat tasks。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
+    @Override
+    public Map<String, Object> statTasks(Long tenantId) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime today = now.toLocalDate().atStartOfDay();
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalTasks", getBaseMapper().countBy(tenantId, false, today, null));
+        result.put("todayTotal", getBaseMapper().countBy(tenantId, true, today, null));
+        result.put("todaySuccess", getBaseMapper().countBy(tenantId, true, today,
+                Arrays.asList(PrintTask.STATUS_SUCCESS)));
+        result.put("todayFailed", getBaseMapper().countBy(tenantId, true, today,
+                Arrays.asList(PrintTask.STATUS_FAILED)));
+        result.put("pending", getBaseMapper().countBy(tenantId, false, today,
+                Arrays.asList(PrintTask.STATUS_PENDING, PrintTask.STATUS_PULLED)));
+        return result;
+    }
+
+    /**
+     * 分页查询 query。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param tenantId 参数 tenantId
+     * @param orderId 参数 orderId
+     * @param taskType 参数 taskType
+     * @param status 参数 status
+     * @param beginTime 参数 beginTime
+     * @param endTime 参数 endTime
+     * @return 返回结果
+     */
+    @Override
+    public IPage<PrintTask> pageQuery(int page, int pageSize, Long tenantId, Long orderId, String taskType,
+                                      String status, LocalDateTime beginTime, LocalDateTime endTime) {
+        return getBaseMapper().listPage(PageUtils.of(page, pageSize), tenantId, orderId, taskType,
+                status, beginTime, endTime);
+    }
+}

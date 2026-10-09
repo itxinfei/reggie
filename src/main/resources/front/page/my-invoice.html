@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>我的发票 - 瑞吉外卖</title>
+  <link rel="icon" href="./../images/favico.ico">
+  <script src="./../js/base.js?v=20260930"></script>
+  <link rel="stylesheet" href="../styles/vant.min.css"/>
+  <link rel="stylesheet" href="../styles/index.css?v=20260930b" />
+  <link rel="stylesheet" href="../styles/skeleton.css?v=20260930" />
+  <link rel="stylesheet" href="../styles/my-invoice.css?v=20260930" />
+  <!-- 加载 remixicon 图标库 -->
+  <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+  <script src="./../js/icon-fallback.js?v=20260917"></script>
+</head>
+<body class="scrollable-page">
+  <div id="invoice-list-app">
+    <cend-shell title="我的发票" light :show-back="true">
+    <!-- 修改点：骨架屏替代 loading 遮罩 -->
+    <div v-if="loading" class="skeleton-container">
+      <!-- 发票卡片骨架 -->
+      <div class="skeleton-inv-card" v-for="i in 3" :key="'si'+i">
+        <div class="skeleton-inv-header">
+          <div class="skeleton-line skeleton-w50"></div>
+          <div class="skeleton-tag"></div>
+        </div>
+        <div class="skeleton-inv-row">
+          <div class="skeleton-line skeleton-w30"></div>
+          <div class="skeleton-line skeleton-w40"></div>
+        </div>
+        <div class="skeleton-inv-row">
+          <div class="skeleton-line skeleton-w30"></div>
+          <div class="skeleton-line skeleton-w50"></div>
+        </div>
+        <div class="skeleton-inv-row">
+          <div class="skeleton-line skeleton-w30"></div>
+          <div class="skeleton-line skeleton-w40"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2026-09-26 头部收敛到 cend-shell，旧 .divHead 已移除 -->
+
+    <!-- 发票记录列表 -->
+    <!-- 修改点：van-pull-refresh 包裹列表实现下拉刷新 -->
+    <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
+    <div class="inv-list" v-if="records.length > 0">
+      <div v-for="item in records" :key="item.id" class="inv-card" @click="goInvoice(item)">
+        <div class="card-head">
+          <span class="title-name">{{ item.title || '未填写抬头' }}</span>
+          <van-tag :class="'inv-status-tag inv-status-' + item.status" size="medium">{{ statusText(item.status) }}</van-tag>
+        </div>
+        <div class="row">
+          <span class="label">订单号</span>
+          <span class="mono">{{ item.orderNo || '--' }}</span>
+        </div>
+        <div class="row">
+          <span class="label">申请时间</span>
+          <span>{{ fmtTime(item.applyTime) }}</span>
+        </div>
+        <div class="row">
+          <span class="label">开票金额</span>
+          <span class="price">¥{{ Number(item.amount || 0).toFixed(2) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 加载失败错误态：与"暂无数据"区分，避免网络失败被误读成没有发票 -->
+    <div class="empty-state" v-else-if="loadError">
+      <i class="ri-wifi-line"></i>
+      <p class="empty-text">加载失败，请稍后重试</p>
+      <button class="empty-action" @click="loadData">重新加载</button>
+    </div>
+
+    <!-- 空状态：三段式（图标+主标题+引导副文案+操作按钮） -->
+    <div class="empty-state" v-else-if="!loading">
+      <i class="ri-file-text-line"></i>
+      <p class="empty-text">暂无发票记录</p>
+      <p class="empty-sub">下单后可在此开具发票</p>
+      <button class="empty-action" @click="goHome">去点餐</button>
+    </div>
+    </van-pull-refresh>
+
+    <!-- 分页 -->
+    <van-pagination
+        v-if="total > pageSize"
+        v-model="page"
+        :total-items="total"
+        :items-per-page="pageSize"
+        @change="onPageChange"
+        class="pagination-wrap"
+    ></van-pagination>
+    </cend-shell>
+  </div>
+
+  <script src="../../backend/plugins/vue/vue.js"></script>
+  <script src="./../js/vant.min.js"></script>
+  <script src="../../backend/plugins/axios/axios.min.js"></script>
+  <script src="./../js/request.js?v=20260930"></script>
+  <script src="./../api/main.js?v=20260917"></script>
+  <script src="./../js/common.js?v=20260930b"></script>
+  <script src="./../js/components-cend.js?v=20260922"></script>
+  <script src="./../api/invoice.js?v=20260917"></script>
+  <script>
+    new Vue({
+      el: '#invoice-list-app',
+      data: function() {
+        return {
+          loading: false,
+          refreshing: false,
+          loadError: false,
+          records: [],
+          total: 0,
+          page: 1,
+          pageSize: 10
+        }
+      },
+      created: function() {
+        // 未登录前置拦截：重定向登录页并携带回跳地址
+        // 修复：新标签页本地登录态丢失但 cookie 会话可能仍有效，先静默恢复
+        var self = this
+        restoreUserSession().then(function(ok) {
+          if (!ok) {
+            window.location.href = '/front/page/login.html?redirect='
+              + encodeURIComponent(window.location.pathname + window.location.search);
+            return
+          }
+          self.loadData()
+        })
+      },
+      methods: {
+        // 修改点：下拉刷新（refreshing 由 loadData.finally 复位）
+        onRefresh: function(){
+          this.page = 1
+          this.loadData()
+        },
+        loadData: function() {
+          var self = this
+          this.loading = true
+          this.loadError = false
+          invoiceMyPageApi({ page: this.page, pageSize: this.pageSize }).then(function(res) {
+            if (res.code === 1) {
+              self.records = (res.data && res.data.records) || []
+              self.total = (res.data && res.data.total) || 0
+            } else {
+              self.loadError = true
+              vant.Toast.fail(res.msg || '加载发票记录失败')
+            }
+          }).catch(function(err) {
+            if (err.message !== 'NOTLOGIN') {
+              self.loadError = true
+              vant.Toast.fail('加载发票记录失败')
+            }
+          }).finally(function() {
+            self.loading = false
+            // 修改点：下拉刷新与实际加载同步
+            self.refreshing = false
+          })
+        },
+        onPageChange: function(p) {
+          this.page = p
+          this.loadData()
+          // 修改点(2026-09-18)：换页后回到列表顶部，否则视口停留在底部分页器，看不到新页首条
+          window.scrollTo(0, 0)
+        },
+        // 状态文案
+        statusText: function(s) {
+          if (s == 0) return '待申请'
+          if (s == 1) return '已申请，待开具'
+          if (s == 2) return '已开具'
+          if (s == 3) return '已作废'
+          return '未知'
+        },
+        // 状态标签颜色：改由 CSS 按 .inv-status-{status} 类驱动（走 --tag/状态令牌），此处仅保留文案
+        // 时间格式化（兼容后端 LocalDateTime 的 ISO 带 T 格式）
+        fmtTime: function(val) {
+          if (!val) return '-'
+          var s = String(val)
+          return s.indexOf('T') > -1 ? s.replace('T', ' ').substring(0, 19) : s
+        },
+        // 跳转到对应订单的发票详情（携带订单号/金额，供开发票页回显）
+        goInvoice: function(item) {
+          var qs = 'orderId=' + encodeURIComponent(item.orderId || '')
+              + '&orderNo=' + encodeURIComponent(item.orderNo || '')
+              + '&amount=' + encodeURIComponent(item.amount != null ? item.amount : '')
+          window.requestAnimationFrame(function() {
+            window.location.href = '/front/page/invoice.html?' + qs
+          })
+        },
+        goHome: function() {
+          window.requestAnimationFrame(function() {
+            window.location.href = '/front/index.html'
+          })
+        },
+        goBack: function() {
+          if (window.history.length > 1) {
+            history.go(-1)
+          } else {
+            window.location.href = '/front/page/user.html'
+          }
+        }
+      }
+    })
+  </script>
+</body>
+</html>

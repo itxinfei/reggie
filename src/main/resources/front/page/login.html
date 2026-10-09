@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+        <title>登录 - 瑞吉外卖</title>
+        <link rel="icon" href="./../images/favico.ico">
+        <script src="./../js/base.js?v=20260930"></script>
+        <link rel="stylesheet" href="../styles/vant.min.css"/>
+        <!-- 修改点：本地图标替代CDN remixicon，零外部依赖 -->
+        <!-- 修改点：加载 RemixIcon 真字体（emoji 兜底改由 js/icon-fallback.js 按需注入） -->
+        <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+        <script src="../js/icon-fallback.js?v=20260917"></script>
+        <link rel="stylesheet" href="../styles/index.css?v=20260930b" />
+        <link rel="stylesheet" href="../styles/skeleton.css?v=20260930" />
+        <link rel="stylesheet" href="./../styles/login.css?v=20260930" />
+    </head>
+    <body class="login-page">
+        <div id="login">
+            <!-- 修改点：ElementUI v-loading 替换为纯CSS loading -->
+            <div v-if="loading" class="loading-overlay">
+                <div class="loading-spinner"></div>
+            </div>
+            <!-- 修改点(2026-09-24)：完全参考美团 H5 登录页布局重构 —— 白底极简、顶部小 logo、
+                 大标题左对齐、无边框大号输入行（底部细分割线）、金色胶囊登录按钮。
+                 颜色不变（品牌金体系），仅调整布局与样式结构；全部 Vue 逻辑与协议弹窗保留 -->
+            <!-- 修改点(2026-09-26)：金色渐变氛围头图改版 —— 上半屏品牌金 hero（logo+品牌名+标语），
+                 下半屏白色圆角卡片浮起承载表单；Vue 逻辑、校验、协议弹窗全部不变 -->
+            <div class="loginHero">
+                <!-- 修改点(2026-09-26 二轮·方案A)：装饰层——漂浮光环 + 金色星点 + 底部波浪过渡（均为纯装饰，aria-hidden） -->
+                <span class="hero-ring ring-a" aria-hidden="true"></span>
+                <span class="hero-ring ring-b" aria-hidden="true"></span>
+                <i class="hero-spark sp1" aria-hidden="true"></i>
+                <i class="hero-spark sp2" aria-hidden="true"></i>
+                <i class="hero-spark sp3" aria-hidden="true"></i>
+                <i class="hero-spark sp4" aria-hidden="true"></i>
+                <div class="brandArea">
+                    <div class="brandIcon">
+                    <!-- 修改点(2026-09-24 四轮)：删除硬编码 width/height（尺寸统一由 CSS 控制），
+                         补充 role="img" + aria-label 供屏幕阅读器识别 -->
+                    <svg viewBox="0 0 72 72" role="img" aria-label="瑞吉外卖 logo">
+                        <!-- 碗体 -->
+                        <ellipse class="logo-bowl" cx="36" cy="38" rx="28" ry="22"/>
+                        <!-- 碗口 -->
+                        <rect class="logo-rim" x="8" y="16" width="56" height="4" rx="2"/>
+                        <!-- 米饭 -->
+                        <ellipse class="logo-rice" cx="36" cy="18" rx="24" ry="8"/>
+                        <ellipse class="logo-highlight" cx="30" cy="16" rx="10" ry="5" opacity="0.6"/>
+                        <ellipse class="logo-highlight" cx="42" cy="15" rx="8" ry="4" opacity="0.4"/>
+                        <!-- 碗底阴影 -->
+                        <ellipse class="logo-shadow" cx="36" cy="58" rx="22" ry="4"/>
+                    </svg>
+                </div>
+                <div class="brandName">瑞吉外卖</div>
+                <div class="brandSlogan">美味，如期而至</div>
+                </div>
+                <!-- 底部波浪：金色头图向白色表单卡片的柔和过渡（纯装饰） -->
+                <svg class="hero-wave" viewBox="0 0 375 36" preserveAspectRatio="none" aria-hidden="true">
+                    <path d="M0,22 C80,36 160,36 230,24 C290,14 340,16 375,8 L375,36 L0,36 Z" fill="#ffffff"/>
+                </svg>
+            </div>
+
+            <div class="loginFormCard">
+            <!-- 美团式大标题：左对齐、大字号、无卡片包裹 -->
+            <div class="loginHeading">手机号登录</div>
+            <div class="loginSubHeading">未注册的手机号验证后将自动创建账号</div>
+
+            <!-- 表单区：去卡片化，输入行无边框、底部细分割线（美团式） -->
+            <div class="divContainer">
+                <div class="inputItem">
+                    <!-- 修改点：新增校验状态class：valid/error，实时视觉反馈 -->
+                    <div class="input-wrapper" :class="{ 'is-valid': phoneValid, 'is-error': phoneError }">
+                        <input type="tel" class="code-input" placeholder="请输入手机号码" v-model="form.phone" maxlength="11" ref="phoneInput" @input="onPhoneInput">
+                        <i v-if="phoneValid" class="validIcon ri-check-line"></i>
+                    </div>
+                    <!-- 修改点：行内校验提示，不占布局空间 -->
+                    <div class="inputHint" v-if="phoneError">请输入正确的11位手机号码</div>
+                </div>
+                <div class="inputItem codeItem">
+                    <!-- 修改点：el-input 替换为原生input；获取验证码按钮移入同一行内右侧 -->
+                    <div class="input-wrapper">
+                        <input type="text" class="code-input" placeholder="请输入验证码" v-model="form.code"
+                               maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code"
+                               @input="form.code = form.code.replace(/\D/g, '')">
+                        <span class="codeBtn"
+                              @click='getCode'
+                              :class="{codeDisabled: countdown > 0 || sending}">
+                            {{ countdown > 0 ? countdown + 's后重发' : (sending ? '发送中…' : '获取验证码') }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 错误提示 -->
+            <div class="divMsg" v-if="msgFlag">手机号输入不正确，请重新输入</div>
+
+            <!-- 登录按钮 -->
+            <!-- 修改点：增加协议勾选校验 -->
+            <!-- 修改点：el-button 替换为原生button -->
+            <button
+                :class="['btnLogin', canLogin ? 'btnActive' : 'btnDisabled']"
+                @click="btnLogin"
+                :disabled="loading">
+                {{ loading ? '登录中...' : '登录' }}
+            </button>
+
+            <!-- 修改点：整行可点击切换勾选，不限于小圆点 -->
+            <!-- 修改点(2026-09-24 四轮)：可访问性 —— 勾选框补 role="checkbox" + aria-checked，
+                 协议链接补 role="button"，屏幕阅读器可识别状态与可点性 -->
+            <div class="agreementRow" @click="toggleAgreement">
+                <label class="agreementCheckbox" @click.stop="toggleAgreement">
+                    <span class="checkIcon" :class="{checked: agreed}"
+                          role="checkbox" :aria-checked="agreed ? 'true' : 'false'" aria-label="同意用户协议与隐私政策">
+                        <span v-if="agreed" class="check-mark">✓</span>
+                    </span>
+                </label>
+                <span class="agreementText">
+                    同意
+                    <span class="agreementLink" role="button" @click.stop="showAgreement('user')">《用户协议》</span>
+                    和
+                    <span class="agreementLink" role="button" @click.stop="showAgreement('privacy')">《隐私政策》</span>
+                </span>
+            </div>
+            </div><!-- /loginFormCard -->
+
+            <!-- 修改点：用户协议弹窗——el-dialog 替换为纯CSS模态框 -->
+            <!-- 修改点(2026-09-17)：可访问性——自定义协议弹窗补充 dialog 语义与 ESC 关闭 -->
+            <div v-if="dialogVisible" class="agreementModal" role="dialog" aria-modal="true"
+                 :aria-label="dialogTitle || '用户协议'" tabindex="-1" @keydown.esc="dialogVisible = false">
+                <div class="agreementDialog">
+                    <div class="modal-header">
+                        <h3 class="modal-title">{{ dialogTitle }}</h3>
+                        <span class="modal-close" @click="dialogVisible = false">✕</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="agreementContent">
+                    <h3 v-if="dialogType === 'user'">瑞吉外卖用户服务协议</h3>
+                    <h3 v-else>瑞吉外卖隐私政策</h3>
+                    <p class="updateDate">更新日期：2026年07月01日</p>
+                    <p class="updateDate">生效日期：2026年07月01日</p>
+
+                    <template v-if="dialogType === 'user'">
+                        <div class="policySection">
+                            <h4>一、总则</h4>
+                            <p>1.1 欢迎使用瑞吉外卖平台（以下简称"本平台"）。本协议是您与瑞吉外卖平台之间关于使用本平台服务所订立的协议。</p>
+                            <p>1.2 您在使用本平台服务前，请务必仔细阅读并充分理解本协议各条款内容。当您勾选"已阅读并同意"并完成登录后，即视为您已阅读并同意接受本协议的全部内容。</p>
+                            <p>1.3 本平台有权根据需要不时修订本协议，修订后的协议将通过平台公告的方式通知您。若您不同意修订内容，应立即停止使用本平台服务。</p>
+                        </div>
+                        <div class="policySection">
+                            <h4>二、服务内容</h4>
+                            <p>2.1 本平台通过互联网为您提供在线点餐、外卖配送及相关信息服务。</p>
+                            <p>2.2 您理解并同意，本平台仅提供信息撮合服务，实际餐饮服务由入驻商家提供，配送服务由合作配送员完成。</p>
+                            <p>2.3 本平台保留随时变更、中断或终止部分或全部服务的权利，且无需事先通知。</p>
+                        </div>
+                        <div class="policySection">
+                            <h4>三、用户账号</h4>
+                            <p>3.1 您通过手机号码注册并使用本平台，您应当对使用该手机号所进行的一切行为负责。</p>
+                            <p>3.2 您应妥善保管验证码等登录凭证，不得将其提供给任何第三方使用。因您保管不善导致的任何损失由您自行承担。</p>
+                            <p>3.3 如发现任何未经授权使用您账号的情况，应立即通知本平台。</p>
+                        </div>
+                        <div class="policySection">
+                            <h4>四、用户行为规范</h4>
+                            <p>4.1 您在使用本平台服务时应遵守国家法律法规，不得利用本平台从事违法违规活动。</p>
+                            <p>4.2 您不得以任何方式干扰本平台的正常运营，包括但不限于：利用技术手段恶意下单、刷单、发起虚假投诉等。</p>
+                            <p>4.3 对于违反上述规定的用户，本平台有权采取警告、限制功能、暂停或终止服务等措施。</p>
+                        </div>
+                        <div class="policySection">
+                            <h4>五、订单与支付</h4>
+                            <p>5.1 您在本平台下单后，订单即告成立。商家接单前您可以取消订单，商家接单后取消规则以订单页面提示为准。</p>
+                            <p>5.2 本平台支持多种支付方式，您选择支付方式后应按照页面提示完成支付。</p>
+                            <p>5.3 如因商品缺货、商家休业等原因导致订单无法履行，本平台将及时通知您并协助退款。</p>
+                        </div>
+                        <div class="policySection">
+                            <h4>六、免责声明</h4>
+                            <p>6.1 本平台不对因不可抗力、系统维护、网络故障等原因造成的服务中断承担责任。</p>
+                            <p>6.2 本平台不对商家提供的餐品质量、配送时效等做任何明示或默示的保证。</p>
+                        </div>
+                        <div class="policySection">
+                            <h4>七、其他</h4>
+                            <p>7.1 本协议的解释、效力及争议解决，均适用中华人民共和国法律。</p>
+                            <p>7.2 如本协议任何条款被认定为无效或不可执行，不影响其余条款的效力。</p>
+                            <p>7.3 如您对本协议有任何疑问，请联系客服：400-8820-888。</p>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <div class="policySection">
+                            <h4>一、信息收集</h4>
+                            <p>1.1 为向您提供优质的外卖服务，我们会在您使用本平台时收集以下信息：</p>
+                            <p>（1）账号信息：手机号码、账号ID，用于注册登录与身份识别；</p>
+                            <p>（2）位置信息：收货地址及大致位置，用于配送服务；</p>
+                            <p>（3）订单信息：点餐记录、支付信息，用于订单履约与售后服务；</p>
+                            <p>（4）设备信息：设备型号、操作系统版本、IP地址，用于保障账户安全。</p>
+                        </div>
+                        <div class="policySection">
+                            <h4>二、信息使用</h4>
+                            <p>2.1 我们收集的信息将用于以下用途：</p>
+                            <p>（1）为您提供点餐、支付、配送等核心服务；</p>
+                            <p>（2）优化服务质量，包括个性化推荐与用户体验改进；</p>
+                            <p>（3）保障交易安全，防范欺诈与风险控制；</p>
+                            <p>（4）根据法律法规要求进行合规处理。</p>
+                            <p>2.2 我们不会将您的个人信息出售或共享给第三方，但以下情形除外：您明确同意、法律法规要求、为完成配送服务需要将地址提供给配送员。</p>
+                        </div>
+                        <div class="policySection">
+                            <h4>三、信息存储与保护</h4>
+                            <p>3.1 您的个人信息存储于中国境内，我们采取加密传输、访问控制、数据备份等措施保障信息安全。</p>
+                            <p>3.2 我们仅在实现服务目的所必需的最短期限内保留您的个人信息，法律法规另有规定的除外。</p>
+                            <p>3.3 如发生个人信息安全事件，我们将依法及时告知您并采取补救措施。</p>
+                        </div>
+                        <div class="policySection">
+                            <h4>四、您的权利</h4>
+                            <p>4.1 您有权查阅、更正、删除您的个人信息。您可以在App内"个人中心"自行管理，或联系客服协助处理。</p>
+                            <p>4.2 您有权撤回已同意的授权，撤回后我们将停止处理相应的个人信息。</p>
+                            <p>4.3 您有权注销账号，注销后您的个人信息将被删除或匿名化处理。</p>
+                        </div>
+                        <div class="policySection">
+                            <h4>五、Cookie及同类技术</h4>
+                            <p>5.1 我们使用Cookie和本地存储技术来提升您的使用体验，如记住登录状态、保存搜索历史等。</p>
+                            <p>5.2 您可以通过浏览器设置管理或禁用Cookie，但这可能影响部分功能的使用。</p>
+                        </div>
+                        <div class="policySection">
+                            <h4>六、未成年人保护</h4>
+                            <p>6.1 本平台主要面向成年人。未满18周岁的用户应在监护人指导下使用本平台。</p>
+                            <p>6.2 如我们发现无意中收集了未成年人的个人信息，将及时删除。</p>
+                        </div>
+                        <div class="policySection">
+                            <h4>七、政策更新</h4>
+                            <p>7.1 我们可能会适时更新本隐私政策。重大变更将通过平台公告或弹窗方式通知您。</p>
+                            <p>7.2 如您对本隐私政策有任何疑问，请联系客服：400-8820-888。</p>
+                        </div>
+                    </template>
+                </div>
+                    </div>
+                    <div class="modal-footer">
+                        <!-- 修改点：el-button 替换为原生button -->
+                        <button class="dialogConfirmBtn" @click="dialogVisible = false">我知道了</button>
+                    </div>
+                </div>
+                <div class="modal-overlay" @click="dialogVisible = false"></div>
+            </div>
+        </div>
+
+        <script src="../../backend/plugins/vue/vue.js"></script>
+        <script src="./../js/vant.min.js"></script>
+        <script src="../../backend/plugins/axios/axios.min.js"></script>
+        <script src="./../js/request.js?v=20260930"></script>
+        <script src="./../api/login.js?v=20260917"></script>
+        <script>
+        new Vue({
+            el:"#login",
+            data(){
+                return {
+                    form:{
+                        phone:'',
+                        code:''
+                    },
+                    msgFlag:false,
+                    loading:false,
+                    countdown:0,
+                    // 修改点(2026-09-18)：验证码请求在飞期间防连点（countdown 仅在成功后启动，存在空窗）
+                    sending:false,
+                    countdownTimer:null,
+                    // 修改点：新增协议勾选状态
+                    agreed: false,
+                    // 修改点：新增协议弹窗相关数据
+                    dialogVisible: false,
+                    dialogTitle: '',
+                    dialogType: '', // 'user' | 'privacy'
+                    // 修改点：追踪用户是否已操作过手机号输入框，控制行内校验提示时机
+                    phoneTouched: false
+                }
+            },
+            computed:{
+                // 修改点：登录按钮可用条件：手机号+验证码+同意协议
+                // 修改点(2026-09-17 UX)：验证码增加 6 位数字格式校验
+                canLogin(){
+                    return this.phoneValid && /^\d{6}$/.test(this.form.code) && this.agreed
+                },
+                // 修改点：手机号格式校验（实时，用于绿色勾显隐）
+                phoneValid(){
+                    const regex = /^1[3-9]\d{9}$/;
+                    return regex.test(this.form.phone)
+                },
+                // 修改点：仅当用户操作过且格式不对时显示行内错误
+                phoneError(){
+                    return this.phoneTouched && this.form.phone.length >= 11 && !this.phoneValid
+                }
+            },
+            created(){},
+            mounted(){
+                // 修改点：自动聚焦手机号输入框（ref方式替代el-input__inner选择器）
+                this.$nextTick(() => {
+                    if (this.$refs.phoneInput) this.$refs.phoneInput.focus()
+                })
+                // 倒计时按手机号分别持久化（见 syncCountdownForPhone）：
+                // 页面刚打开时手机号为空，不恢复全局倒计时，避免锁住另一个号码的发码按钮
+            },
+            beforeDestroy(){
+                if(this.countdownTimer){
+                    clearInterval(this.countdownTimer);
+                    this.countdownTimer = null;
+                }
+            },
+            methods:{
+                // 修改点：手机号输入时清除错误提示、标记已操作
+                onPhoneInput(){
+                    this.msgFlag = false
+                    if(!this.phoneTouched) this.phoneTouched = true
+                    // 手机号变化：按该号码自己的 deadline 恢复/解除倒计时
+                    this.syncCountdownForPhone()
+                },
+                // 倒计时按手机号隔离：各号码 60s 防刷间隔独立，A 号的倒计时不再锁住 B 号的发码按钮
+                deadlineKey: function(phone){ return 'smsCodeDeadline_' + phone },
+                syncCountdownForPhone: function(){
+                    var phone = this.form.phone || ''
+                    var deadline = 0
+                    try {
+                        var raw = sessionStorage.getItem(this.deadlineKey(phone))
+                        if(raw) deadline = Number(raw)
+                    } catch(e) {}
+                    if(deadline > Date.now()){
+                        this.startCountdown(deadline, this.deadlineKey(phone))
+                    } else {
+                        if(this.countdownTimer){ clearInterval(this.countdownTimer); this.countdownTimer = null }
+                        this.countdown = 0
+                        if(deadline){
+                            try { sessionStorage.removeItem(this.deadlineKey(phone)) } catch(e) {}
+                        }
+                    }
+                },
+                // 修改点(2026-09-17 UX)：按截止时间戳驱动倒计时（支持刷新页面后恢复剩余秒数）
+                startCountdown(deadline, storageKey){
+                    var self = this
+                    var tick = function(){
+                        var left = Math.ceil((deadline - Date.now()) / 1000)
+                        if(left <= 0){
+                            self.countdown = 0
+                            if(self.countdownTimer){ clearInterval(self.countdownTimer); self.countdownTimer = null }
+                            if(storageKey){
+                                try { sessionStorage.removeItem(storageKey) } catch(e) {}
+                            }
+                        } else {
+                            self.countdown = left
+                        }
+                    }
+                    tick()
+                    if(this.countdownTimer){ clearInterval(this.countdownTimer) }
+                    this.countdownTimer = setInterval(tick, 1000)
+                },
+                // 修改点：等待API响应后再倒计时，避免请求失败仍倒计时
+                async getCode(){
+                    this.phoneTouched = true
+                    const regex = /^1[3-9]\d{9}$/;
+                    if (!regex.test(this.form.phone)) {
+                        this.msgFlag = true
+                        return
+                    }
+                    // 修改点(2026-09-17 UX)：清空已输入验证码移到手机号校验通过之后，
+                    // 避免手机号非法时用户已输入的验证码被无谓清空
+                    this.form.code = ''
+                    this.msgFlag = false
+                    // 修改点(2026-09-18)：请求在飞期间直接拦截连点，避免弱网下重复触发短信（后端虽有频控，前端也应即时禁用）
+                    if (this.countdown > 0 || this.sending) return;
+                    this.sending = true
+                    try {
+                        const res = await sendMsgApi({phone: this.form.phone})
+                        if(res.code === 1){
+                            // 倒计时截止时间戳按手机号持久化 sessionStorage：
+                            // 刷新后重新输入同一手机号可恢复剩余秒数，换手机号不受其倒计时限制
+                            var deadline = Date.now() + 60 * 1000
+                            var dKey = this.deadlineKey(this.form.phone)
+                            try { sessionStorage.setItem(dKey, String(deadline)) } catch(e) {}
+                            this.startCountdown(deadline, dKey)
+                        } else {
+                            vant.Notify({ type:'warning', message: res.msg || '验证码发送失败'});
+                        }
+                    } catch(e) {
+                        // 网络异常提示已由 request.js 拦截器统一 Notify，此处不重复弹
+                        console.warn('[login] 验证码发送异常:', e)
+                    } finally {
+                        this.sending = false
+                    }
+                },
+                // 修改点：完善登录逻辑 — 错误提示、存储用户完整信息、加载态
+                async btnLogin(){
+                    if(!this.form.phone){
+                        vant.Notify({ type:'warning', message:'请输入手机号码'});
+                        return
+                    }
+                    if(!this.form.code){
+                        vant.Notify({ type:'warning', message:'请输入验证码'});
+                        return
+                    }
+                    // 修改点：增加协议同意校验
+                    if(!this.agreed){
+                        vant.Notify({ type:'warning', message:'请先阅读并同意用户协议与隐私政策'});
+                        return
+                    }
+                    if(this.loading) return;
+                    this.loading = true
+                    try {
+                        const res = await loginApi(this.form)
+                        if(res.code === 1){
+                            // 修改点：存储用户信息，用于首页和个人中心数据展示
+                            // 无条件覆盖全部字段，防止旧数据残留
+                            sessionStorage.setItem("userPhone", this.form.phone)
+                            if(res.data){
+                                sessionStorage.setItem("userId", res.data.id || '')
+                                sessionStorage.setItem("userAvatar", res.data.avatar || '')
+                                sessionStorage.setItem("userName", res.data.name || '')
+                            }
+                            window.requestAnimationFrame(()=>{
+                                // 修改点(2026-09-18)：支持登录后回跳来源页（?redirect=），
+                                // 从受保护页被 401 踢来登录后不再固定回首页、丢失原操作意图
+                                var target = ''
+                                var m = location.search.match(/[?&]redirect=([^&]+)/)
+                                if (m) { try { target = decodeURIComponent(m[1]) } catch(e) { target = '' } }
+                                // 仅允许站内绝对路径（单斜杠开头、非协议相对 //、不含反斜杠），防开放重定向
+                                if (target.charAt(0) === '/' && target.charAt(1) !== '/' && target.indexOf('\\') === -1) {
+                                    window.location.href = target
+                                } else {
+                                    window.location.href = '/front/index.html'
+                                }
+                            })
+                        }else{
+                            vant.Notify({ type:'warning', message:res.msg || '登录失败'});
+                        }
+                    } catch(e) {
+                        // 网络异常提示已由 request.js 拦截器统一 Notify，不重复弹
+                        console.warn('[login] 登录异常:', e)
+                    } finally {
+                        this.loading = false
+                    }
+                },
+                // 修改点：切换协议勾选状态
+                toggleAgreement(){
+                    this.agreed = !this.agreed
+                },
+                // 修改点：打开协议弹窗
+                showAgreement(type){
+                    this.dialogType = type
+                    this.dialogTitle = type === 'user' ? '用户协议' : '隐私政策'
+                    this.dialogVisible = true
+                }
+            }
+        })
+    </script>
+</body>
+</html>

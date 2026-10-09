@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>菜品成本管理 - 瑞吉外卖管理端</title>
+
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <!-- ==================== 菜品成本管理 ==================== -->
+  <!-- 功能说明：核算单菜品的食材/人工/其他成本与售价，计算毛利率，支持新增/编辑/删除 -->
+  <style>
+    /* ===== 毛利率等级样式（高>=30%/中>=10%/低<10%） ===== */
+    .profit-rate {
+      font-weight: 600;
+    }
+    .profit-rate.high {
+      color: var(--el-color-success);
+    }
+    .profit-rate.medium {
+      color: var(--el-color-warning);
+    }
+    .profit-rate.low {
+      color: var(--el-color-danger);
+    }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div id="app" class="dashboard-container">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+    <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
+    <h1 class="sr-only" id="page-title">菜品成本管理</h1>
+    <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
+    <table-bar
+      :search-items="searchItems"
+      :actions="tableActions"
+      :loading="loading"
+      :show-refresh="true"
+      @search="handleSearch"
+      @reset="handleReset"
+      @action="handleAction"
+      @refresh="fetchData()">
+    </table-bar>
+
+    <!-- 数据表格：菜品名称/各项成本/售价/毛利率/备注 -->
+    <crud-table
+        :data="filteredTableData"
+        :columns="columns"
+        :loading="loading"
+        :show-pagination="false"
+        :show-actions="true" :viewable="true"
+        :actions-width="120"
+        :batch-delete="doBatchDelete"
+        @batch-deleted="fetchData()"
+        border
+        stripe
+        aria-label="数据表格">
+        <template #col-profitRate="{ row }">
+          <span class="profit-rate" :class="getProfitRateClass(row.profitRate)">
+            {{ row.profitRate }}%
+          </span>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="handleEdit(row)">编辑</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </crud-table>
+
+    <!-- 新增/编辑弹窗：选择菜品后自动带出BOM成本，手动填写人工/其他成本与售价 -->
+    <crud-dialog :show-submit="true" :show-cancel="true" :title="dialogTitle" :visible.sync="dialogVisible" size="lg" @submit="handleSubmit">
+      <el-form :model="formData" :rules="formRules" ref="costForm" label-width="100px">
+        <!-- 双列栅格：大屏两列、小屏单列（CLAUDE.md 7.2 场景C）；菜品远程搜索独占一行，备注跨全宽 -->
+        <el-form-item label="菜品" prop="dishId">
+          <el-select
+            v-model="formData.dishId"
+            filterable
+            remote
+            :remote-method="searchDishes"
+            :loading="dishLoading"
+            placeholder="请选择菜品"
+            @change="handleDishChange"
+            style="width: 100%;">
+            <el-option
+              v-for="item in dishOptions"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id">
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="食材成本" prop="materialCost">
+              <el-input-number v-model="formData.materialCost" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="人工成本" prop="laborCost">
+              <el-input-number v-model="formData.laborCost" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="其他成本" prop="otherCost">
+              <el-input-number v-model="formData.otherCost" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="售价" prop="salePrice">
+              <el-input-number v-model="formData.salePrice" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="备注">
+          <el-input v-model="formData.remark" type="textarea" :rows="3" placeholder="请输入备注"></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- 修改点：批量导入弹窗 -->
+    <crud-dialog
+      :visible.sync="importDialogVisible"
+      title="批量导入菜品成本"
+      size="lg"
+      :show-submit="true"
+      submit-text="导入"
+      :submit-loading="importLoading"
+      @submit="submitImport"
+    >
+      <el-alert type="info" :closable="false" style="margin-bottom:16px;">
+        <div slot="title">
+          粘贴 CSV 格式数据，第一行为表头。支持列名：<b>菜品名称, 食材成本, 人工成本, 其他成本, 售价, 备注</b>
+          <br/>示例：<code>菜品名称,食材成本,人工成本,其他成本,售价,备注</code>
+        </div>
+      </el-alert>
+      <el-input type="textarea" v-model="importCsvText" :rows="12" placeholder="菜品名称,食材成本,人工成本,其他成本,售价,备注&#10;宫保鸡丁,8.50,2.00,1.00,28.00,&#10;鱼香肉丝,7.00,2.00,0.50,25.00,热销"></el-input>
+    </crud-dialog>
+
+    </main>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/common.js?v=20260926"></script>
+  <script src="../../api/cost.js?v=20260926"></script>
+  <script src="../../api/food.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          loading: false,
+          searchName: '',
+          // 修改点：<table-bar> 统一组件配置
+          searchItems: [
+            { type: 'input', field: 'dishName', placeholder: '请输入菜品名称', width: '200px' }
+          ],
+          tableActions: [
+            { key: 'sync', text: '从采购价同步', type: 'warning', icon: 'ri-refresh-line' },
+            { key: 'add', text: '新增菜品成本', type: 'primary', icon: 'ri-add-line' },
+            { key: 'import', text: '批量导入', type: 'info', icon: 'ri-upload-2-line' }
+          ],
+          tableData: [],
+          columns: [
+            { prop: 'dishName', label: '菜品名称', width: 160, align: 'center' },
+            { prop: 'materialCost', label: '食材成本', width: 110, align: 'center', type: 'money' },
+            { prop: 'laborCost', label: '人工成本', width: 110, align: 'center', type: 'money' },
+            { prop: 'otherCost', label: '其他成本', width: 110, align: 'center', type: 'money' },
+            { prop: 'totalCost', label: '总成本', width: 110, align: 'center', type: 'money' },
+            { prop: 'salePrice', label: '售价', width: 110, align: 'center', type: 'money' },
+            { prop: 'profitRate', label: '毛利率', width: 100, align: 'center', slot: 'col-profitRate' },
+            { prop: 'remark', label: '备注', minWidth: 180, align: 'center' }
+          ],
+          dialogVisible: false,
+          dialogTitle: '新增菜品成本',
+          submitLoading: false,
+          formData: {
+            id: null,
+            dishId: null,
+            dishName: '',
+            materialCost: 0,
+            laborCost: 0,
+            otherCost: 0,
+            salePrice: 0,
+            remark: ''
+          },
+          formRules: {
+            dishId: [{ required: true, message: '请选择菜品', trigger: 'change' }],
+            materialCost: [{ required: true, message: '请输入食材成本', trigger: 'blur' }],
+            salePrice: [{ required: true, message: '请输入售价', trigger: 'blur' }]
+          },
+          dishOptions: [],
+          dishLoading: false,
+          syncLoading: false,
+          // 修改点：批量导入
+          importDialogVisible: false,
+          importCsvText: '',
+          importLoading: false
+        }
+      },
+      computed: {
+        filteredTableData() {
+          if (!this.searchName) {
+            return this.tableData
+          }
+          return this.tableData.filter(item => 
+            item.dishName && item.dishName.includes(this.searchName)
+          )
+        }
+      },
+      created() {
+        this.fetchData()
+      },
+      methods: {
+        // ========== 辅助方法 ==========
+        formatMoney(value) {
+          if (!value && value !== 0) return '0.00'
+          return Number(value).toFixed(2)
+        },
+        getProfitRateClass(rate) {
+          if (rate >= 30) return 'high'
+          if (rate >= 10) return 'medium'
+          return 'low'
+        },
+        // ========== 数据加载 ==========
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '菜品成本', request: deleteDishCost })
+        },
+        async fetchData() {
+          this.loading = true
+          try {
+            const res = await getDishCostList()
+            if (res.code === 1) {
+              this.tableData = res.data || []
+            }
+          } catch (err) {
+            ReggieUI.error('获取数据失败')
+          } finally {
+            this.loading = false
+          }
+        },
+        resetSearch() {
+          this.searchName = ''
+          this.fetchData()
+        },
+        // 修改点：<table-bar> 组件回调桥接
+        handleSearch(params) {
+          this.searchName = (params && params.dishName) || ''
+          this.fetchData()
+        },
+        handleReset() {
+          this.searchName = ''
+          this.fetchData()
+        },
+        handleAction(action) {
+          if (action.key === 'add') {
+            this.handleAdd()
+          } else if (action.key === 'sync') {
+            this.handleSyncFromPurchase()
+          } else if (action.key === 'import') {
+            this.importCsvText = ''
+            this.importDialogVisible = true
+          }
+        },
+        // ========== 批量导入 ==========
+        parseCsvToRows(csvText) {
+          var lines = csvText.trim().split(/\r?\n/);
+          if (lines.length < 2) return [];
+          var header = lines[0].split(',').map(function(h) { return h.trim(); });
+          var rows = [];
+          for (var i = 1; i < lines.length; i++) {
+            var cols = lines[i].split(',').map(function(c) { return c.trim(); });
+            if (cols.length < 1 || !cols[0]) continue;
+            var obj = {};
+            for (var j = 0; j < header.length; j++) {
+              obj[header[j]] = cols[j] || '';
+            }
+            rows.push(obj);
+          }
+          return rows;
+        },
+        async submitImport() {
+          if (!this.importCsvText.trim()) {
+            ReggieUI.warning('请粘贴 CSV 数据');
+            return;
+          }
+          var parsed = this.parseCsvToRows(this.importCsvText);
+          if (parsed.length === 0) {
+            ReggieUI.warning('未解析到有效数据行');
+            return;
+          }
+          // 将 CSV 字段映射到 DishCost 对象
+          var dishCosts = parsed.map(function(row) {
+            return {
+              dishName: row['菜品名称'] || row['dishName'] || '',
+              materialCost: parseFloat(row['食材成本'] || row['materialCost'] || 0) || 0,
+              laborCost: parseFloat(row['人工成本'] || row['laborCost'] || 0) || 0,
+              otherCost: parseFloat(row['其他成本'] || row['otherCost'] || 0) || 0,
+              salePrice: parseFloat(row['售价'] || row['salePrice'] || 0) || 0,
+              remark: row['备注'] || row['remark'] || ''
+            };
+          }).filter(function(d) { return !!d.dishName; });
+
+          if (dishCosts.length === 0) {
+            ReggieUI.warning('未解析到有效菜品数据，请检查 CSV 格式');
+            return;
+          }
+          this.importLoading = true;
+          try {
+            var res = await batchUpdateDishCost(dishCosts);
+            if (String(res.code) === '1') {
+              ReggieUI.success('批量导入成功，共 ' + dishCosts.length + ' 条');
+              this.importDialogVisible = false;
+              this.fetchData();
+            } else {
+              ReggieUI.error(res.msg || '导入失败');
+            }
+          } catch (e) {
+            ReggieUI.error('导入请求失败：' + (e.message || e));
+          } finally {
+            this.importLoading = false;
+          }
+        },
+        // ========== 菜品远程搜索与选择 ==========
+        async searchDishes(query) {
+          if (query !== '') {
+            this.dishLoading = true
+            try {
+              const res = await queryDishList({ name: query })
+              if (res.code === 1) {
+                this.dishOptions = res.data || []
+              }
+            } catch (err) {
+              ReggieUI.error('搜索菜品失败')
+            } finally {
+              this.dishLoading = false
+            }
+          } else {
+            this.dishOptions = []
+          }
+        },
+        async handleDishChange(dishId) {
+          const dish = this.dishOptions.find(item => item.id === dishId)
+          if (dish) {
+            this.formData.dishName = dish.name
+          }
+          // 新增模式下，调用后端 calculateDishCost（已打通 BOM：食材×单价）自动带出食材成本与售价
+          if (this.formData.id === null && dishId) {
+            try {
+              const res = await getDishCostByDishId(dishId)
+              if (res.code === 1 && res.data) {
+                const c = res.data
+                this.formData.materialCost = Number(c.materialCost) || 0
+                this.formData.laborCost = Number(c.laborCost) || 0
+                this.formData.otherCost = Number(c.otherCost) || 0
+                this.formData.salePrice = Number(c.salePrice) || 0
+              }
+            } catch (err) {
+              // 首次录入菜品无历史成本数据时返回空，忽略即可
+            }
+          }
+        },
+        // ========== 新增/编辑 ==========
+        handleAdd() {
+          this.dialogTitle = '新增菜品成本'
+          this.formData = {
+            id: null,
+            dishId: null,
+            dishName: '',
+            materialCost: 0,
+            laborCost: 0,
+            otherCost: 0,
+            salePrice: 0,
+            remark: ''
+          }
+          this.dialogVisible = true
+          this.$nextTick(() => {
+            this.$refs.costForm && this.$refs.costForm.clearValidate()
+          })
+        },
+        handleEdit(row) {
+          this.dialogTitle = '编辑菜品成本'
+          this.formData = { ...row }
+          this.dialogVisible = true
+          this.$nextTick(() => {
+            this.$refs.costForm && this.$refs.costForm.clearValidate()
+          })
+        },
+        // ========== 删除 ==========
+        async handleDelete(row) {
+          try {
+            await ReggieUI.confirm('确定要删除该菜品成本吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+            
+            const res = await deleteDishCost(row.id)
+            if (res.code === 1) {
+              ReggieUI.success('删除成功')
+              this.fetchData()
+            } else {
+              ReggieUI.error(res.msg || '删除失败')
+            }
+          } catch (err) {
+            if (err === 'cancel') return
+            console.warn('[dish-cost] 删除失败:', err)
+            ReggieUI.error('删除失败')
+          }
+        },
+        async handleSubmit() {
+          if (this.submitLoading) { return } // 提交防重：请求期间锁定提交
+          const self = this
+          const valid = await new Promise(function(resolve) {
+            self.$refs.costForm.validate(function(v) { resolve(v) })
+          })
+          if (!valid) { ReggieUI.warning('请完善表单必填项'); return }
+
+          self.submitLoading = true
+          const apiCall = self.formData.id ? updateDishCost(self.formData) : saveDishCost(self.formData)
+          apiCall.then(function(res) {
+            if (res.code === 1) {
+              ReggieUI.success(self.formData.id ? '更新成功' : '新增成功')
+              self.dialogVisible = false
+              self.fetchData()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          }).catch(function(err) {
+            ReggieUI.error('操作失败')
+          }).finally(function() {
+            self.submitLoading = false
+          })
+        },
+        // ========== 采购价同步 ==========
+        handleSyncFromPurchase() {
+          var self = this
+          ReggieUI.confirm('确认根据菜品BOM配方和原料采购价，重新计算所有菜品的食材成本？', '同步确认', { type: 'warning' }).then(function() {
+            self.syncLoading = true
+            syncMaterialCostFromPurchase().then(function(res) {
+              if (String(res.code) === '1') {
+                var count = res.data || 0
+                ReggieUI.success('同步完成，更新了 ' + count + ' 个菜品的食材成本')
+                self.fetchData()
+              } else {
+                ReggieUI.error(res.msg || '同步失败')
+              }
+            }).catch(function() {
+              ReggieUI.error('同步失败，请重试')
+            }).finally(function() {
+              self.syncLoading = false
+            })
+          }).catch(function() {})
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+

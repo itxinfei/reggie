@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>外卖平台订单 - 瑞吉外卖管理端</title>
+
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="delivery-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">配送订单</h1>
+      <!-- 数据统计卡片 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
+
+      <!-- 搜索 + 操作栏 -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        :show-refresh="true"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+        @refresh="search()"
+      ></table-bar>
+
+      <!-- 数据表格 -->
+      <crud-table
+        ref="crudTable"
+        empty-hint="试试调整筛选条件"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :show-actions="true"
+        :actions-width="180"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-platform="{ row }">
+          <el-tag v-if="row.platform === 'MEITUAN'" size="small">美团</el-tag>
+          <el-tag v-else-if="row.platform === 'ELEME'" type="success" size="small">饿了么</el-tag>
+          <el-tag v-else-if="row.platform === 'DOUYIN'" type="warning" size="small">抖音</el-tag>
+          <span v-else>未知平台</span>
+        </template>
+        <template #col-amount="{ row }">
+          <span class="ds-money--danger">¥{{ formatMoney(row.amount) }}</span>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag v-if="row.status === 'PENDING'" type="warning" size="small">待接单</el-tag>
+          <el-tag v-else-if="row.status === 'ACCEPTED'" size="small">已接单</el-tag>
+          <el-tag v-else-if="row.status === 'PICKING'" type="warning" size="small">取餐中</el-tag>
+          <el-tag v-else-if="row.status === 'DELIVERING'" type="warning" size="small">配送中</el-tag>
+          <el-tag v-else-if="row.status === 'DELIVERED'" type="success" size="small">已送达</el-tag>
+          <el-tag v-else-if="row.status === 'CANCELLED'" type="danger" size="small">已取消</el-tag>
+          <el-tag v-else size="small">{{ statusLabelMap[row.status] || '未知状态' }}</el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" @click="showDetail(row)">详情</el-button>
+          <el-button type="text" size="small" class="btn-success" :disabled="row._acting" @click="acceptOrder(row)" v-if="row.status === 'PENDING'">接单</el-button>
+          <el-button type="text" size="small" class="btn-success" :disabled="row._acting" @click="statusChange(row, 'PICKING')" v-if="row.status === 'ACCEPTED'">取餐</el-button>
+          <el-button type="text" size="small" class="btn-success" :disabled="row._acting" @click="statusChange(row, 'DELIVERING')" v-if="row.status === 'PICKING'">配送</el-button>
+          <el-button type="text" size="small" class="btn-success" :disabled="row._acting" @click="statusChange(row, 'DELIVERED')" v-if="row.status === 'DELIVERING'">送达</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="cancelOrder(row)" v-if="row.status !== 'DELIVERED' && row.status !== 'CANCELLED'">取消</el-button>
+        </template>
+      </crud-table>
+
+      <!-- 订单详情弹窗 -->
+      <crud-dialog
+        title="订单详情"
+        :visible.sync="detailVisible"
+        size="md"
+        :show-submit="false"
+        :show-cancel="true"
+        cancel-text="关 闭"
+        :close-on-click-modal="true"
+        @close="resetDetail"
+      >
+        <div v-if="detailOrder" class="od-body">
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form size="small" label-width="100px">
+                <el-form-item label="平台订单号">{{ detailOrder.platformOrderId }}</el-form-item>
+                <el-form-item label="外卖平台">
+                  <el-tag v-if="detailOrder.platform === 'MEITUAN'" size="small">美团</el-tag>
+                  <el-tag v-else-if="detailOrder.platform === 'ELEME'" type="success" size="small">饿了么</el-tag>
+                  <el-tag v-else-if="detailOrder.platform === 'DOUYIN'" type="warning" size="small">抖音</el-tag>
+                </el-form-item>
+                <el-form-item label="订单状态">
+                  <el-tag v-if="detailOrder.status === 'PENDING'" type="warning" size="small">待接单</el-tag>
+                  <el-tag v-else-if="detailOrder.status === 'ACCEPTED'" size="small">已接单</el-tag>
+                  <el-tag v-else-if="detailOrder.status === 'PICKING'" type="warning" size="small">取餐中</el-tag>
+                  <el-tag v-else-if="detailOrder.status === 'DELIVERING'" type="warning" size="small">配送中</el-tag>
+                  <el-tag v-else-if="detailOrder.status === 'DELIVERED'" type="success" size="small">已送达</el-tag>
+                  <el-tag v-else-if="detailOrder.status === 'CANCELLED'" type="danger" size="small">已取消</el-tag>
+                  <el-tag v-else size="small">{{ statusLabelMap[detailOrder.status] || '未知状态' }}</el-tag>
+                </el-form-item>
+                <el-form-item label="订单金额"><b class="ds-money--danger">¥{{ formatMoney(detailOrder.amount) }}</b></el-form-item>
+                <el-form-item label="菜品摘要">{{ detailOrder.dishSummary || '-' }}</el-form-item>
+              </el-form>
+            </el-col>
+            <el-col :span="12">
+              <el-form size="small" label-width="100px">
+                <el-form-item label="用户姓名">{{ detailOrder.userName || '-' }}</el-form-item>
+                <el-form-item label="联系电话">{{ detailOrder.phone || '-' }}</el-form-item>
+                <el-form-item label="配送地址">{{ detailOrder.address || '-' }}</el-form-item>
+                <el-form-item label="下单时间">{{ detailOrder.orderTime || '-' }}</el-form-item>
+                <el-form-item label="更新时间">{{ detailOrder.updateTime || '-' }}</el-form-item>
+              </el-form>
+            </el-col>
+          </el-row>
+        </div>
+      </crud-dialog>
+
+      <!-- 取消原因弹窗 -->
+      <crud-dialog :show-submit="true" :show-cancel="true"
+        title="取消订单"
+        :visible.sync="cancelVisible"
+        size="sm"
+        :submit-loading="cancelLoading"
+        :close-on-click-modal="false"
+        @submit="confirmCancel"
+        @close="cancelForm = {}; $refs.cancelForm && $refs.cancelForm.clearValidate()"
+      >
+        <el-form :model="cancelForm" :rules="cancelRules" ref="cancelForm" label-width="80px" size="small">
+          <el-form-item label="订单号">
+            <span>{{ cancelForm.platformOrderId }}</span>
+          </el-form-item>
+          <el-form-item label="取消原因" prop="reason">
+            <el-select v-model="cancelForm.reason" placeholder="请选择取消原因" style="width:100%" clearable filterable>
+              <el-option label="商品售罄" value="商品售罄"></el-option>
+              <el-option label="店铺休息" value="店铺休息"></el-option>
+              <el-option label="无法配送" value="无法配送"></el-option>
+              <el-option label="用户要求取消" value="用户要求取消"></el-option>
+              <el-option label="其他原因" value="其他原因"></el-option>
+            </el-select>
+          </el-form-item>
+        </el-form>
+      </crud-dialog>
+
+      <!-- 同步平台选择弹窗 -->
+      <crud-dialog
+        title="选择同步平台"
+        :visible.sync="syncDialogVisible"
+        size="sm"
+        @submit="confirmSync"
+        @close="cancelSync"
+      >
+        <el-form :model="syncForm" label-width="80px" size="small">
+          <el-form-item label="外卖平台">
+            <el-select v-model="syncForm.platform" placeholder="请选择平台" style="width: 100%">
+              <el-option label="美团" value="MEITUAN"></el-option>
+              <el-option label="饿了么" value="ELEME"></el-option>
+              <el-option label="抖音" value="DOUYIN"></el-option>
+            </el-select>
+          </el-form-item>
+        </el-form>
+      </crud-dialog>
+    </main>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../api/delivery.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#delivery-app',
+      data: function() {
+        return {
+          loading: false,
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          tableData: [],
+          // 统计数据（从服务端加载）
+          stats: {
+            todayOrders: 0, pendingCount: 0, acceptedCount: 0, pickingCount: 0,
+            deliveringCount: 0, completedCount: 0, cancelledCount: 0,
+            totalCount: 0, totalAmount: 0
+          },
+          activeFilter: '',
+          // 筛选选项（从服务端动态加载）
+          filterOptions: { platforms: [], statuses: [] },
+          optionsLoading: false,
+          optionsLoadError: false,
+          searchConfig: [],
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'syncMenu', text: '同步菜品', type: 'primary' },
+            { key: 'syncStock', text: '同步库存', type: 'primary' }
+          ],
+          // 同步弹窗
+          syncDialogVisible: false,
+          syncType: '',
+          syncForm: { platform: 'MEITUAN' },
+          // 表格列配置
+          columns: [
+            { prop: 'platformOrderId', label: '订单号', minWidth: 140 },
+            { prop: 'platform', label: '平台', slot: true, width: 70, align: 'center' },
+            { prop: 'userName', label: '用户', width: 80, align: 'center' },
+            { prop: 'phone', label: '电话', width: 110, align: 'center' },
+            { prop: 'amount', label: '金额', slot: true, width: 110, type: 'money' },
+            { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
+            { prop: 'orderTime', label: '下单时间', width: 160, align: 'center' },
+          ],
+          // 缓存搜索参数
+          lastSearch: {},
+          // 详情弹窗
+          detailVisible: false,
+          detailOrder: null,
+          loadingDetail: false,
+          // 取消弹窗
+          cancelVisible: false,
+          cancelLoading: false,
+          cancelForm: {},
+          cancelRules: {
+            reason: [{ required: true, message: '请选择取消原因', trigger: 'change' }]
+          },
+          // 同步loading
+          syncLoading: false,
+          // 状态映射表
+          statusLabelMap: {
+            'PENDING': '待接单', 'ACCEPTED': '已接单', 'PICKING': '取餐中',
+            'DELIVERING': '配送中', 'DELIVERED': '已送达', 'CANCELLED': '已取消'
+          }
+        }
+      },
+      computed: {
+        statsCards: function() {
+          const self = this
+          return [
+            { key: 'PENDING', icon: 'ri-time-line', label: '待处理', value: self.stats.pendingCount, color: 'warning', clickable: true, active: self.activeFilter === 'PENDING' },
+            { key: 'DELIVERING', icon: 'ri-car-line', label: '配送中', value: (self.stats.deliveringCount || 0), color: 'info', clickable: true, active: self.activeFilter === 'DELIVERING' },
+            { key: 'DELIVERED', icon: 'ri-checkbox-circle-line', label: '已完成', value: self.stats.completedCount, color: 'success', clickable: true, active: self.activeFilter === 'DELIVERED' },
+            { key: 'CANCELLED', icon: 'ri-close-circle-line', label: '已取消', value: self.stats.cancelledCount, color: 'danger', clickable: true, active: self.activeFilter === 'CANCELLED' }
+          ]
+        }
+      },
+      created: function() {
+        this.loadFilterOptions()
+      },
+      mounted: function() {
+        this.search()
+      },
+      methods: {
+        // 动态更新 searchConfig 中下拉框的选项
+        updateSearchConfig: function() {
+          this.searchConfig = [
+            { type: 'select', field: 'platform', placeholder: '平台', width: '120px',
+              options: this.filterOptions.platforms || [] },
+            { type: 'select', field: 'status', placeholder: '状态', width: '120px',
+              options: this.filterOptions.statuses || [] },
+            { type: 'date', field: 'dateRange', placeholder: '选择日期', width: '300px',
+              beginField: 'startDate', endField: 'endDate' }
+          ]
+        },
+        // ==================== 筛选选项加载 ====================
+        async loadFilterOptions() {
+          this.optionsLoading = true
+          this.optionsLoadError = false
+          try {
+            const res = await deliveryFilterOptions()
+            if (String(res.code) === '1' && res.data) {
+              this.filterOptions.platforms = res.data.platforms || []
+              this.filterOptions.statuses = res.data.statuses || []
+              this.updateSearchConfig()
+            } else {
+              this.optionsLoadError = true
+            }
+          } catch (err) {
+            if (err.message === 'NOTLOGIN') return
+            this.optionsLoadError = true
+            ReggieUI.error('加载筛选选项失败，请刷新页面重试')
+          } finally {
+            this.optionsLoading = false
+          }
+        },
+        // ==================== 数据加载 ====================
+        // 修改点：F9 性能 — 列表与统计分离，reloadStats=true 才重算（分页传 false）
+        async search(reloadStats = true) {
+          this.loading = true
+          try {
+            // 修改点：搜索参数来源统一为 lastSearch（原读取未定义的 searchValues，导致筛选条件从未下发）
+            const params = Object.assign({}, this.lastSearch || {}, { page: this.page, pageSize: this.pageSize })
+            const requests = [deliveryOrderPage(params)]
+            if (reloadStats) { requests.push(deliveryStats({ platform: params.platform, startDate: params.startDate, endDate: params.endDate })) }
+            const results = await Promise.all(requests)
+            const orderRes = results[0]
+            if (String(orderRes.code) === '1') {
+              this.tableData = orderRes.data.records || []
+              this.counts = orderRes.data.total
+            } else {
+              ReggieUI.error(orderRes.msg || '加载订单列表失败')
+            }
+            if (reloadStats) {
+              const statsRes = results[1]
+              if (statsRes && String(statsRes.code) === '1') {
+                this.stats = statsRes.data || this.stats
+              }
+            }
+          } catch (err) {
+            if (err.message === 'NOTLOGIN') return
+            ReggieUI.error('加载订单列表失败，请刷新页面重试')
+          } finally {
+            this.loading = false
+          }
+        },
+        // 修改点：stat-cards 点击筛选（payload.activeKey 为 .sync 更新后的值）
+        onCardClick: function(payload) {
+          if (payload.key === 'PENDING' || payload.key === 'DELIVERING'
+              || payload.key === 'DELIVERED' || payload.key === 'CANCELLED') {
+            this.activeFilter = payload.activeKey
+            this.lastSearch = payload.activeKey ? { status: payload.activeKey } : {}
+          }
+          this.page = 1
+          this.search()
+        },
+        // table-bar 回调
+        onSearch: function(searchParams) {
+          this.activeFilter = ''
+          this.lastSearch = searchParams || {}
+          this.page = 1
+          this.search()
+        },
+        onReset: function() {
+          this.activeFilter = ''
+          this.lastSearch = {}
+          this.page = 1
+          this.search()
+        },
+        onAction: function(payload) {
+          if (payload.key === 'syncMenu') this.openSyncDialog('menu')
+          else if (payload.key === 'syncStock') this.openSyncDialog('stock')
+        },
+        onPageChange: function(payload) {
+          this.page = payload.page
+          this.search(false)
+        },
+        onSizeChange: function(payload) {
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
+          this.search(false)
+        },
+        // ==================== 同步操作 ====================
+        openSyncDialog: function(type) {
+          this.syncType = type
+          this.syncForm.platform = 'MEITUAN'
+          this.syncDialogVisible = true
+        },
+        cancelSync: function() {
+          this.syncDialogVisible = false
+          this.syncType = ''
+        },
+        async confirmSync() {
+          if (!this.syncForm.platform) {
+            ReggieUI.warning('请选择同步平台')
+            return
+          }
+          if (this.syncLoading) return
+          this.syncLoading = true
+          this.syncDialogVisible = false
+          var platform = this.syncForm.platform
+          try {
+            var res
+            if (this.syncType === 'menu') {
+              res = await deliverySyncMenu({ platform: platform })
+            } else {
+              res = await deliverySyncStock({ platform: platform })
+            }
+            if (String(res.code) === '1') {
+              ReggieUI.success(this.syncType === 'menu' ? '同步菜品成功' : '同步库存成功')
+            } else {
+              ReggieUI.warning(res.msg || '同步失败，请稍后重试')
+            }
+          } catch (err) {
+            if (err.message === 'NOTLOGIN') return
+            ReggieUI.error('请求失败：' + (err.message || err))
+          } finally {
+            this.syncLoading = false
+            this.syncType = ''
+          }
+        },
+        // ==================== 订单操作 ====================
+        acceptOrder: function(row) {
+          const self = this
+          // 行级防重：confirm + 请求期间锁定该行，避免重复接单
+          if (row._acting) return
+          self.$set(row, '_acting', true)
+          var clear = function () { self.$set(row, '_acting', false) }
+          ReggieUI.confirm(
+            '确认接单【' + row.platformOrderId + '】？接单后将通知平台。',
+            '确认接单',
+            { confirmButtonText: '确定', cancelButtonText: '取消', type: 'success' }
+          ).then(function() {
+            return deliveryAccept({ platform: row.platform, platformOrderId: row.platformOrderId })
+              .then(function(res) {
+                if (String(res.code) === '1') { ReggieUI.success('接单成功'); self.search() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              })
+              .catch(function(err) { ReggieUI.error('请求失败：' + err) })
+          }).then(clear, function (err) { console.warn('[delivery-order] 派单操作取消或失败:', err); clear() })
+        },
+        // 修改点：完整的状态流转操作
+        statusChange: function(row, targetStatus) {
+          const self = this
+          // 行级防重：confirm + 请求期间锁定该行
+          if (row._acting) return
+          self.$set(row, '_acting', true)
+          var clear = function () { self.$set(row, '_acting', false) }
+          const label = this.statusLabelMap[targetStatus] || targetStatus
+          const confirmText = '确认将【' + row.platformOrderId + '】状态更新为"' + label + '"？'
+          ReggieUI.confirm(confirmText, '状态更新', {
+            confirmButtonText: '确定', cancelButtonText: '取消', type: 'info'
+          }).then(function() {
+            return deliveryUpdateStatus({ id: row.id, status: targetStatus })
+              .then(function(res) {
+                if (String(res.code) === '1') { ReggieUI.success('状态更新成功'); self.search() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              })
+              .catch(function(err) { ReggieUI.error('请求失败：' + err) })
+          }).then(clear, function (err) { console.warn('[delivery-order] 状态流转操作取消或失败:', err); clear() })
+        },
+        cancelOrder: function(row) {
+          this.cancelForm = {
+            id: row.id,
+            platformOrderId: row.platformOrderId,
+            reason: ''
+          }
+          this.cancelVisible = true
+        },
+        confirmCancel: function() {
+          const self = this
+          this.$refs.cancelForm.validate(function(valid) {
+            if (!valid) return
+            self.cancelLoading = true
+            deliveryUpdateStatus({ id: self.cancelForm.id, status: 'CANCELLED', remark: self.cancelForm.reason })
+              .then(function(res) {
+                if (String(res.code) === '1') {
+                  ReggieUI.success('订单已取消')
+                  self.cancelVisible = false
+                  self.search()
+                } else {
+                  ReggieUI.error(res.msg || '操作失败')
+                }
+              })
+              .catch(function(err) { ReggieUI.error('请求失败：' + err) })
+              .finally(function() { self.cancelLoading = false })
+          })
+        },
+        // ==================== 详情弹窗 ====================
+        showDetail: async function(row) {
+          this.loadingDetail = true
+          try {
+            const res = await deliveryOrderDetail(row.id)
+            if (String(res.code) === '1' && res.data) {
+              this.detailOrder = res.data
+            } else {
+              this.detailOrder = Object.assign({}, row)
+              ReggieUI.warning(res.msg || '详情数据不完整，显示列表数据')
+            }
+          } catch (err) {
+            this.detailOrder = Object.assign({}, row)
+            ReggieUI.error('加载详情失败：' + err)
+          } finally {
+            this.loadingDetail = false
+            this.detailVisible = true
+          }
+        },
+        resetDetail: function() {
+          this.detailOrder = null
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+

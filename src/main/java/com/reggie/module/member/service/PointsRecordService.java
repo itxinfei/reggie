@@ -1,0 +1,34 @@
+package com.reggie.module.member.service;
+
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.reggie.module.member.model.PointsRecord;
+
+/**
+ * <p>
+ * 积分记录服务接口
+ * </p>
+ * <p>记录会员积分的获取和消费流水</p>
+ *
+ * @author 心飞为你飞
+ * @since 2024-01-01
+ */
+public interface PointsRecordService extends IService<PointsRecord> {
+
+    /**
+     * 查询会员的积分流水
+     *
+     * @param memberId 会员ID
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @return 分页积分流水
+     */
+    Page<PointsRecord> listByMember(Long memberId, int page, int pageSize);
+
+    /**
+     * 处理过期积分：按 member_id 分组汇总过期积分，逐个扣减并写入 OUT 流水，
+     * 然后将过期记录逻辑删除防止重复处理。
+     * 由 {@link com.reggie.module.schedule.task.PointsExpireTask} 每天凌晨调用。
+     */
+    void expirePointsBatch();
+}

@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>二维码打印中心 - 瑞吉外卖管理端</title>
+
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <style>
+    /* 功能样式（非美化）：配置区 + A4 预览弹窗 + 打印分页。 */
+
+    /* —— 站点地址本机提醒 —— */
+    .site-warn { color: var(--el-color-warning, #e6a23c); font-size: 13px; margin: 0 0 10px; }
+
+    /* —— 勾选计数行 —— */
+    .sel-bar { display: flex; align-items: center; gap: 8px; }
+    .sel-count { color: var(--text-muted); font-size: 13px; }
+    .action-bar { display: flex; align-items: center; gap: 10px; margin: 10px 0; flex-wrap: wrap; }
+    .action-bar__tip { color: var(--text-muted); font-size: 13px; }
+
+    /* ============ 预览弹窗（屏幕查看） ============ */
+    .pv-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; flex-wrap: wrap; }
+    .pv-stage { display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .pv-paper {
+      height: 56vh;                 /* 以高度为准，保证整张 A4 在弹窗内看全 */
+      display: flex;
+    }
+    .pv-page {
+      height: 100%;
+      aspect-ratio: 194 / 281;       /* A4 可打印区比例，所见即所得 */
+      background: var(--bg-surface);
+      border: 1px solid var(--el-border, #dcdfe6);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      display: grid;
+      gap: 3mm;
+      padding: 0;
+    }
+    .pv-cell {
+      min-width: 0; min-height: 0;
+      border: 1px dashed var(--border-default); border-radius: 3px;
+      display: flex;
+    }
+    .pv-cell img {
+      max-width: 100%; max-height: 100%;
+      margin: auto; display: block; object-fit: contain;
+    }
+    .pv-nav { width: 36px; height: 36px; flex-shrink: 0; }
+    .pv-pager { text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 10px; }
+    .pv-cut-tip { text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+    .dialog-footer.is-flex { display: flex; align-items: center; gap: 4px; }
+    .dialog-footer__spacer { flex: 1; }
+
+    /* ============ 打印专用容器（屏幕隐藏） ============ */
+    #printRoot { display: none; }
+
+    @page { size: A4; margin: 8mm; }
+    @media print {
+      html, body { margin: 0 !important; padding: 0 !important; }
+      /* 隐藏配置区与遮罩 */
+      .no-print, .v-modal { display: none !important; }
+      /* 弹窗需把特异性提到 (0,2,0)：压过 page.css 的居中规则
+         .el-dialog__wrapper:not([style*="display:none"]){display:flex!important}，
+         否则打印时弹窗仍以 flex 遮罩显示。源顺序在 page.css 之后，同特异性也胜出。 */
+      .el-dialog__wrapper[class] { display: none !important; }
+      /* 输出拼好版的全部 A4 */
+      #printRoot { display: block; }
+      .print-page {
+        width: 194mm;
+        height: 277mm;               /* 固定高度让 grid 1fr 严格等分，避免溢出第二页 */
+        display: grid;
+        gap: 3mm;
+        margin: 0; padding: 0;
+        page-break-after: always;
+      }
+      .print-page:last-child { page-break-after: auto; }
+      .print-cell { min-width: 0; min-height: 0; display: flex; }
+      .print-cell img {
+        max-width: 100%; max-height: 100%;
+        margin: auto; display: block; object-fit: contain;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app" style="padding:10px;">
+    <h3 v-if="!isEmbedded" class="no-print" style="margin:0 0 10px;">二维码打印中心</h3>
+
+    <!-- 配置区（打印时隐藏） -->
+    <div class="no-print">
+      <el-form :inline="true" size="small" @submit.native.prevent>
+        <el-form-item label="站点地址">
+          <el-input v-model="siteUrl" style="width:293px;" placeholder="http://IP:端口，手机需能访问"></el-input>
+        </el-form-item>
+        <el-form-item label="区域">
+          <el-select v-model="filterAreaId" clearable placeholder="全部区域" style="width:160px;">
+            <el-option v-for="a in areas" :key="a.id" :label="a.name" :value="a.id"></el-option>
+          </el-select>
+        </el-form-item>
+      </el-form>
+
+      <div v-if="siteWarn" class="site-warn">
+        <i class="el-icon-warning-outline"></i>
+        站点地址像是本机地址，手机扫码可能打不开；请填电脑的局域网地址（如 http://192.168.x.x:8080）
+      </div>
+
+      <el-table :data="filteredTables" ref="table" border stripe max-height="380"
+                v-loading="tablesLoading"
+                element-loading-text="桌台加载中"
+                @selection-change="onSelectionChange" style="margin-bottom:10px;">
+        <el-table-column type="selection" width="48" align="center"></el-table-column>
+        <el-table-column prop="name" label="桌台名" width="160"></el-table-column>
+        <el-table-column prop="areaName" label="区域"></el-table-column>
+        <el-table-column prop="sort" label="排序" width="100"></el-table-column>
+        <!-- 空态复用全站统一 .ds-table-empty（styles/components.css），
+             此前走 Element 默认文案：仅一行"暂无数据"、无图标无引导，
+             高度 60px，与统一空态 299px 严重不一致 -->
+        <template slot="empty">
+          <div class="ds-table-empty">
+            <i class="el-icon-document" aria-hidden="true"></i>
+            <p>暂无桌台数据</p>
+            <p class="ds-table-empty__hint">试试切换上方的区域筛选</p>
+          </div>
+        </template>
+      </el-table>
+
+      <div class="sel-bar">
+        <el-button type="text" @click="selectFiltered">勾选当前筛选</el-button>
+        <el-button type="text" @click="clearSel">清空勾选</el-button>
+        <span class="sel-count">已选 {{ selected.length }} / 当前 {{ filteredTables.length }} 桌</span>
+      </div>
+
+      <div class="action-bar">
+        <el-button type="primary" :loading="generating" @click="generate">
+          {{ generating ? '生成中…' : '生成并预览' }}
+        </el-button>
+        <el-button icon="el-icon-view" @click="openPreview" :disabled="!posters.length">查看预览</el-button>
+        <el-button type="text" @click="clearPosters" :disabled="!posters.length">清空</el-button>
+        <span class="action-bar__tip">
+          <template v-if="generating">正在生成 {{ progressDone }}/{{ progressTotal }}</template>
+          <template v-else-if="posters.length">
+            已生成 {{ posters.length }} 张桌贴 · 排成 {{ posterPages.length }} 张 A4，点「查看预览」可打印或下载
+          </template>
+          <template v-else>勾选桌台并生成，完成后自动弹出预览</template>
+        </span>
+      </div>
+      <el-progress v-if="generating" :percentage="progressPct" :stroke-width="10" style="margin-bottom:10px;"></el-progress>
+    </div>
+
+    <!-- 预览弹窗：生成完自动打开，看效果 → 打印 / 下载（统一 crud-dialog，xl=840px） -->
+    <crud-dialog
+      :title="'桌贴预览 · ' + posters.length + ' 张桌贴 · ' + posterPages.length + ' 张 A4'"
+      :visible.sync="previewVisible"
+      size="xl"
+      custom-class="qr-preview-dialog"
+      :close-on-click-modal="false">
+      <div class="pv-toolbar">
+        <el-radio-group v-model="layout" size="small" @change="onLayoutChange">
+          <span style="color:var(--text-secondary);font-size:13px;margin-right:8px;">每张纸</span>
+          <el-radio-button :label="1">1</el-radio-button>
+          <el-radio-button :label="2">2</el-radio-button>
+          <el-radio-button :label="4">4</el-radio-button>
+          <el-radio-button :label="6">6</el-radio-button>
+          <el-radio-button :label="9">9</el-radio-button>
+        </el-radio-group>
+        <span style="color:var(--text-muted);font-size:12px;">切换后实时重排，无需重新生成</span>
+      </div>
+
+      <div class="pv-stage">
+        <el-button class="pv-nav" icon="el-icon-arrow-left" :disabled="previewIndex === 0"
+                   @click="previewIndex--" aria-label="上一页"></el-button>
+        <div class="pv-paper">
+          <div class="pv-page" :style="pageGridStyle">
+            <div class="pv-cell" v-for="p in currentPage" :key="p.id">
+              <img :src="p.img" :alt="p.name">
+            </div>
+          </div>
+        </div>
+        <el-button class="pv-nav" icon="el-icon-arrow-right"
+                   :disabled="previewIndex >= posterPages.length - 1"
+                   @click="previewIndex++" aria-label="下一页"></el-button>
+      </div>
+      <div class="pv-pager">第 {{ previewIndex + 1 }} / {{ posterPages.length }} 张 A4</div>
+      <div class="pv-cut-tip">虚线为裁切位置 · 图内已含门店名与桌号</div>
+
+      <span slot="footer" class="dialog-footer is-flex">
+        <el-button type="text" icon="el-icon-download"
+                   @click="downloadPage(previewIndex)">下载本页图片</el-button>
+        <el-button type="text" icon="el-icon-files"
+                   @click="downloadAll">下载全部图片</el-button>
+        <span class="dialog-footer__spacer"></span>
+        <el-button @click="previewVisible = false">关闭</el-button>
+        <el-button type="primary" icon="el-icon-printer" @click="doPrint">打 印</el-button>
+      </span>
+    </crud-dialog>
+
+    <!-- 打印专用：全部拼版页（屏幕隐藏，打印时输出） -->
+    <div id="printRoot">
+      <div class="print-page" v-for="(pg, pi) in posterPages" :key="pi" :style="pageGridStyle">
+        <div class="print-cell" v-for="p in pg" :key="p.id">
+          <img :src="p.img" :alt="p.name">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script>
+    // 每页数 → 网格列×行（按竖版海报 800×1040，保证不溢出 A4）
+    var LAYOUT_GRID = { 1: [1, 1], 2: [1, 2], 4: [2, 2], 6: [2, 3], 9: [3, 3] };
+    var SITE_STORE_KEY = 'reggie_qrcode_site';
+    var EXPORT_DPI = 200;                 // 导出 PNG 分辨率（二维码缩小后仍清晰好扫）
+
+    new Vue({
+      data: function () {
+        return {
+          isEmbedded: /[?&]embedded=1/.test(window.location.search),
+          siteUrl: '',
+          areas: [],
+          tables: [],
+          // 桌台列表加载标志：缺口在于首屏拉数据时表格区域为空，
+          // 与"确实没有桌台"在视觉上无法区分，需要 v-loading 区分两种状态
+          tablesLoading: false,
+          filterAreaId: null,
+          selected: [],
+          layout: 6,
+          posters: [],
+          generating: false,
+          progressDone: 0,
+          progressTotal: 0,
+          previewVisible: false,
+          previewIndex: 0
+        };
+      },
+      computed: {
+        filteredTables: function () {
+          var vm = this;
+          if (vm.filterAreaId == null) { return vm.tables; }
+          return vm.tables.filter(function (t) { return t.areaId === vm.filterAreaId; });
+        },
+        siteWarn: function () {
+          return /^https?:\/\/(localhost|127\.|0\.0\.0\.0)/i.test(this.siteUrl || '');
+        },
+        pageGridStyle: function () {
+          var grid = LAYOUT_GRID[this.layout] || [2, 3];
+          return {
+            gridTemplateColumns: 'repeat(' + grid[0] + ', 1fr)',
+            gridTemplateRows: 'repeat(' + grid[1] + ', 1fr)'
+          };
+        },
+        posterPages: function () {
+          var pages = [];
+          for (var i = 0; i < this.posters.length; i += this.layout) {
+            pages.push(this.posters.slice(i, i + this.layout));
+          }
+          return pages;
+        },
+        currentPage: function () {
+          return this.posterPages[this.previewIndex] || [];
+        },
+        progressPct: function () {
+          if (!this.progressTotal) { return 0; }
+          return Math.round(this.progressDone / this.progressTotal * 100);
+        }
+      },
+      mounted: function () {
+        var vm = this;
+        var saved = '';
+        try { saved = window.localStorage.getItem(SITE_STORE_KEY) || ''; } catch (e) { saved = ''; }
+        vm.siteUrl = saved || window.location.origin;
+
+        $axios.get('/api/dining/area/list').then(function (res) {
+          vm.areas = res.data || [];
+        }).catch(function () { });
+        vm.tablesLoading = true;
+        $axios.get('/api/dining/table/list').then(function (res) {
+          vm.tables = res.data || [];
+        }).catch(function () { }).then(function () {
+          vm.tablesLoading = false;
+        });
+      },
+      methods: {
+        onSelectionChange: function (sel) { this.selected = sel; },
+        selectFiltered: function () {
+          var vm = this;
+          vm.$refs.table.clearSelection();
+          vm.filteredTables.forEach(function (t) { vm.$refs.table.toggleRowSelection(t, true); });
+        },
+        clearSel: function () { this.$refs.table.clearSelection(); },
+        clearPosters: function () {
+          this.posters = [];
+          this.previewIndex = 0;
+        },
+        openPreview: function () {
+          if (!this.posters.length) { return; }
+          this.previewIndex = 0;
+          this.previewVisible = true;
+        },
+        onLayoutChange: function () { this.previewIndex = 0; },
+        generate: function () {
+          var vm = this;
+          if (!vm.selected.length) {
+            ReggieUI.warning('请先勾选要生成海报的桌台');
+            return;
+          }
+          var url = (vm.siteUrl || '').replace(/\/+$/, '');
+          var run = function () { vm.runGenerate(url); };
+          if (/^https?:\/\/(localhost|127\.|0\.0\.0\.0)/i.test(url)) {
+            ReggieUI.confirm('当前站点地址像是本机地址（' + url + '），手机扫码可能无法访问。是否仍要生成？',
+                        '地址提醒', { confirmButtonText: '仍要生成', cancelButtonText: '取消', type: 'warning' })
+              .then(run).catch(function () { });
+          } else {
+            run();
+          }
+        },
+        runGenerate: function (url) {
+          var vm = this;
+          try { window.localStorage.setItem(SITE_STORE_KEY, url); } catch (e) { }
+
+          var list = vm.selected.slice();
+          var ordered = new Array(list.length);
+          vm.posters = [];
+          vm.generating = true;
+          vm.progressTotal = list.length;
+          vm.progressDone = 0;
+
+          var cursor = 0;
+          function buildOne(t, pos) {
+            return $axios.get('/api/dining/table/qrcode/poster', { params: { tableId: t.id, siteUrl: url } })
+              .then(function (res) {
+                ordered[pos] = { id: t.id, name: t.name, areaName: t.areaName, img: res.data };
+              })
+              .catch(function () { ordered[pos] = null; })
+              .then(function () { vm.progressDone++; });
+          }
+          function worker() {
+            if (cursor >= list.length) { return Promise.resolve(); }
+            var pos = cursor;
+            var t = list[cursor++];
+            return buildOne(t, pos).then(worker);
+          }
+
+          Promise.all([worker(), worker(), worker()]).then(function () {
+            vm.posters = ordered.filter(function (x) { return !!x; });
+            vm.generating = false;
+            if (!vm.posters.length) {
+              ReggieUI.error('海报全部生成失败，请稍后重试');
+              return;
+            }
+            ReggieUI.success('已生成 ' + vm.posters.length + ' 张，排成 ' + vm.posterPages.length + ' 张 A4');
+            vm.openPreview();   // 生成完成立即弹窗看效果
+          });
+        },
+        doPrint: function () {
+          if (!this.posters.length) {
+            ReggieUI.warning('请先生成海报');
+            return;
+          }
+          window.print();
+        },
+
+        /* ===== 导出 A4 拼版 PNG（纯前端 Canvas，零依赖） ===== */
+        loadImage: function (dataUri) {
+          return new Promise(function (resolve) {
+            var im = new Image();
+            im.onload = function () { resolve(im); };
+            im.onerror = function () { resolve(null); };
+            im.src = dataUri;
+          });
+        },
+        // 把某一页（若干海报）按 A4 拼版绘制到 canvas
+        renderPageCanvas: function (pagePosters) {
+          var vm = this;
+          var grid = LAYOUT_GRID[vm.layout] || [2, 3];
+          var cols = grid[0], rows = grid[1];
+          var k = EXPORT_DPI / 25.4;
+          var W = Math.round(210 * k);
+          var H = Math.round(297 * k);
+          var margin = Math.round(8 * k);
+          var gap = Math.round(3 * k);
+          var cellW = (W - margin * 2 - gap * (cols - 1)) / cols;
+          var cellH = (H - margin * 2 - gap * (rows - 1)) / rows;
+
+          return Promise.all(pagePosters.map(function (p) { return vm.loadImage(p.img); }))
+            .then(function (imgs) {
+              var canvas = document.createElement('canvas');
+              canvas.width = W; canvas.height = H;
+              var ctx = canvas.getContext('2d');
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, W, H);
+              // 裁切引导虚线
+              ctx.strokeStyle = '#c9ccd4';
+              ctx.lineWidth = 1;
+              ctx.setLineDash([Math.round(k * 1.5), Math.round(k * 1.5)]);
+
+              imgs.forEach(function (im, i) {
+                if (!im) { return; }
+                var cx = margin + (i % cols) * (cellW + gap);
+                var cy = margin + Math.floor(i / cols) * (cellH + gap);
+                // contain 等比缩放居中
+                var ir = im.width / im.height, cr = cellW / cellH, dw, dh;
+                if (ir > cr) { dw = cellW; dh = cellW / ir; } else { dh = cellH; dw = cellH * ir; }
+                ctx.drawImage(im, cx + (cellW - dw) / 2, cy + (cellH - dh) / 2, dw, dh);
+                ctx.strokeRect(cx - gap / 2, cy - gap / 2, cellW + gap, cellH + gap);
+              });
+              return canvas;
+            });
+        },
+        saveCanvas: function (canvas, name) {
+          return new Promise(function (resolve) {
+            canvas.toBlob(function (blob) {
+              var a = document.createElement('a');
+              a.href = URL.createObjectURL(blob);
+              a.download = name;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              setTimeout(function () { URL.revokeObjectURL(a.href); resolve(); }, 200);
+            }, 'image/png');
+          });
+        },
+        downloadPage: function (index) {
+          var vm = this;
+          var pg = vm.posterPages[index];
+          if (!pg) { return; }
+          vm.renderPageCanvas(pg).then(function (canvas) {
+            return vm.saveCanvas(canvas, '桌贴A4_第' + (index + 1) + '页.png');
+          }).then(function () {
+            ReggieUI.success('已下载第 ' + (index + 1) + ' 页（高清 PNG，可直接按 A4 打印）');
+          });
+        },
+        downloadAll: function () {
+          var vm = this;
+          if (vm.posterPages.length > 1) {
+            ReggieUI.info('若浏览器询问是否允许多个文件下载，请点「允许」');
+          }
+          var i = 0;
+          function step() {
+            if (i >= vm.posterPages.length) {
+              ReggieUI.success('已下载全部 ' + vm.posterPages.length + ' 张 A4 拼版图片');
+              return;
+            }
+            var idx = i++;
+            vm.renderPageCanvas(vm.posterPages[idx]).then(function (canvas) {
+              return vm.saveCanvas(canvas, '桌贴A4_第' + (idx + 1) + '页.png');
+            }).then(function () { setTimeout(step, 350); });
+          }
+          step();
+        }
+      }
+    }).$mount('#app');
+  </script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+</body>
+</html>

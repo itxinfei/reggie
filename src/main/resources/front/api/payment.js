@@ -1,0 +1,41 @@
+// ==================== 支付 API ====================
+// 注意：PaymentController 映射在 /api/payment（与 /order 控制器不同），
+// 且 /api/payment/** 不在登录白名单内，必须保持用户登录态才能调用。
+
+// 创建支付订单并获取支付链接/二维码（PayResponse: tradeNo / payUrl / qrCodeUrl / errorMsg）
+function paymentCreateApi(data) {
+  return $axios({
+    'url': '/api/payment/pay',
+    'method': 'post',
+    data
+  })
+}
+
+// 沙箱模拟支付完成：回调通知接口（仅 mock-mode=true 的开发/演示环境会受理，
+// 生产环境 mock-mode=false 时由微信/支付宝服务端真实回调，前端不应调用此方法）。
+// params 需带 out_trade_no(商户单号)、sign(非空) 及对应渠道金额字段：
+// 微信 total_fee(分)、支付宝 total_amount(元)
+function paymentNotifyMockApi(channel, params) {
+  return $axios({
+    'url': '/api/payment/notify/' + channel,
+    'method': 'post',
+    data: params
+  })
+}
+
+// C 端用户查询支付状态（收银台轮询）：后端校验 tradeNo 关联订单属于当前用户。
+// 返回 data: status(PENDING/SUCCESS/FAIL/REFUND) / orderId / channel / amount / mockMode
+function paymentQueryApi(tradeNo) {
+  return $axios({
+    'url': '/api/payment/user/query/' + encodeURIComponent(tradeNo),
+    'method': 'get'
+  })
+}
+
+// C 端查询本人餐补余额（企业餐补，未开通时 enabled=false，前端据此隐藏餐补支付入口）
+function subsidyMyApi() {
+  return $axios({
+    'url': '/api/subsidy/my',
+    'method': 'get'
+  })
+}

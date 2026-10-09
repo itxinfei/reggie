@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>骑手异常工单 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260928" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260928" />
+  <style>
+    html, body { height: 100%; margin: 0; padding: 0; background: var(--el-bg-subtle); }
+    html { overflow: hidden; }
+    body { overflow-y: auto; }
+    .container { padding: 24px 32px; max-width: 1500px; margin: 0 auto; }
+    .tool-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tool-bar .spacer { flex: 1; }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <main class="container" id="main-content" role="main" aria-labelledby="page-title">
+    <h1 class="sr-only" id="page-title">骑手异常工单</h1>
+
+    <el-card shadow="never">
+      <div class="tool-bar">
+        <el-select v-model="filterStatus" placeholder="全部状态" clearable style="width: 140px;" @change="reload">
+          <el-option label="待处理" :value="0"></el-option>
+          <el-option label="已处理" :value="1"></el-option>
+          <el-option label="已转单" :value="2"></el-option>
+          <el-option label="已关闭" :value="3"></el-option>
+        </el-select>
+        <el-select v-model="filterType" placeholder="全部类型" clearable style="width: 160px;" @change="reload">
+          <el-option label="联系不上顾客" :value="1"></el-option>
+          <el-option label="商品破损" :value="2"></el-option>
+          <el-option label="地址有误" :value="3"></el-option>
+          <el-option label="顾客拒收" :value="4"></el-option>
+          <el-option label="申请转单" :value="5"></el-option>
+          <el-option label="其他" :value="6"></el-option>
+        </el-select>
+        <el-input v-model="filterOrderNo" placeholder="订单号" clearable style="width: 180px;"
+                  @keyup.enter.native="reload"></el-input>
+        <el-button type="primary" @click="reload">查询</el-button>
+        <span class="spacer"></span>
+        <el-pagination
+          layout="total, prev, pager, next"
+          :total="total"
+          :page-size="pageSize"
+          :current-page="page"
+          @current-change="onPageChange">
+        </el-pagination>
+      </div>
+
+      <el-table :data="rows" v-loading="loading" border>
+        <el-table-column prop="id" label="工单ID" width="90" align="center"></el-table-column>
+        <el-table-column prop="orderNumber" label="订单号" width="180" align="center"></el-table-column>
+        <el-table-column prop="riderName" label="上报骑手" width="110" align="center">
+          <template slot-scope="{ row }">{{ row.riderName || ('#' + row.riderId) }}</template>
+        </el-table-column>
+        <el-table-column label="异常类型" width="130" align="center">
+          <template slot-scope="{ row }">
+            <el-tag size="small" type="warning">{{ typeText(row.exceptionType) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="description" label="异常描述" min-width="180" align="center"
+                         show-overflow-tooltip></el-table-column>
+        <el-table-column label="状态" width="100" align="center">
+          <template slot-scope="{ row }">
+            <el-tag :type="statusTag(row.status)" size="small">{{ statusText(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="上报时间" width="170" align="center"></el-table-column>
+        <el-table-column prop="handleNote" label="处理意见" min-width="140" align="center"
+                         show-overflow-tooltip>
+          <template slot-scope="{ row }">{{ row.handleNote || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="150" align="center" fixed="right">
+          <template slot-scope="{ row }">
+            <el-button v-if="row.status === 0" type="text" size="small"
+                       @click="openHandle(row)">处理</el-button>
+            <span v-else class="el-text--secondary">已处理</span>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <el-dialog title="处理异常工单" :visible.sync="handleVisible" width="480px">
+      <el-form label-width="90px">
+        <el-form-item label="工单">
+          <span>{{ handleRow ? (handleRow.orderNumber + ' · ' + typeText(handleRow.exceptionType)) : '' }}</span>
+        </el-form-item>
+        <el-form-item label="处理方式">
+          <el-radio-group v-model="handleAction">
+            <el-radio label="RESOLVE">标记已处理</el-radio>
+            <el-radio label="CLOSE">关闭工单</el-radio>
+            <el-radio label="REASSIGN">改派骑手</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="目标骑手" v-if="handleAction === 'REASSIGN'">
+          <el-select v-model="newRiderId" placeholder="选择改派骑手" style="width: 100%;"
+                     v-loading="ridersLoading">
+            <el-option v-for="r in riders" :key="r.id"
+                       :label="r.name + '（在途' + (r.currentOrderCount || 0) + '单·' + riderStatusText(r.status) + '）'"
+                       :value="r.id"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="处理备注">
+          <el-input v-model="handleNote" type="textarea" :rows="3"
+                    placeholder="填写处理说明（改派建议注明原因）"></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer">
+        <el-button @click="handleVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitHandle">确认处理</el-button>
+      </span>
+    </el-dialog>
+  </main>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/common.js?v=20260928"></script>
+  <script>
+    new Vue({
+      el: '#main-content',
+      data: function () {
+        return {
+          loading: false,
+          rows: [],
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          filterStatus: '',
+          filterType: '',
+          filterOrderNo: '',
+          handleVisible: false,
+          handleRow: null,
+          handleAction: 'RESOLVE',
+          handleNote: '',
+          newRiderId: null,
+          riders: [],
+          ridersLoading: false,
+          submitting: false
+        };
+      },
+      mounted: function () {
+        this.load();
+      },
+      methods: {
+        load: function () {
+          var vm = this;
+          vm.loading = true;
+          $axios.get('/api/rider-exception/admin/page', {
+            params: {
+              status: vm.filterStatus === '' ? undefined : vm.filterStatus,
+              exceptionType: vm.filterType === '' ? undefined : vm.filterType,
+              orderNumber: vm.filterOrderNo || undefined,
+              page: vm.page,
+              size: vm.pageSize
+            }
+          }).then(function (res) {
+            var page = res.data || {};
+            vm.rows = page.records || [];
+            vm.total = page.total || 0;
+          }).catch(function () { /* 提示已统一 */ }).then(function () {
+            vm.loading = false;
+          });
+        },
+        reload: function () {
+          this.page = 1;
+          this.load();
+        },
+        onPageChange: function (p) {
+          this.page = p;
+          this.load();
+        },
+        openHandle: function (row) {
+          this.handleRow = row;
+          this.handleAction = 'RESOLVE';
+          this.handleNote = '';
+          this.newRiderId = null;
+          this.handleVisible = true;
+          this.loadRiders();
+        },
+        loadRiders: function () {
+          var vm = this;
+          if (vm.riders.length) { return; }
+          vm.ridersLoading = true;
+          $axios.get('/api/delivery/rider/page', { params: { page: 1, pageSize: 100 } })
+            .then(function (res) {
+              var page = res.data || {};
+              vm.riders = page.records || [];
+            }).catch(function () { /* 提示已统一 */ }).then(function () {
+              vm.ridersLoading = false;
+            });
+        },
+        submitHandle: function () {
+          var vm = this;
+          if (vm.handleAction === 'REASSIGN' && !vm.newRiderId) {
+            vm.$message.warning('请选择改派骑手');
+            return;
+          }
+          vm.submitting = true;
+          $axios.put('/api/rider-exception/' + vm.handleRow.id + '/handle', {
+            action: vm.handleAction,
+            handleNote: vm.handleNote,
+            newRiderId: vm.handleAction === 'REASSIGN' ? vm.newRiderId : null
+          }).then(function () {
+            vm.$message.success('处理完成');
+            vm.handleVisible = false;
+            vm.load();
+          }).catch(function () { /* 提示已统一 */ }).then(function () {
+            vm.submitting = false;
+          });
+        },
+        typeText: function (t) {
+          var map = { 1: '联系不上顾客', 2: '商品破损', 3: '地址有误', 4: '顾客拒收', 5: '申请转单', 6: '其他' };
+          return map[t] || '异常';
+        },
+        statusText: function (s) {
+          var map = { 0: '待处理', 1: '已处理', 2: '已转单', 3: '已关闭' };
+          return map[s] || '未知';
+        },
+        statusTag: function (s) {
+          switch (s) {
+            case 0: return 'warning';
+            case 1: return 'success';
+            case 2: return 'primary';
+            default: return 'info';
+          }
+        },
+        riderStatusText: function (s) {
+          var map = { 0: '离线', 1: '在线', 2: '忙碌' };
+          return map[s] || '';
+        }
+      }
+    });
+  </script>
+</body>
+</html>

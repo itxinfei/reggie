@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>行政区划管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260926" />
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="region-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">行政区划管理</h1>
+      <!-- 修改点：统计卡片支持点击筛选（点击省份/城市/区县卡片按层级过滤数据，与层级下拉框互斥） -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
+      <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="tableActions"
+        @search="handleQuery"
+        @reset="reset"
+        @action="onTableAction"
+        :show-refresh="true"
+        @refresh="fetchData(false)">
+        <template slot="search-extra">
+          <el-select v-model="input.name" placeholder="选择地区名称" class="el-select--narrow-xs" clearable filterable size="small"
+            :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @change="handleQuery" @visible-change="onFilterDropdownVisible" >
+            <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+          </el-select>
+          <el-select v-model="input.level" placeholder="层级" clearable class="el-select--wide-xs" @change="onLevelChange">
+            <el-option label="全部" :value="null"></el-option>
+            <el-option label="省份" :value="1"></el-option>
+            <el-option label="城市" :value="2"></el-option>
+            <el-option label="区/县" :value="3"></el-option>
+          </el-select>
+        </template>
+      </table-bar>
+
+      <!-- 修改点：数据表格改用 <crud-table> 统一组件，列通过 columns 配置 + 插槽自定义 -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :loading="loading"
+        :show-actions="true" :viewable="true"
+        :actions-width="120"
+        :page-sizes="[10, 20, 30, 50]"
+        row-key="id"
+        :batch-delete="doBatchDelete"
+        @batch-deleted="fetchData()"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-level="{ row }">
+          <el-tag :type="row.level === 1 ? 'danger' : row.level === 2 ? 'warning' : 'success'" size="small">
+            {{ row.level === 1 ? '省份' : row.level === 2 ? '城市' : '区/县' }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="editHandle(row)">修改</el-button>
+          <el-dropdown trigger="click" @command="(cmd) => cmd === 'delete' && deleteHandle(row.id)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- 修改点：新增/编辑弹窗改用 <crud-dialog :show-submit="true" :show-cancel="true"> 统一组件（内置关闭/重置逻辑，底部按钮统一 medium） -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :title="formData.title"
+      :visible.sync="formData.dialogVisible"
+      size="lg"
+      :submit-loading="submitLoading"
+      @submit="submitForm"
+    >
+      <!-- 修改点：移除误导性死 class demo-form-inline（label-width 80 合适，保持不变） -->
+      <!-- 修改点：补全 ref/:model/:rules，启用 Element 校验（原仅手写 if 判断，属"假必填"不校验） -->
+      <el-form ref="regionForm" :model="formData" :rules="regionRules" label-width="100px" size="small">
+        <el-form-item label="地区名称：" prop="name">
+          <el-input v-model="formData.name" placeholder="请输入地区名称" maxlength="50" ></el-input>
+        </el-form-item>
+        <el-form-item label="区划代码：">
+          <el-input v-model="formData.code" placeholder="请输入区划代码，如110000" maxlength="20" ></el-input>
+        </el-form-item>
+        <el-form-item label="层级：">
+          <el-select v-model="formData.level" placeholder="请选择层级" style="width: 100%">
+            <el-option label="省份(1级)" :value="1"></el-option>
+            <el-option label="城市(2级)" :value="2"></el-option>
+            <el-option label="区/县(3级)" :value="3"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="上级地区：" v-if="formData.level !== 1" prop="parentId">
+          <el-select v-model="formData.parentId" placeholder="请选择上级地区" style="width: 100%" filterable>
+            <el-option v-for="p in parentOptions" :key="p.id" :label="p.name" :value="p.id"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="排序：">
+          <el-input-number v-model="formData.sort" :min="0" :max="9999" placeholder="排序值" style="width: 100%" ></el-input-number>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/region.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+<script>
+    new Vue({
+      el: '#region-app',
+      // 修改点：引入列表页通用 Mixin，自动获得 page/pageSize/counts/loading 与翻页处理
+      mixins: [window.ReggieListMixin],
+      data() {
+        return {
+          input: { name: '', level: null },
+          // 修改点：当前激活的统计卡片 key（'' 全部 / '1' 省 / '2' 市 / '3' 区），点击卡片按层级筛选
+          activeFilter: '',
+          // 修改点：按层级统计数据，由 /region/stats 加载，供统计卡片展示
+          stats: { total: 0, provinceCount: 0, cityCount: 0, districtCount: 0 },
+          // 修改点：搜索下拉框动态选项（从数据库加载地区名称）
+          filterOptions: { names: [] },
+          // 修改点：<table-bar> 统一组件配置
+          tableSearchItems: [],
+          tableActions: [
+            { key: 'add', text: '+ 新增地区', type: 'primary' }
+          ],
+          optionsLoading: false,
+          optionsLoadError: false,
+          tableData: [],
+          parentOptions: [],
+          // 修改点：分页相关字段已改由 ReggieListMixin 提供，此处仅保留业务状态
+          submitLoading: false,
+          formData: {
+            title: '', id: undefined, name: '', code: '', level: 1,
+            parentId: null, sort: 0, dialogVisible: false
+          },
+          // 修改点：地区表单校验规则（配合 el-form :rules + validate()）
+          // 注：regionRules 已改为 computed 动态生成（level 2/3 时上级地区必填），此处不再静态声明
+          // 修改点：列配置（交给 <crud-table>，避免手写 <el-table-column> 重复）
+          columns: [
+            { prop: 'id', label: 'ID', width: 60, align: 'center' },
+            { prop: 'name', label: '地区名称', width: 120 },
+            { prop: 'code', label: '区划代码', width: 100, align: 'center' },
+            { prop: 'level', label: '层级', width: 70, align: 'center', slot: true },
+            { prop: 'parentId', label: '父级ID', width: 70, align: 'center' },
+            { prop: 'sort', label: '排序', width: 60, align: 'center' }
+          ]
+        }
+      },
+      created() {
+        this.loadFilterOptions()
+        this.fetchData()
+      },
+      computed: {
+        // 修改点：regionRules 动态化 — 层级为 2/3 级时上级地区必填（此前静态规则无此项，漏选直接提交空白父级）
+        regionRules() {
+          const rules = {
+            name: [{ required: true, whitespace: true, message: '请输入地区名称', trigger: 'blur' }]
+          }
+          if (this.formData.level !== 1) {
+            rules.parentId = [{ required: true, message: '请选择上级地区', trigger: 'change' }]
+          }
+          return rules
+        },
+        // 修改点：4 张可点击统计卡片（总数/省份/城市/区县），点击按层级筛选数据
+        statsCards() {
+          var s = this.stats || {}
+          return [
+            { key: '', icon: 'ri-map-pin-2-line', label: '地区总数', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
+            { key: '1', icon: 'ri-map-pin-line', label: '省份', value: s.provinceCount || 0, color: 'success', clickable: true, active: this.activeFilter === '1' },
+            { key: '2', icon: 'ri-building-line', label: '城市', value: s.cityCount || 0, color: 'warning', clickable: true, active: this.activeFilter === '2' },
+            { key: '3', icon: 'ri-book-open-line', label: '区/县', value: s.districtCount || 0, color: 'danger', clickable: true, active: this.activeFilter === '3' }
+          ]
+        }
+      },
+      watch: {
+        'formData.level': function(newVal) {
+          // 省份级不需要上级
+          if (newVal === 1) {
+            this.formData.parentId = null
+          } else {
+            this.loadParentOptions(newVal)
+          }
+        }
+      },
+      methods: {
+        /* ========== 数据加载 ========== */
+        // 修改点：<table-bar> 组件统一操作分发
+        onTableAction: function(payload) {
+          if (payload.key === 'add') { this.addHandle(); }
+        },
+        // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
+        async loadFilterOptions() {
+          this.optionsLoading = true
+          this.optionsLoadError = false
+          try {
+            const res = await regionOptions()
+            if (String(res.code) === '1' && res.data) {
+              this.filterOptions.names = res.data.names || []
+            } else {
+              this.optionsLoadError = true
+              ReggieUI.warning('加载地区选项失败：' + (res.msg || '接口返回异常'))
+            }
+          } catch (err) {
+            // 修改点：NOTLOGIN 错误已在全局拦截器处理（跳转登录页），无需重复提示
+            if (err.message === 'NOTLOGIN') {
+              return
+            }
+            this.optionsLoadError = true
+            ReggieUI.error('加载筛选选项失败，请刷新页面重试')
+          } finally {
+            this.optionsLoading = false
+          }
+        },
+        // 下拉框打开时若之前加载失败，自动重试
+        onFilterDropdownVisible(visible) {
+            if (visible && this.optionsLoadError) {
+                this.loadFilterOptions()
+            }
+        },
+        // 修改点：原 init() 重命名为 fetchData()，由 ReggieListMixin 的翻页/改大小自动调用
+        // reloadStats=true 时并行重载统计卡片（初始进入/增删改后）；搜索/卡片筛选时传 false 不重算
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '地区', request: deleteRegion })
+        },
+        async fetchData(reloadStats) {
+          if (reloadStats === undefined) { reloadStats = true }
+          this.loading = true
+          // 层级筛选：优先统计卡片 activeFilter，其次层级下拉框 input.level（两者互斥）
+          var level = this.activeFilter || this.input.level
+          var params = { page: this.page, pageSize: this.pageSize, name: this.input.name || undefined, level: level || undefined }
+          try {
+            var requests = [regionPage(params)]
+            if (reloadStats) { requests.push(this.loadRegionStats()) }
+            var results = await Promise.all(requests)
+            var res = results[0]
+            if (res.code === 1) {
+              this.tableData = res.data.records || []
+              this.counts = res.data.total || 0
+            } else {
+              // 修改点：此前 else 静默，列表加载失败无任何反馈
+              ReggieUI.error((res && res.msg) || '获取地区列表失败')
+            }
+            if (reloadStats) {
+              var statsRes = results[1]
+              if (statsRes && statsRes.code === 1 && statsRes.data) {
+                this.stats = statsRes.data
+              } else if (statsRes) {
+                // 修改点：统计加载失败给轻提示（列表仍可用）
+                ReggieUI.warning((statsRes.msg) || '获取地区统计失败')
+              }
+            }
+          } catch (err) {
+            // 修改点：此前仅 console.warn，无任何用户提示
+            ReggieUI.error('获取地区列表失败：' + (err || '网络异常'))
+          } finally {
+            this.loading = false
+          }
+        },
+        // 修改点：加载按层级统计数据（总数/省/市/区），供统计卡片展示
+        async loadRegionStats() {
+          try {
+            var res = await regionStats()
+            if (res.code === 1 && res.data) {
+              return { code: 1, data: res.data }
+            }
+          } catch (err) {
+            console.warn('加载地区统计失败:', err)
+          }
+          return { code: 0 }
+        },
+        /* ========== 搜索与筛选 ========== */
+        handleQuery() {
+          // 名称搜索保持当前层级筛选，仅翻回第 1 页
+          this.page = 1
+          this.fetchData(false)
+        },
+        // 修改点：层级下拉框变化 — 与统计卡片联动，同步激活对应卡片
+        onLevelChange() {
+          this.activeFilter = this.input.level ? String(this.input.level) : ''
+          this.page = 1
+          this.fetchData(false)
+        },
+        // 修改点：统计卡片点击 — 按层级筛选数据，与下拉框联动同步选中项
+        onCardClick(payload) {
+          this.activeFilter = payload.activeKey
+          this.input.level = payload.activeKey ? Number(payload.activeKey) : null
+          this.page = 1
+          this.fetchData(false)
+        },
+        // 重置搜索条件，恢复表格初始状态
+        reset() {
+          this.input.name = ''
+          this.input.level = null
+          this.activeFilter = ''
+          this.page = 1
+          this.fetchData(false)
+        },
+
+        // 加载可选的上级地区
+        async loadParentOptions(level) {
+          // 2级城市需要选省份，3级区县需要选城市
+          const parentLevel = level - 1
+          // 修改点：改为调用后端 /region/by-level 聚合接口（按层级返回全部），不再用 pageSize:1000 拉全量导致截断
+          const res = await regionByLevel(parentLevel)
+          if (res.code === 1) {
+            this.parentOptions = res.data || []
+          }
+        },
+
+        /* ========== 地区操作（新增/编辑/删除） ========== */
+        addHandle() {
+          this.formData = {
+            title: '新增地区', id: undefined, name: '', code: '', level: 1,
+            parentId: null, sort: 0, dialogVisible: true
+          }
+          this.parentOptions = []
+        },
+
+        editHandle(row) {
+          this.formData = {
+            title: '修改地区', id: row.id, name: row.name, code: row.code || '',
+            level: row.level, parentId: row.parentId, sort: row.sort || 0,
+            dialogVisible: true
+          }
+          if (row.level !== 1) {
+            this.loadParentOptions(row.level)
+          }
+        },
+
+        async submitForm() {
+          const self = this
+          const passed = await new Promise(resolve => {
+            self.$refs.regionForm.validate(function(valid) { resolve(valid) })
+          })
+          if (!passed) {
+            ReggieUI.warning('请完善表单必填项')
+            return
+          }
+          const data = {
+            id: self.formData.id,
+            name: self.formData.name.trim(),
+            code: self.formData.code || null,
+            level: self.formData.level,
+            parentId: self.formData.level === 1 ? 0 : self.formData.parentId,
+            sort: self.formData.sort
+          }
+          self.submitLoading = true
+          let res
+          try {
+            if (self.formData.id) {
+              res = await editRegion(data)
+            } else {
+              res = await addRegion(data)
+            }
+            if (res.code === 1) {
+              ReggieUI.success(self.formData.id ? '修改成功' : '新增成功')
+              self.formData.dialogVisible = false
+              self.fetchData()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          } finally {
+            self.submitLoading = false
+          }
+        },
+
+        deleteHandle(id) {
+          ReggieUI.confirm('确认删除该地区吗？如有子级则无法删除。', '提示', { type: 'warning' }).then(async () => {
+            try {
+              const res = await deleteRegion(id)
+              if (res.code === 1) {
+                ReggieUI.success('删除成功')
+                this.fetchData()
+              } else {
+                ReggieUI.error(res.msg || '删除失败')
+              }
+            } catch (err) {
+              // code!=1 时 request 拦截器会 reject，需在此单独提示，否则落入外层仅 console.warn
+              ReggieUI.error((err && err.message) || '删除失败')
+            }
+          }).catch((e) => {
+            // 外层仅处理用户取消/关闭，其余异常兜底提示
+            if (e === 'cancel' || e === 'close') return
+            ReggieUI.error('删除失败')
+          })
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI模型配置 - 瑞吉外卖管理端</title>
+
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/ai-provider.css?v=20260923b" />
+</head>
+<body>
+<!-- ====== AI 服务商配置管理页 ====== -->
+<!-- 功能：管理 AI 服务商与连接测试，支持激活/编辑/删除供应商、测试连接、一键初始化预设模型 -->
+<!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+<a href="#main-content" class="skip-link">跳转到主内容</a>
+<div class="dashboard-container" id="provider-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">AI 模型配置</h1>
+
+        <!-- 全供应商不可用：顶部红色告警横幅 -->
+        <el-alert
+            v-if="statusData.allExhausted"
+            title="全部 AI 供应商均不可用"
+            type="error" :closable="false" show-icon class="exhausted-alert">
+            <template slot="default">
+                所有候选均已故障或处于熔断冷却中，新对话将收到兜底提示。请检查各供应商额度/密钥，或将其他可用供应商设为首选。
+                <span v-if="statusData.lastExhaustedTime">最近发生：{{ statusData.lastExhaustedTime }}</span>
+            </template>
+        </el-alert>
+
+        <!-- 当前首选供应商 -->
+        <div class="active-provider-card" v-if="activeProvider">
+            <div class="active-provider-info">
+                <div class="provider-icon-large" :class="getIconClass(activeProvider.providerCode)">
+                    <i :class="getProviderIcon(activeProvider.providerCode)" aria-hidden="true"></i>
+                </div>
+                <div class="provider-detail">
+                    <div class="name">{{ activeProvider.providerName }}
+                        <el-tag size="small" type="success" class="current-tag">首选</el-tag>
+                    </div>
+                    <div class="model">模型：{{ activeProvider.modelName }}</div>
+                    <div class="url">接口地址：{{ activeProvider.baseUrl }}</div>
+                </div>
+                <div>
+                    <el-button type="primary" size="small" @click="testProvider(activeProvider.id)">
+                        测试连接
+                    </el-button>
+                </div>
+            </div>
+        </div>
+        <!-- 无可用首选：空态卡片（样式收口为 --empty 修饰类） -->
+        <div class="active-provider-card active-provider-card--empty" v-else>
+            <p>
+                暂无可用的首选 AI 模型，请在下方选择一个已启用的供应商并点击「设为首选」
+            </p>
+            <el-button type="primary" size="small" @click="initPresets">
+                一键初始化预设模型
+            </el-button>
+        </div>
+
+        <!-- 供应商列表 -->
+        <div class="section-title">
+            <i class="ri-robot-2-line" aria-hidden="true"></i> 已配置的模型
+            <span class="count-tip">（共 {{ providers.length }} 个）</span>
+            <span class="section-actions">
+                <el-button type="primary" size="small" @click="initPresets">
+                    初始化预设模型
+                </el-button>
+                <el-button type="primary" size="small" @click="openAddDialog">
+                    添加自定义模型
+                </el-button>
+                <el-button size="small" @click="loadData" icon="ri-refresh-line">
+                    刷新
+                </el-button>
+            </span>
+        </div>
+
+        <div class="provider-grid">
+            <div v-for="provider in providers" :key="provider.id"
+                 :class="['provider-card',
+                     provider.isActive ? 'active-card' : '',
+                     provider.enabled ? '' : 'disabled-card']">
+                <div class="card-header">
+                    <div class="card-icon" :class="getIconClass(provider.providerCode)">
+                        <i :class="getProviderIcon(provider.providerCode)" aria-hidden="true"></i>
+                    </div>
+                    <div class="card-info">
+                        <div class="name">{{ provider.providerName }}</div>
+                        <div class="model-name">{{ provider.modelName }}</div>
+                    </div>
+                    <el-tag size="small" :type="statusTagType(provider)" effect="plain">
+                        {{ statusTagText(provider) }}
+                    </el-tag>
+                </div>
+                <div class="card-desc">{{ provider.remark || '暂无备注信息' }}</div>
+                <div class="card-meta">
+                    <span class="meta-item"><i class="ri-time-line" aria-hidden="true"></i> 超时 {{ provider.timeout || 60 }}s</span>
+                    <span class="meta-item"><i class="ri-font-size-2" aria-hidden="true"></i> {{ provider.apiFormat || 'OpenAI' }}</span>
+                    <span class="meta-item" v-if="provider.lastTestTime">
+                        <i v-if="provider.lastTestResult === 'success'" class="ri-checkbox-circle-line test-ok" aria-hidden="true"></i>
+                        <i v-else class="ri-close-circle-line test-ng" aria-hidden="true"></i>
+                        {{ provider.lastTestResult === 'success' ? ' 测试通过' : ' 测试失败' }}
+                    </span>
+                    <!-- P2 能力标签（chat 恒具备不展示，仅展示扩展能力） -->
+                    <el-tag v-if="capOn(provider, 'vision')" type="success" size="mini" effect="plain">视觉</el-tag>
+                    <el-tag v-if="capOn(provider, 'tools')" type="warning" size="mini" effect="plain">工具</el-tag>
+                    <el-tag v-if="capOn(provider, 'embedding')" type="info" size="mini" effect="plain">嵌入</el-tag>
+                </div>
+                <div class="card-actions">
+                    <el-button v-if="!provider.isActive" type="success" size="small"
+                               @click="activateProvider(provider.id)">设为首选</el-button>
+                    <el-button v-else type="info" size="small" disabled>首选</el-button>
+                    <el-button type="primary" size="small" @click="testProvider(provider.id)">测试</el-button>
+                    <el-button size="small" @click="openEditDialog(provider)">编辑</el-button>
+                    <el-button type="text" size="small" class="btn-delete" @click="deleteProvider(provider.id)"
+                               :disabled="provider.isActive">删除</el-button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 添加/编辑弹窗 -->
+    <crud-dialog size="lg" :show-submit="true" :show-cancel="true" :title="dialogTitle" :visible.sync="dialogVisible"
+               :show-close="true" :close-on-click-modal="false" :submit-loading="submitting" @submit="submitForm">
+        <!-- 修改点：补全 ref/:rules 启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
+        <el-form ref="providerForm" :model="form" :rules="providerRules" label-width="100px" size="small" class="dialog-form">
+            <!-- 修改点(2026-09-18)：分组分隔线，降低长表单视觉压力 -->
+            <el-divider content-position="left">基础信息</el-divider>
+            <el-form-item label="供应商名称" prop="providerName">
+                <el-input v-model="form.providerName" placeholder="如：DeepSeek、通义千问"></el-input>
+            </el-form-item>
+            <el-form-item label="供应商编码" prop="providerCode">
+                <el-input v-model="form.providerCode"
+                    placeholder="deepseek / qwen / zhipu / ernie..."></el-input>
+                <div class="field-tip">唯一标识，建议使用英文小写，如 deepseek、qwen</div>
+            </el-form-item>
+            <el-divider content-position="left">接口配置</el-divider>
+            <!-- 修改点(2026-09-18)：重新设计 —— 地址自动补全预览，杜绝"填裸域名打到网页入口"的配置错误 -->
+            <el-form-item label="API 地址" prop="baseUrl">
+                <el-input v-model="form.baseUrl"
+                    placeholder="https://api.iamhc.cn 或 https://api.deepseek.com/v1" clearable></el-input>
+                <div class="field-tip">
+                    填网关域名即可，系统自动补全 /v1/chat/completions；带 /v1 或完整路径的写法同样支持
+                </div>
+                <div v-if="form.baseUrl" class="endpoint-preview">
+                    <i class="ri-link" aria-hidden="true"></i>
+                    实际请求：<code>{{ resolvedEndpoint }}</code>
+                </div>
+            </el-form-item>
+            <el-form-item label="模型名称" prop="modelName">
+                <!-- 修改点：模型名称支持手动输入 + 一键拉取API模型列表（参考ChatBox/NextChat体验） -->
+                <div class="model-name-row">
+                    <el-input class="model-name-input" v-model="form.modelName" placeholder="deepseek-chat / qwen-turbo / glm-4"></el-input>
+                    <el-button size="small" type="success" @click="fetchModelList"
+                        :loading="fetchingModels" :disabled="!form.baseUrl || !form.apiKey">
+                        {{ fetchingModels ? '获取中...' : '获取模型列表' }}
+                    </el-button>
+                </div>
+                <div class="field-tip">
+                    手动输入或点击「获取模型列表」自动拉取（需先填写 API 地址和密钥）
+                </div>
+                <!-- 修改点：模型列表下拉选择区 -->
+                <div v-if="modelList.length > 0" class="model-list-panel">
+                    <div class="model-list-header">
+                        共 {{ modelList.length }} 个可用模型，点击即可选择：
+                        <span class="model-list-clear" role="button" tabindex="0" @click="modelList = []" @keydown.enter="modelList = []" aria-label="收起模型列表"><i class="ri-close-line" aria-hidden="true"></i> 收起</span>
+                    </div>
+                    <div class="model-list-items">
+                        <span v-for="m in modelList" :key="m"
+                              :class="['model-chip', { active: form.modelName === m }]"
+                              role="button" tabindex="0"
+                              @click="selectModel(m)" @keydown.enter="selectModel(m)"
+                              :aria-label="'选择模型' + m" :aria-pressed="form.modelName === m">
+                            {{ m }}
+                        </span>
+                    </div>
+                </div>
+                <!-- 修改点：获取失败时的错误提示 -->
+                <div v-if="modelFetchError" class="model-fetch-error">
+                    <i class="ri-alert-line" aria-hidden="true"></i> {{ modelFetchError }}
+                </div>
+            </el-form-item>
+            <el-form-item label="API 密钥" prop="apiKey">
+                <!-- 修改点(2026-09-18)：明文直接显示（用户要求不脱敏），密钥入库前仍加密存储 -->
+                <el-input v-model="form.apiKey" type="text"
+                    :placeholder="form._hasExistingKey ? '' : 'sk-...'" clearable></el-input>
+                <div class="key-hint" v-if="form._hasExistingKey">
+                    <i class="ri-checkbox-circle-line key-ok" aria-hidden="true"></i> 已加载当前密钥，可直接查看或替换
+                </div>
+                <div class="key-hint" v-else>
+                    <i class="ri-alert-line key-warn" aria-hidden="true"></i> 密钥将加密存储到数据库
+                </div>
+            </el-form-item>
+            <el-form-item label="API 格式">
+                <!-- 修改点(2026-09-18)：popper 不挂 body，避免 append-to-body 弹窗内下拉层级异常导致选不了 -->
+                <el-select v-model="form.apiFormat" :popper-append-to-body="false">
+                    <el-option label="OpenAI 兼容格式（推荐）" value="openai_compatible"></el-option>
+                    <el-option label="Anthropic Claude" value="anthropic"></el-option>
+                    <el-option label="百度文心一言" value="baidu"></el-option>
+                    <el-option label="360智脑" value="360"></el-option>
+                    <el-option label="自定义" value="custom"></el-option>
+                </el-select>
+                <div class="field-tip">国内主流网关/GPT/DeepSeek/千问/GLM 均选「OpenAI 兼容格式」；360、自定义也按 OpenAI 兼容处理</div>
+            </el-form-item>
+            <!-- P2：模型能力开关（chat 固定具备；vision 控制聊天页图片入口） -->
+            <el-divider content-position="left">模型能力</el-divider>
+            <el-form-item label="能力开关">
+                <el-checkbox-group v-model="form.capabilityList" class="capability-group">
+                    <el-checkbox label="chat" disabled>文本对话（必选）</el-checkbox>
+                    <el-checkbox label="vision">图片视觉</el-checkbox>
+                    <el-checkbox label="tools">工具调用</el-checkbox>
+                    <el-checkbox label="embedding">向量嵌入</el-checkbox>
+                </el-checkbox-group>
+                <div class="field-tip">
+                    勾选后聊天页按能力开放功能：「图片视觉」开启图片发送入口（模型本身须支持识图，如 GPT-4o、Qwen-VL、GLM-4V）；
+                    「工具调用」「向量嵌入」为经营数据问答与知识库能力预留
+                </div>
+            </el-form-item>
+            <el-form-item label="向量维度" v-if="form.capabilityList.indexOf('embedding') >= 0">
+                <el-input-number v-model="form.embeddingDimensions" :min="1" :max="32768"></el-input-number>
+                <div class="field-tip">embedding 模型输出维度（知识库 RAG 使用，常见 1024 / 1536 / 2048）</div>
+            </el-form-item>
+            <el-divider content-position="left">生成参数</el-divider>
+            <el-row :gutter="16">
+                <el-col :span="12">
+                    <el-form-item label="超时（秒）">
+                        <el-input-number v-model="form.timeout" :min="10" :max="300"></el-input-number>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                    <el-form-item label="最大 Token">
+                        <el-input-number v-model="form.maxTokens" :min="100" :max="32768"></el-input-number>
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <el-form-item label="温度参数">
+                <el-slider v-model="form.temperature" :min="0" :max="2" :step="0.1"
+                    :format-tooltip="function(val) { return '温度: ' + val; }"></el-slider>
+            </el-form-item>
+            <el-form-item label="备注说明">
+                <el-input v-model="form.remark" type="textarea" :rows="2"
+                    placeholder="模型特点、适用场景等说明"></el-input>
+            </el-form-item>
+            <!-- 修改点(2026-09-18)：新增 —— 弹窗内连通测试（编辑模式，使用数据库已保存配置） -->
+            <el-form-item v-if="form.id" label="连通测试">
+                <el-button size="small" type="warning" plain :loading="dialogTesting" @click="testFromDialog">
+                    {{ dialogTesting ? '测试中...' : '测试已保存的配置' }}
+                </el-button>
+                <div v-if="dialogTestResult" :class="['key-hint', dialogTestOk ? 'dialog-test-ok' : 'dialog-test-ng']">
+                    <i :class="dialogTestOk ? 'ri-checkbox-circle-line key-ok' : 'ri-close-circle-line key-ng'" aria-hidden="true"></i>
+                    {{ dialogTestResult }}
+                </div>
+                <div v-else class="field-tip">测试走数据库已保存的配置；刚修改的字段请先点「保存」再测试</div>
+            </el-form-item>
+        </el-form>
+    </crud-dialog>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js?v=20260915"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js?v=20260930"></script>
+<script src="../../js/accessibility-utils.js?v=20260927"></script>
+<script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+<script src="../../api/ai.js?v=20260921"></script>
+<script>
+(function() {
+    'use strict';
+
+    /** 供应商图标 — RemixIcon 类名映射（不再使用 emoji，确保跨端一致） */
+    const PROVIDER_ICON = {
+        deepseek:    'ri-robot-2-line',
+        qwen:        'ri-compass-3-line',
+        zhipu:       'ri-radar-line',
+        ernie:       'ri-translate-2',
+        openai:      'ri-open-arm-line',
+        claude:      'ri-flashlight-line',
+        kimi:        'ri-moon-cloudy-line',
+        minimax:     'ri-sparkling-line',
+        doubao:      'ri-seedling-line',
+        stepfun:     'ri-stairs-line',
+        custom:      'ri-settings-3-line'
+    };
+
+    new Vue({
+        el: '#provider-app',
+        data: {
+            providers: [],
+            activeProvider: null,
+            // AI 服务健康状态（loadStatus 轮询更新，默认 configured 避免初始误报横幅）
+            statusData: { configured: true, allExhausted: false },
+            dialogVisible: false,
+            dialogTitle: '添加模型',
+            submitting: false,
+            // 修改点：模型列表拉取状态
+            fetchingModels: false,
+            modelList: [],
+            modelFetchError: '',
+            // 修改点(2026-09-18)：弹窗内连通测试状态
+            dialogTesting: false,
+            dialogTestResult: '',
+            dialogTestOk: false,
+            form: {
+                id: null,
+                providerCode: '',
+                providerName: '',
+                baseUrl: '',
+                modelName: '',
+                apiKey: '',
+                apiFormat: 'openai_compatible',
+                timeout: 60,
+                maxTokens: 2048,
+                temperature: 0.7,
+                remark: '',
+                // P2 能力开关：弹窗工作态数组（提交时序列化为 capabilities JSON 字符串）
+                capabilityList: ['chat'],
+                embeddingDimensions: null
+            },
+        },
+
+        // 校验规则随 form.id 动态生成：apiKey 新增必填、编辑时留空表示沿用原密钥（错误内联，不用 toast）
+        computed: {
+            // 候选状态映射 code → statusData 候选项（含实时熔断状态）
+            breakerMap: function() {
+                var map = {};
+                var candidates = (this.statusData && this.statusData.candidates) || [];
+                candidates.forEach(function(c) { map[c.code] = c; });
+                return map;
+            },
+            providerRules: function() {
+                return {
+                    providerName: [{ required: true, whitespace: true, message: '请输入供应商名称', trigger: 'blur' }],
+                    providerCode: [{ required: true, whitespace: true, message: '请输入供应商编码', trigger: 'blur' }],
+                    baseUrl: [{ required: true, whitespace: true, message: '请输入 API 地址', trigger: 'blur' }],
+                    modelName: [{ required: true, whitespace: true, message: '请输入模型名称', trigger: 'blur' }],
+                    apiKey: (!this.form || !this.form.id)
+                        ? [{ required: true, whitespace: true, message: '请输入 API 密钥', trigger: 'blur' }]
+                        : []
+                };
+            },
+            // 修改点(2026-09-18)：端点实时预览，规则与后端 AiUrlUtils.resolveEndpoint 保持一致
+            resolvedEndpoint: function() {
+                var base = (this.form.baseUrl || '').trim().replace(/\/+$/, '');
+                if (!base) return '';
+                var ep = '/chat/completions';
+                if (base.length > ep.length && base.lastIndexOf(ep) === base.length - ep.length) {
+                    return base;
+                }
+                var schemeIdx = base.indexOf('://');
+                var pathIdx = schemeIdx >= 0 ? base.indexOf('/', schemeIdx + 3) : base.indexOf('/');
+                if (pathIdx < 0) {
+                    return base + '/v1' + ep;
+                }
+                return base + ep;
+            }
+        },
+
+        created: function() {
+            this.loadData();
+            // 健康状态：立即加载 + 每 15 秒轮询（熔断/全耗尽实时反映）
+            this.loadStatus();
+            this.statusTimer = setInterval(this.loadStatus, 15000);
+        },
+
+        beforeDestroy: function() {
+            if (this.statusTimer) { clearInterval(this.statusTimer);
+            }
+        },
+
+        watch: {
+            // P2：按模型名启发式勾选视觉能力（运营选模型后免手动；仅自动勾选不自动取消）
+            'form.modelName': function(val) {
+                if (!val || !this.form.capabilityList) return;
+                var name = String(val).toLowerCase();
+                if (/(^|[-_])vl([-_]|$)|vision|visual|4o|glm-4v|qwen-vl|image/.test(name)
+                        && this.form.capabilityList.indexOf('vision') < 0) {
+                    this.form.capabilityList.push('vision');
+                }
+            }
+        },
+
+        methods: {
+            /* ── 弹窗内连通测试（编辑模式） ── */
+            // 修改点(2026-09-18)：新增，测试走数据库已保存配置（与卡片上的「测试」按钮同一接口）
+            testFromDialog: function() {
+                const self = this;
+                self.dialogTesting = true;
+                self.dialogTestResult = '';
+                window.aiBackendApi.providerTest(self.form.id).then(function(res) {
+                    if (res.code === 1 && res.data) {
+                        self.dialogTestOk = res.data.success === 'true';
+                        self.dialogTestResult = res.data.result || (self.dialogTestOk ? 'SUCCESS' : 'FAIL');
+                    } else {
+                        self.dialogTestOk = false;
+                        self.dialogTestResult = res.msg || '测试请求失败';
+                    }
+                }).catch(function(err) {
+                    self.dialogTestOk = false;
+                    self.dialogTestResult = '测试请求失败：' + (err.message || err);
+                }).finally(function() {
+                    self.dialogTesting = false;
+                });
+            },
+
+            /* ── 数据加载 ── */
+            loadData: function() {
+                const self = this;
+                Promise.all([
+                    window.aiBackendApi.providerList(),
+                    window.aiBackendApi.providerActive()
+                ]).then(function(results) {
+                    if (results[0].code === 1) {
+                        self.providers = results[0].data || [];
+                    }
+                    if (results[1].code === 1) {
+                        self.activeProvider = results[1].data || null;
+                    }
+                }).catch(function(err) {
+                    ReggieUI.error('加载失败：' + (err.message || err));
+                });
+            },
+
+            /* ── 健康状态加载/展示 ── */
+            loadStatus: function() {
+                const self = this;
+                window.aiBackendApi.getStatus().then(function(res) {
+                    if (res.code === 1 && res.data) {
+                        self.statusData = res.data;
+                    }
+                }).catch(function() { /* 状态轮询失败静默，不打扰操作 */ });
+            },
+
+            // 卡片状态标签类型：按实时熔断状态 + 启用/首选标记
+            statusTagType: function(provider) {
+                var c = this.breakerMap[provider.providerCode];
+                var state = c && c.breaker ? c.breaker.state : 'closed';
+                if (!provider.enabled) return 'info';
+                if (state === 'open') return 'danger';
+                if (state === 'half-open') return 'warning';
+                if (provider.isActive) return 'success';
+                return '';
+            },
+
+            // 卡片状态标签文案
+            statusTagText: function(provider) {
+                var c = this.breakerMap[provider.providerCode];
+                var state = c && c.breaker ? c.breaker.state : 'closed';
+                if (!provider.enabled) return '已停用';
+                if (state === 'open') return '故障冷却中';
+                if (state === 'half-open') return '恢复探测中';
+                if (provider.isActive) return '首选';
+                return '备用就绪';
+            },
+
+            /** 获取供应商图标 RemixIcon 类名（用在 <i :class="...">） */
+            getProviderIcon: function(code) {
+                return PROVIDER_ICON[code] || 'ri-robot-2-line';
+            },
+
+            getIconClass: function(code) {
+                return 'icon-' + (code || 'custom');
+            },
+
+            /* ── 供应商操作（激活/测试/删除） ── */
+            activateProvider: function(id) {
+                const self = this;
+                ReggieUI.confirm('设为首选后，新的对话请求优先使用该供应商；当其故障（限流/额度不足/超时/密钥失效/5xx）时自动切换到其他已启用供应商，恢复后自动回切。确定继续吗？', '设为首选确认', {
+                    confirmButtonText: '确定',
+                    type: 'warning'
+                }).then(function() {
+                    window.aiBackendApi.providerActivate(id).then(function(res) {
+                        if (res.code === 1) {
+                            ReggieUI.success('已设为首选');
+                            self.loadData();
+                            self.loadStatus();
+                        } else {
+                            ReggieUI.error(res.msg || '设置失败');
+                        }
+                    }).catch(function(err) {
+                        ReggieUI.error('设置失败：' + (err.message || err));
+                    });
+                }).catch(function(err) { console.warn('[provider-config] 设为首选操作取消或失败:', err) });
+            },
+
+            testProvider: function(id) {
+                const self = this;
+                var provider = this.providers.find(function(p) { return p.id === id; });
+                if (!provider) return;
+
+                var loadingMsg = ReggieUI.message({
+                    type: 'info',
+                    message: '正在测试 ' + provider.providerName + ' 连接...',
+                    duration: 0,
+                    iconClass: 'ri-loader-4-line'
+                });
+                const startTime = Date.now();
+
+                window.aiBackendApi.providerTest(id).then(function(res) {
+                    loadingMsg.close();
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                    if (res.code === 1) {
+                        const result = res.data.result || '';
+                        const isSuccess = result.indexOf('SUCCESS') === 0;
+                        ReggieUI.message({
+                            type: isSuccess ? 'success' : 'error',
+                            message: provider.providerName + ' (' + elapsed + 's)：' + result,
+                            duration: 6000,
+                            showClose: true
+                        });
+                        self.loadData();
+                    } else {
+                        ReggieUI.error('测试失败：' + (res.msg || '服务器返回异常'));
+                    }
+                }).catch(function(err) {
+                    loadingMsg.close();
+                    ReggieUI.message({
+                        type: 'error',
+                        message: '测试失败：' + (err.message || err),
+                        duration: 5000,
+                        showClose: true
+                    });
+                });
+            },
+
+            deleteProvider: function(id) {
+                const self = this;
+                ReggieUI.confirm('确定删除此模型配置吗？此操作不可恢复。', '删除确认', {
+                    confirmButtonText: '确定删除',
+                    type: 'warning'
+                }).then(function() {
+                    window.aiBackendApi.providerDelete(id).then(function(res) {
+                        if (res.code === 1) {
+                            ReggieUI.success('删除成功');
+                            self.loadData();
+                        } else {
+                            ReggieUI.error(res.msg || '删除失败');
+                        }
+                    });
+                }).catch(function(err) { console.warn('[provider-config] 删除供应商操作取消或失败:', err) });
+            },
+
+            /* ── 弹窗表单（新增/编辑/提交） ── */
+
+            /** P2：列表卡片判断某能力是否开启（坏 JSON/缺字段一律视为关闭） */
+            capOn: function(provider, key) {
+                var caps = provider && provider.capabilities;
+                var obj = null;
+                if (caps && typeof caps === 'object') {
+                    obj = caps;
+                } else if (caps) {
+                    try { obj = JSON.parse(caps); } catch (e) { obj = null; }
+                }
+                return !!(obj && obj[key] === true);
+            },
+
+            /** P2：解析后端 capabilities（JSON 字符串/对象）为复选框数组；chat 恒在 */
+            parseCapabilityList: function(caps) {
+                var list = ['chat'];
+                var obj = null;
+                if (caps && typeof caps === 'object') {
+                    obj = caps;
+                } else if (caps) {
+                    try { obj = JSON.parse(caps); } catch (e) { obj = null; }
+                }
+                if (obj) {
+                    ['vision', 'tools', 'embedding'].forEach(function(k) {
+                        if (obj[k] === true && list.indexOf(k) < 0) list.push(k);
+                    });
+                }
+                return list;
+            },
+
+            openAddDialog: function() {
+                this.form = {
+                    id: null, providerCode: '', providerName: '',
+                    baseUrl: '', modelName: '', apiKey: '',
+                    apiFormat: 'openai_compatible', timeout: 60,
+                    maxTokens: 2048, temperature: 0.7, remark: '',
+                    capabilityList: ['chat'], embeddingDimensions: null,
+                    _hasExistingKey: false
+                };
+                // 修改点：重置模型列表状态
+                this.modelList = [];
+                this.modelFetchError = '';
+                this.fetchingModels = false;
+                // 修改点(2026-09-18)：重置连通测试状态
+                this.dialogTesting = false;
+                this.dialogTestResult = '';
+                this.dialogTestOk = false;
+                this.dialogTitle = '添加模型';
+                this.dialogVisible = true;
+            },
+
+            openEditDialog: function(provider) {
+                const self = this;
+                const snapshot = JSON.parse(JSON.stringify(provider));
+                // 修改点(2026-09-18)：列表返回的 apiKey 也是脱敏值，立即清空防止误提交覆盖真实密钥
+                // 修复：capabilityList/_hasExistingKey 等工作态键必须在赋值给 this.form 前就存在，
+                // 否则 Vue2 不会为「已响应式对象上新增的属性」建立 getter/setter，复选框/密钥提示会冻结
+                snapshot.apiKey = '';
+                snapshot.capabilityList = this.parseCapabilityList(provider.capabilities);
+                snapshot.embeddingDimensions = provider.embeddingDimensions || null;
+                // 掩码可能出现在开头（indexOf===0），>= 0 才能正确识别已有 key
+                snapshot._hasExistingKey = !!(provider.apiKey && provider.apiKey.indexOf('****') >= 0);
+                this.form = snapshot;
+                // 修改点(2026-09-18)：重置连通测试状态
+                this.dialogTesting = false;
+                this.dialogTestResult = '';
+                this.dialogTestOk = false;
+                // 修改点：重置模型列表状态
+                this.modelList = [];
+                this.modelFetchError = '';
+                this.fetchingModels = false;
+                this.dialogTitle = '编辑模型 - ' + (provider.providerName || provider.providerCode);
+                this.dialogVisible = true;
+
+                window.aiBackendApi.providerGet(provider.id, true).then(function(res) {
+                    if (res.code === 1 && res.data) {
+                        // 修改点(2026-09-18)：编辑时直接拉取明文密钥回填显示（不脱敏），
+                        // 保存时原样重新加密入库，效果等同「不修改」；后端仍保留 **** 掩码防护
+                        self.form.apiKey = res.data.apiKey || '';
+                        self.form._hasExistingKey = !!(res.data.apiKey);
+                        // P2：详情接口的能力配置比列表项更权威，重新解析回填
+                        self.form.capabilityList = self.parseCapabilityList(res.data.capabilities);
+                        self.form.embeddingDimensions = res.data.embeddingDimensions || null;
+                    }
+                }).catch(function() {
+                    if (self.form._hasExistingKey) {
+                        self.form.apiKey = '';
+                    }
+                });
+            },
+
+            submitForm: function() {
+                const self = this;
+                // slot 内容的 $refs 注册在页面实例上（append-to-body 只移 DOM 不移 Vue 组件树）
+                const formRef = this.$refs.providerForm;
+                if (!formRef) {
+                    ReggieUI.error('表单未就绪，请重试');
+                    return;
+                }
+                formRef.validate(function(valid) {
+                    if (!valid) return;
+                    self.submitting = true;
+
+                    const payload = JSON.parse(JSON.stringify(self.form));
+                    if (self.form.id && self.form._hasExistingKey && !self.form.apiKey) {
+                        delete payload.apiKey;
+                        delete payload._hasExistingKey;
+                    }
+                    delete payload._hasExistingKey;
+                    // P2：工作态数组 → 后端 capabilities JSON 字符串（chat 恒为 true）
+                    var caps = { chat: true, vision: false, tools: false, embedding: false };
+                    (self.form.capabilityList || []).forEach(function(k) {
+                        if (k === 'vision' || k === 'tools' || k === 'embedding') caps[k] = true;
+                    });
+                    payload.capabilities = JSON.stringify(caps);
+                    // 非嵌入模型不带维度，避免残留旧值
+                    if (!caps.embedding) payload.embeddingDimensions = null;
+                    delete payload.capabilityList;
+
+                    const api = self.form.id
+                        ? window.aiBackendApi.providerUpdate(payload)
+                        : window.aiBackendApi.providerAdd(payload);
+
+                    api.then(function(res) {
+                        if (res.code === 1) {
+                            // 修改点：add 接口返回 { action:"新增"/"更新", msg }，update 返回简单字符串
+                            let msg = res.msg || '';
+                            if (res.data && res.data.msg) {
+                                msg = res.data.msg;
+                            }
+                            ReggieUI.success(msg || (self.form.id ? '更新成功' : '添加成功'));
+                            self.dialogVisible = false;
+                            self.modelList = [];
+                            self.modelFetchError = '';
+                            self.loadData();
+                        } else {
+                            ReggieUI.error(res.msg || '操作失败');
+                        }
+                    }).catch(function(err) {
+                        ReggieUI.error('操作失败：' + (err.message || err));
+                    }).finally(function() {
+                        self.submitting = false;
+                    });
+                });
+            },
+
+            /* ── 预设初始化与模型列表 ── */
+            initPresets: function() {
+                const self = this;
+                ReggieUI.confirm(
+                    '将自动添加 DeepSeek、通义千问、智谱AI、文心一言、百川、月之暗面、MiniMax、360 等 8 个预设模型配置。继续吗？',
+                    '初始化预设',
+                    { confirmButtonText: '确定初始化', type: 'info' }
+                ).then(function() {
+                    window.aiBackendApi.providerInitPresets().then(function(res) {
+                        if (res.code === 1) {
+                            ReggieUI.success(res.msg || '初始化成功');
+                            self.loadData();
+                        } else {
+                            ReggieUI.error(res.msg || '初始化失败');
+                        }
+                    }).catch(function(err) {
+                        ReggieUI.error('初始化失败：' + (err.message || err));
+                    });
+                }).catch(function(err) { console.warn('[provider-config] 初始化供应商操作取消或失败:', err) });
+            },
+
+            // 修改点：从AI供应商API拉取可用模型列表（参考ChatBox/NextChat交互方式）
+            fetchModelList: function() {
+                const self = this;
+                if (!this.form.baseUrl || !this.form.apiKey) {
+                    ReggieUI.warning('请先填写 API 地址和 API 密钥');
+                    return;
+                }
+                this.fetchingModels = true;
+                this.modelFetchError = '';
+                this.modelList = [];
+
+                window.aiBackendApi.providerFetchModels(
+                    this.form.baseUrl,
+                    this.form.apiKey
+                ).then(function(res) {
+                    if (res.code === 1) {
+                        self.modelList = res.data || [];
+                        if (self.modelList.length === 0) {
+                            self.modelFetchError = '该供应商未返回任何模型，请手动输入模型名称';
+                        } else {
+                            ReggieUI.success('成功获取 ' + self.modelList.length + ' 个模型');
+                        }
+                    } else {
+                        self.modelFetchError = res.msg || '获取失败';
+                    }
+                }).catch(function(err) {
+                    self.modelFetchError = '请求失败：' + (err.message || err);
+                }).finally(function() {
+                    self.fetchingModels = false;
+                });
+            },
+
+            // 修改点：选择模型
+            selectModel: function(modelName) {
+                this.form.modelName = modelName;
+            },
+
+            handleClose: function() {
+                this.dialogVisible = false;
+            }
+        }
+    });
+})();
+</script>
+</body>
+</html>
+
+
+

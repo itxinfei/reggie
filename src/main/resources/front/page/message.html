@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>消息中心 - 瑞吉外卖</title>
+    <link rel="icon" href="./../images/favico.ico">
+    <script src="./../js/base.js?v=20260930"></script>
+    <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <link rel="stylesheet" href="../styles/index.css?v=20260930b" />
+    <link rel="stylesheet" href="../styles/skeleton.css?v=20260930" />
+    <!-- 修改点：提取内联样式到独立CSS文件 -->
+    <link rel="stylesheet" href="./../styles/message.css?v=20260930" />
+    <!-- 修改点：加载 remixicon 图标库（复用 backend 真实字体，front/styles 下 404 占位已删） -->
+    <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+    <script src="./../js/icon-fallback.js?v=20260917"></script>
+</head>
+<body>
+    <div id="messageApp" class="app">
+      <cend-shell title="消息中心" light :show-back="true">
+        <template #right>
+          <span v-if="unreadCount > 0" class="mark-all-btn" @click.stop="markAllRead">全部已读</span>
+        </template>
+
+        <div class="divContent">
+            <!-- 修复(2026-09-27 审查P0-4)：客服会话消息落点。全局通知条提示"客服发来N条新消息"
+                 但本页只有营销/系统消息，两个数据源不一致；现把进行中会话的最新客服回复
+                 置顶展示，点击进入在线客服会话 -->
+            <div class="cs-msg-card" v-if="csSession" @click="goCsSession()">
+                <div class="cs-msg-head">
+                    <span class="cs-msg-name"><i class="ri-customer-service-2-line"></i> 在线客服</span>
+                    <span class="cs-msg-time">{{ formatTime(csSession.lastTime) }}</span>
+                </div>
+                <div class="cs-msg-content">{{ csSession.lastContent }}</div>
+            </div>
+
+            <!-- 修改点：骨架屏 -->
+            <!-- skeleton.css 无行布局工具类，header 行级 flex 以内联样式保留，视觉等价；
+                 原 .skeleton-line-sm(10高) 统一收敛为标准 .skeleton-line(14高) -->
+            <div v-if="loading && messages.length === 0" class="skeleton-container">
+                <div class="skeleton-card" v-for="i in 4" :key="'sm'+i">
+                    <div class="flex items-center justify-between mb-10">
+                        <div class="skeleton-line skeleton-w50"></div>
+                        <div class="skeleton-tag"></div>
+                    </div>
+                    <div class="mb-8">
+                        <div class="skeleton-line skeleton-w90"></div>
+                        <div class="skeleton-line skeleton-w70"></div>
+                    </div>
+                    <div class="skeleton-line skeleton-w30"></div>
+                </div>
+            </div>
+            <!-- 修改点：van-pull-refresh 包裹列表实现下拉刷新 -->
+            <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
+            <!-- 消息列表 -->
+            <div v-for="msg in messages" :key="msg.id"
+                 :class="['msg-card', msg.status === 1 ? 'unread' : 'read']"
+                 @click="openDetail(msg)">
+                <div v-if="msg.status === 1" class="unread-dot"></div>
+                <div class="msg-header">
+                    <span class="msg-title">{{ msg.title || '系统消息' }}</span>
+                    <span :class="['msg-tag', pushTypeClass(msg.pushType)]">{{ pushTypeName(msg.pushType) }}</span>
+                </div>
+                <div class="msg-content">{{ msg.content }}</div>
+                <div class="msg-time">{{ formatTime(msg.createTime) }}</div>
+            </div>
+
+            <!-- 空状态（仅在非加载、非错误时展示，避免首屏失败误显示"暂无消息"） -->
+            <div class="empty-state" v-if="messages.length === 0 && !loading && !loadError">
+                <i class="ri-chat-3-line"></i>
+                <p class="empty-text">暂无消息</p>
+                <p class="empty-sub">订单和优惠通知会显示在这里</p>
+            </div>
+
+            <!-- 修改点(2026-09-18)：首屏加载失败错误态，点击可重试，不再误报"暂无消息" -->
+            <div class="empty-state" v-if="messages.length === 0 && !loading && loadError" @click="retryLoad">
+                <i class="ri-wifi-off-line"></i>
+                <p class="empty-text">消息加载失败，点击重试</p>
+            </div>
+
+            <!-- 加载更多 -->
+            <div class="load-more" v-if="hasMore && messages.length > 0" @click="loadMore">
+                {{ loading ? '加载中...' : '加载更多' }}
+            </div>
+            </van-pull-refresh>
+        </div>
+
+        <!-- 消息详情弹窗 -->
+        <div class="detail-overlay" :class="{show: detail.show}" @click.self="closeDetail()">
+            <div class="detail-card">
+                <div class="detail-title">{{ detail.title }}</div>
+                <div class="detail-content">{{ detail.content }}</div>
+                <div class="detail-time">{{ formatTime(detail.createTime) }}</div>
+                <!-- 后续操作出口：消除详情"死胡同"。优惠券消息引导去点餐用券，其余通用 -->
+                <div class="detail-actions">
+                    <button class="detail-btn detail-btn-primary" @click="goFromDetail('/front/index.html')">
+                        {{ detail.pushType === 4 ? '去点餐使用' : '去点餐' }}
+                    </button>
+                    <button class="detail-btn detail-btn-plain" @click="goFromDetail('/front/page/order.html')">查看订单</button>
+                </div>
+                <button class="detail-close" @click="closeDetail()">关闭</button>
+            </div>
+        </div>
+      </cend-shell>
+    </div>
+
+    <script src="../../backend/plugins/vue/vue.js"></script>
+    <script src="./../js/vant.min.js"></script>
+    <script src="../../backend/plugins/axios/axios.min.js"></script>
+    <script src="./../js/request.js?v=20260930"></script>
+    <script src="./../api/recommend.js?v=20260917"></script>
+    <script src="./../api/cs.js?v=20260929"></script>
+    <script src="./../js/common.js?v=20260930b"></script>
+    <script src="./../js/components-cend.js?v=20260922"></script>
+    <script>
+        // 修改点：用户消息中心页面 - 允许用户查看、阅读营销消息
+        new Vue({
+            el: '#messageApp',
+            data: function() {
+                return {
+                    messages: [],
+                    page: 1,
+                    pageSize: 15,
+                    loading: false,
+                    refreshing: false,
+                    hasMore: true,
+                    // 修改点(2026-09-18)：区分「真的无消息」与「首屏加载失败」，避免失败误显示空状态
+                    loadError: false,
+                    unreadCount: 0,
+                    // 客服会话置顶卡片数据 { lastContent, lastTime }
+                    csSession: null,
+                    detail: {
+                        show: false,
+                        title: '',
+                        content: '',
+                        pushType: null,
+                        createTime: ''
+                    }
+                };
+            },
+            created: function() {
+                this.loadMessages();
+                this.fetchUnreadCount();
+                this.fetchCsSession();
+                // 修改点：注册 ESC 键监听，支持关闭消息详情弹窗
+                this._handleEscKey = function(e) {
+                    if ((e.key === 'Escape' || e.key === 'Esc') && this.detail.show) {
+                        this.closeDetail();
+                    }
+                }.bind(this);
+                document.addEventListener('keydown', this._handleEscKey);
+                // SSE 新消息到达：刷新未读数与第一页列表
+                this._onSseNewMessage = function() {
+                    this.fetchUnreadCount();
+                    if (this.page === 1) { this.loadMessages(); }
+                }.bind(this);
+                window.addEventListener('reggie:new-message', this._onSseNewMessage);
+            },
+            beforeDestroy: function() {
+                // 修改点：移除 ESC 键监听
+                if (this._handleEscKey) {
+                    document.removeEventListener('keydown', this._handleEscKey);
+                }
+                // 移除 SSE 新消息监听
+                if (this._onSseNewMessage) {
+                    window.removeEventListener('reggie:new-message', this._onSseNewMessage);
+                }
+            },
+            methods: {
+                goBack: function() {
+                    // 兜底：直接从链接进入无历史时 history.back() 无效，改回首页避免卡死本页
+                    if (history.length > 1) {
+                        history.back();
+                    } else {
+                        window.location.replace('/front/index.html');
+                    }
+                },
+                // 修改点：下拉刷新
+                // 修改点：下拉刷新（refreshing 由 loadMessages.finally 复位，与网络实际完成同步）
+                onRefresh: function() {
+                    // 首屏/上一次加载仍在进行时不重入：直接结束下拉动画，
+                    // 否则 loadMessages 守卫 return 后没人复位 refreshing，刷新动画永久卡死
+                    if (this.loading) { this.refreshing = false; return; }
+                    this.page = 1;
+                    this.hasMore = true;
+                    this.loadError = false;
+                    this.loadMessages();
+                },
+
+                loadMessages: function() {
+                    var self = this;
+                    if (self.loading) return;
+                    self.loading = true;
+                    // 修改点：进入请求即清错误态（首屏）
+                    if (self.page === 1) self.loadError = false;
+
+                    recommendApi.getUserMessages(self.page, self.pageSize).then(function(res) {
+                        if (res && res.code === 1 && res.data) {
+                            var records = res.data.records || [];
+                            if (self.page === 1) {
+                                self.messages = records;
+                            } else {
+                                self.messages = self.messages.concat(records);
+                            }
+                            self.hasMore = records.length >= self.pageSize;
+                            // 修改点(2026-09-18)：仅在成功且确有下一页后才推进页码。
+                            // 原 loadMore 先 page++ 再请求，一旦请求失败页码已前进，下次重试永久跳过该页
+                            if (self.hasMore) self.page++;
+                        } else {
+                            if (self.page === 1) self.loadError = true;
+                            vant.Toast.fail((res && res.msg) || '加载消息失败');
+                        }
+                    }).catch(function(err) {
+                        console.error('加载消息失败:', err);
+                        // 修改点：首屏失败置错误态；翻页失败停留本页，"加载更多"可重试同一页
+                        if (self.page === 1) self.loadError = true;
+                        vant.Toast.fail('加载消息失败');
+                    }).finally(function() {
+                        self.loading = false;
+                        // 修改点：下拉刷新与实际加载同步
+                        self.refreshing = false;
+                    });
+                },
+
+                loadMore: function() {
+                    // 修改点(2026-09-18)：不再在此预先 page++，页码由 loadMessages 成功后推进
+                    if (this.loading || !this.hasMore) return;
+                    this.loadMessages();
+                },
+
+                // 修改点(2026-09-18)：首屏失败点击重试
+                retryLoad: function() {
+                    this.page = 1;
+                    this.hasMore = true;
+                    this.loadMessages();
+                },
+
+                // 修改点：点击消息打开详情，同时标记为已读
+                openDetail: function(msg) {
+                    this.detail.title = msg.title || '系统消息';
+                    this.detail.content = msg.content || '';
+                    this.detail.pushType = msg.pushType;
+                    this.detail.createTime = msg.createTime;
+                    this.detail.show = true;
+
+                    // 修改点：未读消息自动标记为已读
+                    if (msg.status === 1) {
+                        var self = this;
+                        recommendApi.markMessageRead(msg.id).then(function(res) {
+                            if (res && res.code === 1) {
+                                msg.status = 2;
+                                if (self.unreadCount > 0) self.unreadCount--;
+                            }
+                        }).catch(function(err) {
+                            console.error('标记已读失败:', err);
+                            vant.Toast.fail('标记已读失败');
+                        });
+                    }
+                },
+
+                closeDetail: function() {
+                    this.detail.show = false;
+                },
+
+                // 从详情弹窗跳转到后续页面（关闭弹层后导航）
+                goFromDetail: function(url) {
+                    this.detail.show = false;
+                    window.requestAnimationFrame(function() { window.location.href = url; });
+                },
+
+                fetchUnreadCount: function() {
+                    var self = this;
+                    recommendApi.getUnreadCount().then(function(res) {
+                        if (res && res.code === 1 && res.data !== undefined) {
+                            self.unreadCount = res.data;
+                        }
+                    }).catch(function() {});
+                },
+
+                // 拉取进行中客服会话的最新一条消息，置顶展示（失败静默，不影响消息列表）
+                fetchCsSession: function() {
+                    var self = this;
+                    csMySessions().then(function(res) {
+                        if (!res || res.code !== 1 || !res.data || !res.data.length) { return; }
+                        var sid = null;
+                        for (var i = 0; i < res.data.length; i++) {
+                            var st = Number(res.data[i].status);
+                            if (st === 0 || st === 1) { sid = res.data[i].id; break; }
+                        }
+                        if (!sid) { return; }
+                        return csListMessages(sid, { silent: true }).then(function(r) {
+                            if (!r || r.code !== 1 || !r.data || !r.data.length) { return; }
+                            var last = r.data[r.data.length - 1];
+                            var prefix = last.senderType === 2 ? '' : '我：';
+                            self.csSession = {
+                                lastContent: last.messageType === 2 ? '[图片]' : (prefix + (last.content || '')),
+                                lastTime: last.createTime
+                            };
+                        });
+                    }).catch(function() {});
+                },
+
+                goCsSession: function() {
+                    window.location.href = '/front/page/customer-service.html';
+                },
+
+                markAllRead: function() {
+                    var self = this;
+                    var unreadMsgs = self.messages.filter(function(m) { return m.status === 1; });
+                    if (unreadMsgs.length === 0) {
+                        vant.Toast('暂无未读消息');
+                        return;
+                    }
+                    vant.Dialog.confirm({
+                        title: '全部已读',
+                        message: '确定将所有未读消息标记为已读？'
+                    }).then(function() {
+                        // 修改点(2026-09-17)：改为单次批量已读接口（原对每条未读各发一次请求，N+1 且易触发限流）
+                        vant.Toast.loading({ message: '处理中…', forbidClick: true, duration: 0 });
+                        return recommendApi.markAllMessagesRead();
+                    }).then(function(res) {
+                        vant.Toast.clear();
+                        if (res && res.code === 1) {
+                            self.messages.forEach(function(m) { if (m.status === 1) { m.status = 2; } });
+                            self.unreadCount = 0;
+                            vant.Toast.success('已全部标记为已读');
+                        } else {
+                            vant.Toast.fail((res && res.msg) || '标记已读失败');
+                        }
+                    }).catch(function(e) {
+                        vant.Toast.clear();
+                        // 用户点取消/遮罩关闭时 vant reject 'cancel'/'close'，属主动放弃，静默不报错
+                        if (e === 'cancel' || e === 'close') return;
+                        console.error('[message] 批量已读失败:', e);
+                        vant.Toast.fail('操作失败，请稍后重试');
+                    });
+                },
+
+                pushTypeName: function(type) {
+                    var map = { 1: '弹窗', 2: '通知', 3: '短信', 4: '优惠券' };
+                    return map[type] || '其他';
+                },
+
+                pushTypeClass: function(type) {
+                    var map = { 1: 'tag-popup', 2: 'tag-notification', 3: 'tag-sms', 4: 'tag-coupon' };
+                    return map[type] || '';
+                },
+
+                formatTime: function(dateStr) {
+                    if (!dateStr) return '';
+                    // 修改点：iOS Safari 无法解析「yyyy-MM-dd HH:mm:ss」空格分隔格式，
+                    // 补 -→/ 替换 + isNaN 回退（与 tracking.html/my-evaluations.html 一致）
+                    var d = new Date(String(dateStr).replace(/-/g, '/'));
+                    if (isNaN(d.getTime())) return dateStr;
+                    var now = new Date();
+                    var pad = function(n) { return String(n).padStart(2, '0'); };
+
+                    var dateStr2 = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+                    var todayStr = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate());
+
+                    var time = pad(d.getHours()) + ':' + pad(d.getMinutes());
+                    if (dateStr2 === todayStr) {
+                        return '今天 ' + time;
+                    }
+                    var yesterday = new Date(now.getTime() - 86400000);
+                    var yesterdayStr = yesterday.getFullYear() + '-' + pad(yesterday.getMonth()+1) + '-' + pad(yesterday.getDate());
+                    if (dateStr2 === yesterdayStr) {
+                        return '昨天 ' + time;
+                    }
+                    return dateStr2 + ' ' + time;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

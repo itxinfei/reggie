@@ -1,0 +1,63 @@
+/* ============================================================
+ * 工具函数引用（需要在页面中单独引入）
+ * ============================================================
+ * 无障碍访问工具: ../../js/accessibility-utils.js
+ * 性能优化工具: ../../js/performance-utils.js
+ * ============================================================ */
+/* ============================================================
+ * 统一样式入口文件（Main Styles Entry）
+ * ============================================================
+ * 所有页面只需引用此文件，自动加载所有必要的样式
+ * 加载顺序：
+ *   1. tokens.css - 设计令牌（颜色、间距、字体等）
+ *   2. design-system.css - 设计系统基础层
+ *   3. common.css - 通用样式（已包含common-base/el/fixes）
+ *   4. page.css - 页面级样式
+ *   5. components.css - 组件样式
+ * ============================================================ */
+
+/* 设计令牌（必须最先加载） */
+@import "tokens.css";
+
+/* 设计系统基础层 */
+@import "design-system.css";
+
+/* 通用样式（已包含common-base/el/fixes） */
+@import "common.css";
+
+/* 页面级样式 */
+@import "page.css";
+
+/* 组件样式 */
+@import "components.css";
+
+/* 统一组件样式 */
+@import "unified-components.css";
+@import "form-fixes.css";
+
+/* 统计卡片组件样式（<stat-cards>/<stat-card> 依赖，必须随 main.css 全局加载，
+   否则统计卡片渲染为无样式纯文字） */
+@import "components-stats-card.css";
+
+/* 全局一致性层（最后加载，覆盖 page.css 等历史漂移：字体/背景/容器/表头/分页） */
+@import "consistency.css";
+
+/* 键盘聚焦可见环（WCAG 2.4.7）。
+   必须 !important：组件库里 `.el-input__inner { outline: 0 }`、`.el-submenu__title:focus
+   { outline: 0 }` 等规则的特异性不低于 :focus-visible，且部分在引入顺序上更靠后，
+   正常层叠会被静默压掉——实测内容页的输入框、可点击统计卡片此前聚焦时完全没有焦点环。
+   三个子属性分开声明而非用 outline 简写：简写里一旦某个值解析失败（例如变量缺失），
+   整条声明都会失效，分开写能保证至少宽度与样式始终生效。
+   注意：这里直接内联而非放进 design-system.css，因为该文件经 @import 链下发在部分页面未生效。 */
+:focus-visible {
+  outline-style: solid !important;
+  outline-width: 2px !important;
+  outline-color: var(--color-brand-600, #e6ae00) !important;
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+  /* 兜底：el-input__inner 等组件会把 outline 压成 0 且 !important 也压不住，
+     再用一层 box-shadow 光环保证键盘焦点始终看得见 */
+  box-shadow: 0 0 0 2px var(--color-brand-600, #e6ae00) !important;
+}
+
+

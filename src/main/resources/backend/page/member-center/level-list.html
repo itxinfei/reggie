@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>会员等级 - 瑞吉外卖管理端</title>
+
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <style>
+    /* ========== 等级进阶阶梯 ========== */
+    .progression-section { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 20px;
+      box-shadow: var(--shadow-sm); }
+    .progression-title { font-size:var(--font-size-md); font-weight: 600; color: var(--el-text-primary); margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px; }
+    .progression-bar { display: flex; align-items: flex-end; gap: 10px; padding: 10px 0; }
+    /* min-width:0 必需：flex 项默认 min-width:auto 会被 nowrap 内容顶开，窄屏必然横向溢出 */
+    .prog-item { flex: 1 1 0; min-width: 0; text-align: center; position: relative; }
+    .prog-icon { font-size:var(--font-size-xl); margin-bottom: 6px; }
+    .prog-bar-wrap { height: 8px; background: var(--el-bg-lighter); border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 6px; }
+    .prog-bar-fill { height: 100%; border-radius: var(--radius-sm); transition: width 0.6s ease; }
+    .prog-name { font-size:var(--font-size-xs); color: var(--el-text-regular); font-weight: 500; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; }
+    /* P0: #909399 压白底仅 3.08:1，改用达标的信息文字色 */
+    .prog-pts { font-size: var(--font-size-xs); color: var(--color-info-text); }
+    .prog-discount { font-size: var(--font-size-xs); color: var(--color-success-text); font-weight: 600; }
+
+    /* ========== 响应式适配 ========== */
+    @media (max-width: 900px) {
+      .progression-section { padding: 16px 14px; }
+      .prog-name { font-size: var(--font-size-xs); }
+      /* 窄屏阶梯改纵向堆叠：横向均分 + nowrap 在窄视口下无解，直接堆叠最稳 */
+      .progression-bar { flex-direction: column; align-items: stretch; gap: 12px; padding: 4px 0; }
+      .prog-item { display: flex; align-items: center; gap: 10px; text-align: left; min-width: 0; }
+      .prog-icon { flex: 0 0 auto; margin-bottom: 0; }
+      .prog-name { flex: 0 1 auto; white-space: normal; overflow: visible; }
+      .prog-bar-wrap { flex: 1 1 auto; margin-bottom: 0; }
+      .prog-pts, .prog-discount { flex: 0 0 auto; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="level-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">会员等级</h1>
+      <!-- 修改点：使用 <stat-cards> 统一组件 -->
+      <stat-cards :cards="statsCards"></stat-cards>
+
+      <!-- ===== 等级进阶 ===== -->
+      <div class="progression-section" v-if="tableData.length > 0">
+        <div class="progression-title"><i class="ri-bar-chart-2-line" aria-hidden="true"></i> 等级晋升阶梯</div>
+        <div class="progression-bar">
+          <div class="prog-item" v-for="(item, idx) in sortedLevels" :key="item.id">
+            <div class="prog-icon"><i :class="getLevelIcon(idx)" aria-hidden="true"></i></div>
+            <div class="prog-name">{{ item.name }}</div>
+            <div class="prog-bar-wrap"><div class="prog-bar-fill" :style="{width: getBarWidth(idx), background: getBarColor(idx)}"></div></div>
+            <div class="prog-pts">{{ item.minPoints }} 分</div>
+            <div class="prog-discount" v-if="item.discount != null">{{ (item.discount*10).toFixed(1) }}折</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 修改点：使用 <table-bar> 统一组件 -->
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="tableActions"
+        :show-refresh="true"
+        @search="handleQuery"
+        @reset="handleReset"
+        @refresh="fetchData(false)"
+        @action="onTableAction">
+      </table-bar>
+
+      <!-- ===== 表格 ===== -->
+      <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :loading="loading"
+        :show-actions="true" :viewable="true"
+        :actions-width="240"
+        row-key="id"
+        :batch-delete="doBatchDelete"
+        @batch-deleted="handleQuery()"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-name="{ row }"><span style="font-weight:600;">{{ row.name }}</span></template>
+        <template #col-minPoints="{ row }"><span style="font-weight:600;color:var(--color-brand-700);">{{ row.minPoints }}</span></template>
+        <template #col-discount="{ row }">
+          <el-tag :type="row.discount >= 0.9 ? 'info' : row.discount >= 0.8 ? 'warning' : 'danger'" size="small" effect="dark">
+            {{ row.discount != null ? (row.discount * 10).toFixed(1) + '折' : '-' }}
+          </el-tag>
+        </template>
+        <template #col-sort="{ row }"><span>{{ row.sort != null ? row.sort : '-' }}</span></template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="editHandle(row)">修改</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row.id)">删除</el-button>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- ===== 弹窗 ===== -->
+    <!-- 修改点：使用 <crud-dialog :show-submit="true" :show-cancel="true"> 统一组件替代手写 el-dialog，默认 footer 提供"取消/确定" -->
+    <crud-dialog :show-submit="true" :show-cancel="true" :title="formData.title" :visible.sync="formData.dialogVisible" :submit-loading="submitting" size="md" @submit="submitForm">
+      <el-form label-width="100px" :model="formData" :rules="formRules" ref="levelForm">
+        <el-form-item label="等级名称：" prop="name">
+          <el-input v-model="formData.name" placeholder="请输入等级名称" maxlength="20"></el-input>
+        </el-form-item>
+        <el-form-item label="所需积分：" prop="minPoints">
+          <el-input v-model.number="formData.minPoints" type="number" placeholder="请输入所需积分" min="0"></el-input>
+        </el-form-item>
+        <el-form-item label="折扣率：" prop="discount">
+          <el-input v-model.number="formData.discount" type="number" placeholder="如 0.85 表示8.5折" min="0" max="1" step="0.01">
+            <template slot="append">折</template>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="排序：" prop="sort">
+          <el-input v-model.number="formData.sort" type="number" placeholder="数字越小越靠前" min="0"></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/member-center.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script>
+    new Vue({
+      el: '#level-app',
+      // 修改点：引入列表页通用 Mixin，自动提供分页(page/pageSize/counts/loading)与翻页处理
+      mixins: [window.ReggieListMixin],
+      data: function() {
+        return {
+          submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
+          // 修改点：<table-bar> 统一组件配置
+          tableSearchItems: [
+            { type: 'input', field: 'name', placeholder: '等级名称搜索', width: 200 }
+          ],
+          tableActions: [
+            { key: 'add', text: '+ 新增会员等级', type: 'primary' }
+          ],
+          // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
+          columns: [
+            { prop: 'name', label: '等级名称', width: 120 },
+            { prop: 'minPoints', label: '所需积分', width: 90, slot: true, type: 'number' },
+            { prop: 'discount', label: '折扣率', width: 80, slot: true, type: 'number' },
+            { prop: 'sort', label: '排序', width: 60, align: 'center', slot: true }
+          ],
+          loading: false, action: '', counts: 0, page: 1, pageSize: 10, tableData: [],
+          stats: { totalLevels: 0, highestLevel: '-', lowestPoints: 0, avgDiscount: '-' },
+          formData: { title: '新增会员等级', dialogVisible: false, id: '', name: '', minPoints: '', discount: '', sort: '' },
+          formRules: {
+            name: [{ required: true, message: '请输入等级名称', trigger: 'blur' }],
+            minPoints: [
+              { required: true, message: '请输入所需积分', trigger: 'blur' },
+              { type: 'number', min: 0, message: '所需积分必须是不小于 0 的数字', trigger: 'blur' }
+            ],
+            discount: [
+              { required: true, message: '请输入折扣率', trigger: 'blur' },
+              { type: 'number', min: 0, max: 1, message: '折扣率必须在 0~1 之间（如 0.85 表示8.5折）', trigger: 'blur' }
+            ],
+            sort: [
+              { required: true, message: '请输入排序', trigger: 'blur' },
+              { type: 'number', min: 0, message: '排序必须是不小于 0 的数字', trigger: 'blur' }
+            ]
+          }
+        }
+      },
+      computed: {
+        // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+        statsCards: function() {
+          const self = this;
+          return [
+            { key: 'total',   icon: 'ri-award-line',       label: '等级总数', value: self.stats.totalLevels || 0, color: 'primary' },
+            { key: 'highest', icon: 'ri-vip-crown-line',   label: '最高等级', value: self.stats.highestLevel || '-', color: 'success' },
+            { key: 'entry',   icon: 'ri-crosshair-line',      label: '入门门槛', value: self.stats.lowestPoints || 0, color: 'warning' },
+            { key: 'avg',     icon: 'ri-percent-line',     label: '平均折扣率', value: self.stats.avgDiscount || '-', color: 'info' }
+          ]
+        },
+        sortedLevels: function() {
+          return this.tableData.slice().sort(function(a,b) { return (a.minPoints||0) - (b.minPoints||0) })
+        }
+      },
+      created: function() { this.fetchData(true) },
+      methods: {
+        /* ========== 数据加载 ========== */
+        // 修改点：<table-bar> 组件统一操作分发
+        onTableAction: function(payload) {
+          if (payload.key === 'add') { this.addHandle(); }
+        },
+        async fetchData(reloadStats = true) {
+          this.loading = true
+          const s = this.lastSearch || {}
+          try {
+            // 修改点：分页列表必须走 levelPage（原先误用 levelStats 聚合接口，返回无 records 导致等级列表恒空）；
+            // 统计卡片另走 levelStats，仅数据突变后重载，翻页/搜索不重算
+            const params = { page: this.page, pageSize: this.pageSize, name: s.name || undefined }
+            const requests = [levelPage(params)]
+            if (reloadStats) { requests.push(levelStats()) }
+            const results = await Promise.all(requests)
+            const res = results[0]
+            if (String(res.code) === '1') {
+              this.tableData = res.data.records || []
+              this.counts = res.data.total
+            } else { ReggieUI.error(res.msg || '操作失败') }
+            if (reloadStats) {
+              const statsRes = results[1]
+              if (String(statsRes.code) === '1' && statsRes.data) {
+                this.stats = {
+                  totalLevels: Number(statsRes.data.totalLevels) || 0,
+                  highestLevel: statsRes.data.highestLevel || '-',
+                  lowestPoints: Number(statsRes.data.lowestPoints) || 0,
+                  avgDiscount: statsRes.data.avgDiscount || '-'
+                }
+              }
+            }
+          } catch(e) { ReggieUI.error('请求失败：' + e) }
+          this.loading = false
+        },
+        /* ========== 等级阶梯展示 ========== */
+        getBarWidth: function(idx) {
+          const max = this.sortedLevels.length || 1
+          return ((idx + 1) / max * 100) + '%'
+        },
+        getBarColor: function(idx) {
+          const colors = [RgPalette.slate200,RgPalette.violet400,RgPalette.indigo400,RgPalette.blue400,RgPalette.emerald400,RgPalette.amber400,RgPalette.orange500,RgPalette.red500]
+          return colors[idx % colors.length]
+        },
+        /** 等级阶梯图标：RemixIcon 类名（按阶梯从低→高：种子→铜牌→奖牌→星星→皇冠） */
+        getLevelIcon: function(idx) {
+          const total = this.sortedLevels ? this.sortedLevels.length : 1;
+          if (idx === total - 1) return 'ri-vip-crown-fill';
+          if (idx >= total - 3)  return 'ri-star-smile-fill';
+          if (idx >= 2)          return 'ri-medal-line';
+          if (idx >= 1)          return 'ri-award-line';
+          return 'ri-seedling-line';
+        },
+        /* ========== 搜索与筛选 ========== */
+        // <table-bar> @search 回调（table-bar 已管理搜索条件，通过 searchParams 传入）
+        handleQuery: function(searchParams) {
+          this.lastSearch = searchParams || {};
+          this.page = 1
+          this.fetchData(false)
+        },
+        // <table-bar> @reset 回调
+        handleReset: function() {
+          this.lastSearch = {}
+          this.page = 1
+          this.fetchData(false)
+        },
+        /* ========== 等级操作（新增/编辑/删除） ========== */
+        addHandle: function() {
+          this.action = 'add'; this.formData.title = '新增会员等级'
+          this.formData.id = ''; this.formData.name = ''; this.formData.minPoints = ''
+          this.formData.discount = ''; this.formData.sort = ''
+          this.formData.dialogVisible = true
+          const self = this; this.$nextTick(function() { if (self.$refs.levelForm) self.$refs.levelForm.clearValidate() })
+        },
+        editHandle: function(row) {
+          this.action = 'edit'; this.formData.title = '修改会员等级'
+          this.formData.id = row.id; this.formData.name = row.name
+          this.formData.minPoints = row.minPoints; this.formData.discount = row.discount; this.formData.sort = row.sort
+          this.formData.dialogVisible = true
+          const self = this; this.$nextTick(function() { if (self.$refs.levelForm) self.$refs.levelForm.clearValidate() })
+        },
+        submitForm: function() {
+          if (this.submitting) return // 提交防重
+          const self = this
+          this.$refs.levelForm.validate(function(valid) {
+            if (!valid) { ReggieUI.warning('请完善表单信息'); return false }
+            // 等级门槛不重叠：minPoints 不能与其他等级相同（排序后才能严格递增）
+            var pts = Number(self.formData.minPoints)
+            var overlap = self.sortedLevels.some(function(lv) {
+              return String(lv.id) !== String(self.formData.id) && Number(lv.minPoints) === pts
+            })
+            if (overlap) { ReggieUI.warning('该所需积分与已有等级相同，等级门槛不可重叠'); return false }
+            self.submitting = true
+            const data = Object.assign({}, self.formData)
+            if (self.action === 'add') {
+              addLevel(data).then(function(res) {
+                self.submitting = false
+                if (res.code === 1) { ReggieUI.success('等级添加成功！'); self.formData.dialogVisible = false; self.handleQuery() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(e) { self.submitting = false; ReggieUI.error('请求失败：' + e) })
+            } else {
+              data.id = self.formData.id
+              updateLevel(data).then(function(res) {
+                self.submitting = false
+                if (res.code === 1) { ReggieUI.success('等级修改成功！'); self.formData.dialogVisible = false; self.handleQuery() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(e) { self.submitting = false; ReggieUI.error('请求失败：' + e) })
+            }
+          })
+        },
+        // 批量删除：顺序循环单删接口，汇总成功/失败
+        doBatchDelete: function(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '会员等级', request: deleteLevel })
+        },
+        deleteHandle: function(id) {
+          const self = this
+          ReggieUI.confirm('此操作将永久删除该等级, 是否继续?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+            .then(function() {
+              deleteLevel(id).then(function(res) {
+                if (res.code === 1) { ReggieUI.success('删除成功！'); self.handleQuery() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(e) { ReggieUI.error('请求失败：' + e) })
+            }).catch(function() {})
+        },
+        // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

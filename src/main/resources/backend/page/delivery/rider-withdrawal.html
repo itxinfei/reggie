@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>骑手提现审核 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260928" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260928" />
+  <style>
+    html, body { height: 100%; margin: 0; padding: 0; background: var(--el-bg-subtle); }
+    html { overflow: hidden; }
+    body { overflow-y: auto; }
+    .container { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+    .tool-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tool-bar .spacer { flex: 1; }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <main class="container" id="main-content" role="main" aria-labelledby="page-title">
+    <h1 class="sr-only" id="page-title">骑手提现审核</h1>
+
+    <el-card shadow="never">
+      <div class="tool-bar">
+        <el-select v-model="filterStatus" placeholder="全部状态" clearable style="width: 160px;" @change="load">
+          <el-option label="待审核" value="PENDING"></el-option>
+          <el-option label="已通过" value="APPROVED"></el-option>
+          <el-option label="已驳回" value="REJECTED"></el-option>
+        </el-select>
+        <el-button type="primary" @click="load">查询</el-button>
+        <span class="spacer"></span>
+        <el-pagination
+          layout="total, prev, pager, next"
+          :total="total"
+          :page-size="pageSize"
+          :current-page="page"
+          @current-change="onPageChange">
+        </el-pagination>
+      </div>
+
+      <el-table :data="rows" v-loading="loading" border>
+        <el-table-column prop="id" label="申请ID" width="90" align="center"></el-table-column>
+        <el-table-column prop="riderId" label="骑手ID" width="100" align="center"></el-table-column>
+        <el-table-column label="提现金额" width="120" align="center">
+          <template slot-scope="{ row }"><strong>¥{{ formatMoney(row.amount) }}</strong></template>
+        </el-table-column>
+        <el-table-column label="状态" width="100" align="center">
+          <template slot-scope="{ row }">
+            <el-tag :type="statusTag(row.status)" size="small">{{ statusText(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="applyTime" label="申请时间" width="170" align="center"></el-table-column>
+        <el-table-column prop="reviewTime" label="审核时间" width="170" align="center">
+          <template slot-scope="{ row }">{{ row.reviewTime || '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="140" align="center"></el-table-column>
+        <el-table-column label="操作" width="160" align="center" fixed="right">
+          <template slot-scope="{ row }">
+            <el-button v-if="row.status === 'PENDING'" type="text" size="small"
+                       @click="openReview(row, true)">通过</el-button>
+            <el-button v-if="row.status === 'PENDING'" type="text" size="small"
+                       class="btn-warning" @click="openReview(row, false)">驳回</el-button>
+            <span v-if="row.status !== 'PENDING'" class="el-text--secondary">已处理</span>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <el-dialog :title="reviewApprove ? '通过提现' : '驳回提现'" :visible.sync="reviewVisible" width="420px">
+      <p>申请ID：{{ reviewRow ? reviewRow.id : '' }}　金额：¥{{ reviewRow ? formatMoney(reviewRow.amount) : '0.00' }}</p>
+      <el-input v-model="reviewRemark" type="textarea" :rows="3" placeholder="审核备注（驳回建议填写原因）"></el-input>
+      <span slot="footer">
+        <el-button @click="reviewVisible = false">取消</el-button>
+        <el-button :type="reviewApprove ? 'primary' : 'danger'" :loading="submitting"
+                   @click="submitReview">确认{{ reviewApprove ? '通过' : '驳回' }}</el-button>
+      </span>
+    </el-dialog>
+  </main>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/common.js?v=20260928"></script>
+  <script>
+    function fmt(v) {
+      if (v == null) return '0.00';
+      return Number(v).toFixed(2);
+    }
+    new Vue({
+      el: '#main-content',
+      data: function () {
+        return {
+          loading: false,
+          rows: [],
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          filterStatus: '',
+          reviewVisible: false,
+          reviewRow: null,
+          reviewApprove: true,
+          reviewRemark: '',
+          submitting: false
+        };
+      },
+      mounted: function () {
+        this.load();
+      },
+      methods: {
+        load: function () {
+          var vm = this;
+          vm.loading = true;
+          $axios.get('/api/delivery/rider-withdrawal/page', {
+            params: { status: vm.filterStatus || undefined, page: vm.page, size: vm.pageSize }
+          }).then(function (res) {
+            var page = res.data || {};
+            vm.rows = page.records || [];
+            vm.total = page.total || 0;
+          }).catch(function () { /* 提示已统一 */ }).then(function () {
+            vm.loading = false;
+          });
+        },
+        onPageChange: function (p) {
+          this.page = p;
+          this.load();
+        },
+        openReview: function (row, approve) {
+          this.reviewRow = row;
+          this.reviewApprove = approve;
+          this.reviewRemark = '';
+          this.reviewVisible = true;
+        },
+        submitReview: function () {
+          var vm = this;
+          if (!vm.reviewApprove && !vm.reviewRemark) {
+            vm.$message.warning('驳回请填写原因');
+            return;
+          }
+          vm.submitting = true;
+          $axios.post('/api/delivery/rider-withdrawal/' + vm.reviewRow.id + '/review', null, {
+            params: { approve: vm.reviewApprove, remark: vm.reviewRemark }
+          }).then(function () {
+            vm.$message.success('审核完成');
+            vm.reviewVisible = false;
+            vm.load();
+          }).catch(function () { /* 提示已统一 */ }).then(function () {
+            vm.submitting = false;
+          });
+        },
+        formatMoney: fmt,
+        statusText: function (s) {
+          if (s === 'PENDING') return '待审核';
+          if (s === 'APPROVED') return '已通过';
+          if (s === 'REJECTED') return '已驳回';
+          return s || '';
+        },
+        statusTag: function (s) {
+          if (s === 'PENDING') return 'warning';
+          if (s === 'APPROVED') return 'success';
+          if (s === 'REJECTED') return 'danger';
+          return 'info';
+        }
+      }
+    });
+  </script>
+</body>
+</html>

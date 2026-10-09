@@ -1,0 +1,285 @@
+/* ============================================================
+ * 全局一致性层（Consistency Layer）
+ * ------------------------------------------------------------
+ * 加载顺序：main.css 末尾（最后加载，用于覆盖 page.css 等历史漂移）
+ * 目的：在不改动各页面 HTML 结构的前提下，收敛全站视觉漂移，
+ *       输出统一、规范、可商用化的页面观感。
+ * 解决的历史漂移：
+ *   1. 字体栈 6 种变体混用（'Microsoft YaHei' 优先 / 'Segoe UI' 优先等）
+ *   2. 页面背景渐变/纯色混用
+ *   3. 主容器圆角被 page.css 覆盖为 4px（设计系统定义 12px）
+ * 原则：仅统一"理应一致"的视觉面，不改变各页面业务布局与交互。
+ * 注意：登录页（body.login-page）保留其品牌渐变背景。
+ * ============================================================ */
+
+/* ========== 1. 字体栈统一 ========== */
+/* 页面内曾出现 6 种 font-family 变体，统一收敛到 tokens 的 --font-family-base */
+html,
+body {
+  font-family: var(--font-family-base) !important;
+}
+
+/* ========== 2. 页面背景统一 ========== */
+/* 管理端内容页统一浅灰底（--bg-page）；登录页通过 :not() 排除，保留品牌渐变 */
+body:not(.login-page) {
+  background: var(--bg-page) !important;
+}
+
+/* ========== 3. 主容器表面统一 ========== */
+/* 重新断言设计系统容器规范（design-system.css 定义，被 page.css 覆盖后在此恢复） */
+/* 用户拍板(2026-09-19)：取消卡片外 8px 灰边，白卡片贴紧 iframe 边缘，更紧凑；
+   卡片内边距四边统一 10px（2026-09-21 拍板，原 8/12 非对称）。 */
+.dashboard-container {
+  padding: 0;
+}
+.dashboard-container .container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 10px; /* 四边统一 10px（原 8/12 非对称，2026-09-21 拍板），全站容器收口于这一处 */
+  margin: 0; /* 归零 unified-components 遗留的 24px 底边距，配合外衬 padding:0 四面贴边 */
+  min-width: 0; /* 防 iframe 内定宽内容横向撑破（与裸 .container 兜底一致） */
+}
+
+/* 兼容非 dashboard-container 的页面容器（overview-container 等） */
+.overview-container .container,
+.daily-container .container,
+.chart-container .container,
+.addBrand-container .container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 10px; /* 四边统一 10px（原 8/12 非对称，2026-09-21 拍板），全站容器收口于这一处 */
+  min-width: 0;
+}
+
+/* ========== 3b. 裸 .container 兜底（body 直下，无 dashboard-container 包裹） ========== */
+/* cashier/daily-settlement、cost/dish-cost、delivery/range-management、finance/withdrawal、
+   food/spec-management、marketing/discount、marketing/full-reduction、report/sales-report
+   等页面使用 <div id="app" class="container"> 直挂 body 下，
+   此前仅靠页面私有 padding/max-width，无卡片外观，与 26+ 个 dashboard-container 页面割裂。
+   此处统一补齐卡片表面，使其与主容器规范完全一致。 */
+body > .container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 10px; /* 四边统一 10px（原 8/12 非对称，2026-09-21 拍板），全站容器收口于这一处 */
+  max-width: 1400px;
+  /* 用户拍板(2026-09-19)：取消卡片外 8px 灰边，垂直外边距归 0；左右 auto 保留超宽屏居中 */
+  margin: 0 auto;
+  min-width: 0;
+}
+
+/* ========== 5. 表格数据默认居中（!important 强化，消除一切覆盖源） ========== */
+/* 手写 el-table（cashier/delivery/finance/marketing 等）与 crud-table 数据单元格统一居中；
+   与 page.css 表头居中（.el-table th !important）策略一致，用 !important 强制生效，
+   防止 Element UI 默认 left / 其他样式文件的同特异性规则覆盖。
+   修改点(2026-09-01)：全站表格表头与内容必须居中——crud-table resolveColAlign 默认已全 center，
+   金额/数字列不再右对齐；.is-right/.is-left 仅作为页面显式覆盖的兜底通道。
+   三态对齐均 !important 保证一致性。
+   修改点(2026-09-17)：新增默认居中规则 .el-table__cell .cell（无类目）——全站所有无显式 align
+   的表格单元格一律居中，手写 el-table 不再需要在列配置里零散写 align: 'center'，
+   页面显式 align（生成 is-left/is-right class）仍优先覆盖默认。 */
+/* 默认居中：所有无 align class 的表格单元格 */
+.el-table .el-table__cell:not(.is-left):not(.is-right):not(.is-center) .cell {
+  text-align: center !important;
+}
+/* 显式三态覆盖（页面 align prop 生成的 class） */
+.el-table td.is-left .cell,
+.el-table th.is-left .cell {
+  text-align: left !important;
+}
+.el-table td.is-center .cell,
+.el-table th.is-center .cell {
+  text-align: center !important;
+}
+.el-table td.is-right .cell,
+.el-table th.is-right .cell {
+  text-align: right !important;
+}
+
+/* ========== 6. 手写统计卡片统一（cashier/finance/cost/report 等页面的私有 .stats-row/.stats-card） ========== */
+/* 这些页面仍用私有实现而非 <stat-cards> 组件，此处补齐与统一组件一致的交互态与表面，
+   避免页面间统计卡片观感割裂（仅增强，不改页面 HTML）。 */
+.stats-row .stats-card,
+.stats-cards .stats-card {
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  border: 1px solid var(--border-subtle);
+}
+.stats-row .stats-card:hover,
+.stats-cards .stats-card:hover {
+  /* 抬升档全站统一：translateY(-2px) + shadow-md（与统一组件 .stat-card、
+     .ds-card--hover 一致）；移除原先 -3px + shadow-lg + 金边的夸张反馈。 */
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ========== 5. 表格表头统一（表头底色/字重/字号对齐设计规范） ========== */
+.el-table th.el-table__cell {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+}
+
+/* ========== 6. 分页区域统一（全站表格分页唯一权威定义） ==========
+   page.css 的 .container .pageList 与 components.css 的
+   .crud-table-wrapper .pageList 重复副本已删除，统一落到这里。
+   el-pagination 内部为 inline-block，靠父级 text-align 居中；不使用 flex，
+   以免改变分页器自身的内部布局。margin 维持 20px（--space-5）现状。 */
+.pageList {
+  text-align: center;
+  margin-top: var(--space-5);
+}
+
+/* ========== 6b. 手写筛选栏内部节奏统一（新增，0 HTML 改动） ==========
+   背景：5 个页面的手写 .filter-bar（优惠券到期预警 / 积分记录 / 充值记录 /
+   库存预警 / 评价审核）内部 gap 在 10/12/16px 间漂移，统一收敛到紧凑档 8px，
+   并保证控件在窄屏可换行。
+   边界：仅统一内部布局（display/wrap/gap），不触碰卡片表面（背景/圆角/
+   阴影/内外边距维持各页现状）；评价审核页 .container 为透明容器，筛选卡
+   自带白卡表面，保持不变。
+   特异性：页面私有 <style> 晚于 main.css 加载，故用 body + .container 前缀
+   把特异性提升到 (0,2,1) 以稳定覆盖页面的单类/双类定义。
+   豁免：排队叫号页的 .filter-bar 是 .bar-row 单行工具栏内的透明填充子组
+   （位于 .queue-container 下、无 .container 祖先），刻意维持 12px 单行
+   设计，自然不在命中范围。
+   align-items 不做全局统一：label 在控件上方的 col 模式（优惠券/库存预警）
+   适用 flex-end；文字标签与控件同行的平铺模式（积分/充值/评价）适用
+   center——强统一为 flex-end 会使同行标签文字下坠，故各页按自身结构保持。 */
+body .container .filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* 评价审核页筛选卡是静态容器（不可点击），其私有 hover 抬升到 shadow-lg
+   属于无意义反馈，与阶段 A「静态卡片不抬升」的全站语义对齐：hover 时维持
+   静止阴影（表面、过渡均不变）。 */
+body .eval-app-wrap .filter-bar:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+/* ========== 6c. 通用页级操作行（卡→栏→表统一布局第二区段） ==========
+   统计卡置顶后，原位于卡片上方的页级按钮行（签到/刷新/平台同步等）统一
+   包此类：横排、紧凑 gap 8px、可换行，与下方主体留 12px。
+   重置 Element 相邻按钮自带的 10px 左外边距，避免与 gap 叠加成 18px。 */
+.ds-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.ds-actions-row .el-button + .el-button {
+  margin-left: 0;
+}
+
+/* ==========================================================================
+   7. 响应式兜底（新增）
+   背景：Element UI 的 :span="N" 是固定百分比，不带断点时在手机上依然按
+   N/24 分栏（如 :span="8" 在 375px 宽屏上每列仅 ~110px），弹窗表单与详情
+   栅格会被挤成不可读的窄条。全站有 11 个页面存在此问题（弹窗内共约 80 个
+   el-col），逐个补 :xs 属性易漏易回归，故在此做统一兜底：
+     - <768px  ：所有栅格列强制单列（100%）
+     - 768~992px：半栏（原 span<12 的窄列升为 1/2，避免 3~4 列并排过窄）
+   页面若显式写了 :xs/:sm 属性，Element UI 会生成 el-col-xs-* 类，
+   其优先级由下方 :not() 排除，页面显式声明仍然生效（不被兜底覆盖）。
+   ========================================================================== */
+/* ============================================================
+ * 可交互元素的光标语义（Cursor Affordance）
+ * ------------------------------------------------------------
+ * 问题：Element UI 在这两类触发器上没有声明 cursor，实测 computed 值为 auto，
+ *       鼠标移上去没有任何「这里能点」的反馈。全站共 236 处（54 个页面）：
+ *         - .el-tabs__item      实测为 <div>，内部没有 button 子元素兜底
+ *         - .el-dropdown        自身是触发器容器，内部 button 虽有 pointer，
+ *                               但容器整体应当一致
+ * 影响：可点性属于基础交互反馈，缺失会让用户反复试探，是体验层面的实际缺陷。
+ * 说明：用 :not(.is-disabled) 排除禁用态 —— 那些本就不该给出可点暗示。
+ * ============================================================ */
+.el-tabs__item:not(.is-disabled),
+.el-dropdown:not(.is-disabled) {
+  cursor: pointer;
+}
+
+@media (max-width: 767px) {
+  .el-row > .el-col:not([class*="el-col-xs-"]) {
+    width: 100%;
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
+}
+@media (min-width: 768px) and (max-width: 991px) {
+  /* 仅收窄"很窄"的列（原 span 1~8，即 3 列及以上并排），span>=12 的保持不变 */
+  .el-row > .el-col-1:not([class*="el-col-sm-"]),
+  .el-row > .el-col-2:not([class*="el-col-sm-"]),
+  .el-row > .el-col-3:not([class*="el-col-sm-"]),
+  .el-row > .el-col-4:not([class*="el-col-sm-"]),
+  .el-row > .el-col-5:not([class*="el-col-sm-"]),
+  .el-row > .el-col-6:not([class*="el-col-sm-"]),
+  .el-row > .el-col-7:not([class*="el-col-sm-"]),
+  .el-row > .el-col-8:not([class*="el-col-sm-"]) {
+    width: 50%;
+    max-width: 50%;
+    flex: 0 0 50%;
+  }
+}
+
+/* ========== 8. 移动端表格横向滚动（新增） ==========
+   窄屏下表格列被压缩到无法阅读，改为保留最小宽度 + 容器横向滚动，
+   由用户左右滑动查看，优于挤压换行。 */
+@media (max-width: 767px) {
+  .el-table__body,
+  .el-table__header,
+  .el-table__footer {
+    min-width: 600px;
+  }
+  .el-table__body-wrapper,
+  .el-table__header-wrapper,
+  .el-table__footer-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* 分页在窄屏允许换行居中，避免溢出被裁切 */
+  .pageList .el-pagination,
+  .pagination-container .el-pagination {
+    white-space: normal;
+    text-align: center;
+  }
+
+  /* 表单控件的固定像素宽度兜底：
+     多个页面在弹窗/筛选区用行内 style="width:200~360px" 写死控件宽度，
+     在 375px 窄屏上会连同 label 一起溢出、右侧被裁切。
+     此处统一改为自适应（!important 用于覆盖行内 style）。 */
+  .el-dialog .el-input,
+  .el-dialog .el-select,
+  .el-dialog .el-cascader,
+  .el-dialog .el-date-editor,
+  .el-dialog .el-input-number,
+  .search-area .el-input,
+  .search-area .el-select,
+  .search-area .el-date-editor {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-right: 0 !important;
+  }
+  /* 弹窗在窄屏接近全宽，避免默认百分比宽度留白过多 */
+  .el-dialog {
+    width: 94% !important;
+    margin-top: 8vh !important;
+  }
+  /* 表单标签改为顶部对齐，避免窄屏 label 与控件挤在一行 */
+  .el-dialog .el-form--label-right .el-form-item__label {
+    float: none;
+    display: block;
+    width: auto !important;
+    text-align: left;
+    padding-right: 0;
+  }
+  .el-dialog .el-form--label-right .el-form-item__content {
+    margin-left: 0 !important;
+  }
+}

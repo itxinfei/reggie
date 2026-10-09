@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>个人中心 - 瑞吉外卖</title>
+    <link rel="icon" href="./../images/favico.ico">
+    <script src="./../js/base.js?v=20260930"></script>
+    <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <link rel="stylesheet" href="../styles/index.css?v=20260930b" />
+    <link rel="stylesheet" href="../styles/skeleton.css?v=20260930" />
+    <!-- 修改点：加载 remixicon 图标库，菜单位图 png → ri-* 矢量图标 -->
+    <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+    <script src="../js/icon-fallback.js?v=20260917"></script>
+    <link rel="stylesheet" href="./../styles/user.css?v=20260930" />
+    <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
+    <link rel="stylesheet" href="../styles/tabbar.css?v=20260930" />
+</head>
+<body>
+    <div id="user" class="app relative">
+      <cend-shell :show-back="false">
+        <!-- 修改点：骨架屏替代 loading 遮罩 -->
+        <div v-if="pageLoading" class="skeleton-container">
+            <!-- 用户信息骨架 -->
+            <div class="skeleton-user">
+                <div class="skeleton-avatar"></div>
+                <div class="skeleton-user-info">
+                    <div class="skeleton-line skeleton-w40"></div>
+                    <div class="skeleton-line skeleton-w30"></div>
+                </div>
+            </div>
+            <!-- 会员卡片骨架 -->
+            <div class="skeleton-member-card">
+                <div class="skeleton-line skeleton-w60"></div>
+                <div class="skeleton-stats">
+                    <div class="skeleton-stat"></div>
+                    <div class="skeleton-stat"></div>
+                    <div class="skeleton-stat"></div>
+                </div>
+            </div>
+            <!-- 功能列表骨架 -->
+            <div class="skeleton-links">
+                <div class="skeleton-link-item" v-for="i in 5" :key="'sl'+i">
+                    <div class="skeleton-icon"></div>
+                    <div class="skeleton-line skeleton-w50"></div>
+                </div>
+            </div>
+        </div>
+        <!-- 用户信息 hero（对标美团/饿了么一级页：无返回、无标题，头像昵称独立成区，右上角编辑） -->
+        <div class="user-hero">
+            <i class="ri-pencil-line hero-edit-icon" @click.stop="openEditProfile" aria-label="编辑资料" role="button"></i>
+            <!-- 头像支持点击选择 / 拖拽上传，本地即时预览，上传中显示遮罩 -->
+            <div class="avatar-wrap"
+                 :class="{ dragging: avatarDragging, uploading: avatarUploading }"
+                 role="button" tabindex="0" aria-label="点击或拖拽图片以更换头像"
+                 @click="triggerAvatarInput"
+                 @keydown.enter.prevent="triggerAvatarInput"
+                 @dragover.prevent="onAvatarDragOver"
+                 @dragleave.prevent="onAvatarDragLeave"
+                 @drop.prevent="onAvatarDrop">
+                <img class="avatar-img" :src="userAvatar ? imgPath(userAvatar) : '/front/images/headPage.png'" alt="用户头像"/>
+                <div v-if="avatarUploading" class="avatar-mask">
+                    <i class="ri-loader-4-line rotating"></i>
+                </div>
+                <input ref="avatarInput" class="avatar-input" type="file"
+                       accept="image/jpeg,image/png,image/gif" @change="onAvatarChange"/>
+            </div>
+            <div class="desc">
+                <div class="divName">
+                    {{ userName || '用户' }}
+                    <!-- User.sex 为 String("0"/"1")，宽松比较兼容 Number/String -->
+                    <span v-if="userGender == '1'" class="gender-icon">
+                        <i class="ri-men-line"></i>
+                    </span>
+                    <span v-else-if="userGender == '0'" class="gender-icon">
+                        <i class="ri-women-line"></i>
+                    </span>
+                    <span v-if="memberInfo && memberInfo.isMember" class="member-tag"><i class="ri-vip-crown-2-fill"></i>会员</span>
+                </div>
+                <div class="divPhone">{{ maskedPhone }}</div>
+            </div>
+        </div>
+        <!-- 修改点：van-pull-refresh 包裹内容实现下拉刷新 -->
+        <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功" class="user-scroll">
+        <div class="divContent has-tabbar">
+            <!-- 会员卡片 -->
+            <div class="member-card" @click="goMemberCenter" v-if="memberInfo">
+                <div class="card-top">
+                    <span v-if="memberInfo.isMember && memberInfo.level" :class="['card-level-badge', memberInfo.level.name === '普通会员' ? 'standard' : '']">
+                        {{ memberInfo.level.name || '未知等级' }}
+                    </span>
+                    <span v-else class="card-level-badge standard">未开通会员</span>
+                    <span class="card-arrow">查看详情 ›</span>
+                </div>
+                <div class="card-stats" v-if="memberInfo.isMember && memberInfo.member">
+                    <div class="card-stat">
+                        <div class="val">{{ fmtPoints(memberInfo.member.points) }}</div>
+                        <div class="lbl">积分</div>
+                    </div>
+                    <div class="card-stat">
+                        <div class="val">{{ fmtMoney(memberInfo.member.balance) }}</div>
+                        <div class="lbl">余额</div>
+                    </div>
+                    <div class="card-stat">
+                        <div class="val">{{ memberInfo.couponCount || 0 }}</div>
+                        <div class="lbl">优惠券</div>
+                    </div>
+                </div>
+                <div class="card-coupon-tag" v-if="memberInfo.isMember && memberInfo.couponCount > 0">
+                    你有 <span class="coupon-count">{{ memberInfo.couponCount }}</span> 张可用优惠券
+                </div>
+                <!-- v-else-if 而非 v-else：会员但0券时不显示"开通会员"，避免向已是会员的用户要其开通 -->
+                <div class="non-member-tip" v-else-if="!memberInfo.isMember">
+                    开通会员解锁更多权益
+                </div>
+            </div>
+
+            <!-- 订单快捷入口网格 -->
+            <!-- 修改点(2026-09-17)：补区块标题行「我的订单 >」，对齐主流外卖信息架构 -->
+            <div class="order-quick-grid">
+                <div class="order-quick-header" @click="toOrderPage">
+                    <span class="oqh-title">我的订单</span>
+                    <span class="oqh-more">全部订单 <i class="ri-arrow-right-s-line"></i></span>
+                </div>
+                <div class="order-quick-item" @click="toOrderPageWithStatus(1)">
+                    <span class="oq-icon oq-pending">
+                        <i class="ri-time-line"></i>
+                        <span v-if="pendingCount > 0" class="oq-badge">{{ pendingCount }}</span>
+                    </span>
+                    <span class="oq-label">待付款</span>
+                </div>
+                <div class="order-quick-item" @click="toOrderPageWithStatus(2)">
+                    <span class="oq-icon oq-accepted">
+                        <i class="ri-restaurant-line"></i>
+                    </span>
+                    <span class="oq-label">待接单</span>
+                </div>
+                <div class="order-quick-item" @click="toOrderPageWithStatus(3)">
+                    <span class="oq-icon oq-delivering">
+                        <i class="ri-e-bike-2-line"></i>
+                    </span>
+                    <span class="oq-label">配送中</span>
+                </div>
+                <div class="order-quick-item" @click="toOrderPageWithStatus(4)">
+                    <span class="oq-icon oq-evaluate">
+                        <i class="ri-star-line"></i>
+                    </span>
+                    <span class="oq-label">待评价</span>
+                </div>
+                <!-- 修改点：退款入口应传状态 6=已退款/退款中（原误传 5=已取消，点进去是错误列表） -->
+                <div class="order-quick-item" @click="toOrderPageWithStatus(6)">
+                    <span class="oq-icon oq-refund">
+                        <i class="ri-refund-2-line"></i>
+                    </span>
+                    <span class="oq-label">退款</span>
+                </div>
+            </div>
+
+            <div class="divLinks">
+                <!-- 第一组：常用服务 -->
+                <div class="menu-group-title">常用服务</div>
+                <div class="item" @click="goMemberCenter">
+                    <i class="ri-vip-crown-2-line link-icon li-member" aria-hidden="true"></i>
+                    <span>会员中心</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <div class="divSplit"></div>
+                <div class="item" @click="openEditProfile">
+                    <i class="ri-edit-box-line link-icon li-edit" aria-hidden="true"></i>
+                    <span>编辑资料</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <div class="divSplit"></div>
+                <div class="item" @click="toAddressPage">
+                    <i class="ri-map-pin-line link-icon li-address" aria-hidden="true"></i>
+                    <span>地址管理</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <!-- 第二组：订单与消息 -->
+                <div class="menu-group-title">订单与消息</div>
+                <div class="item" @click="toOrderPage">
+                    <i class="ri-file-list-3-line link-icon li-history" aria-hidden="true"></i>
+                    <span>历史订单</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <div class="divSplit"></div>
+                <div class="item relative" @click="toMessagePage">
+                    <i class="ri-notification-2-line link-icon li-message" aria-hidden="true"></i>
+                    <span>消息中心</span>
+                    <span v-if="unreadCount > 0" class="msg-badge">{{ unreadCount }}</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <!-- 第三组：更多 -->
+                <div class="menu-group-title">更多</div>
+                <div class="item" @click="toQueuePage">
+                    <i class="ri-time-line link-icon" aria-hidden="true"></i>
+                    <span>排队取号</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <div class="divSplit"></div>
+                <div class="item" @click="toReservationPage">
+                    <i class="ri-calendar-check-line link-icon" aria-hidden="true"></i>
+                    <span>到店预订</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <div class="divSplit"></div>
+                <div class="item" @click="toFrequentPage">
+                    <i class="ri-shopping-basket-line link-icon li-frequent" aria-hidden="true"></i>
+                    <span>常购清单</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <div class="divSplit"></div>
+                <div class="item" @click="toCouponCenterPage">
+                    <i class="ri-coupon-3-line link-icon" aria-hidden="true"></i>
+                    <span>领券中心</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <div class="divSplit"></div>
+                <div class="item" @click="toFavoritePage">
+                    <i class="ri-heart-3-line link-icon li-favorite" aria-hidden="true"></i>
+                    <span>我的收藏</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <div class="divSplit"></div>
+                <div class="item" @click="toBrowseHistoryPage">
+                    <i class="ri-history-line link-icon" aria-hidden="true"></i>
+                    <span>我的足迹</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <div class="divSplit"></div>
+                <div class="item" @click="toEvaluationPage">
+                    <i class="ri-star-line link-icon li-evaluate" aria-hidden="true"></i>
+                    <span>我的评价</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <div class="divSplit"></div>
+                <div class="item" @click="toInvoicePage">
+                    <i class="ri-receipt-line link-icon li-invoice" aria-hidden="true"></i>
+                    <span>我的发票</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <div class="divSplit"></div>
+                <div class="item" @click="contactService">
+                    <i class="ri-customer-service-2-line link-icon li-service" aria-hidden="true"></i>
+                    <span>联系客服</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <!-- 修改点(2026-09-17 UX)：移除"设置"占位入口（点击仅提示开发中，正式菜单不应挂未上线功能） -->
+            </div>
+            <div class="divOrders" v-if="order[0]">
+                <div class="title">最新订单</div>
+                <div class="timeStatus">
+                    <span>{{order[0].orderTime}}</span>
+                    <span :class="getStatusClass(order[0].status)">{{getStatus(order[0].status)}}</span>
+                </div>
+                <div class="dishList">
+                    <!-- 修改点：对齐美团订单卡片——菜品小图+名称+x数量，点击小图可全屏放大预览（van-image-preview） -->
+                    <div v-for="(item,index) in (order[0].orderDetails || [])" :key="index" class="item" @click="previewDishImage(imgPath(item.image), index)">
+                        <img v-if="item.image" :src="imgPath(item.image)" loading="lazy" :alt="item.name || '菜品'" @error="imgError" class="dish-thumb" />
+                        <span class="dish-name">{{item.name}}</span>
+                        <span class="dish-count">x{{item.number}}</span>
+                    </div>
+                </div>
+                <div class="result">
+                    <span>共{{order[0].sumNum}} 件商品,实付</span>
+                    <span class="price">¥{{ Number(order[0].amount || 0).toFixed(2) }}</span>
+                </div>
+                <div class="btn" v-if="order[0].status === 4">
+                    <div class="btnAgain"
+                         :class="{ 'is-loading': addOrderLoading, 'is-disabled': addOrderLoading }"
+                         @click="addOrderAgain">
+                        {{ addOrderLoading ? '处理中...' : '再来一单' }}
+                    </div>
+                </div>
+            </div>
+            <div class="quitLogin"
+                 :class="{ 'is-loading': logoutLoading }"
+                 @click="toPageLogin">
+                {{ logoutLoading ? '退出中...' : '退出登录' }}
+            </div>
+        </div>
+        </van-pull-refresh>
+
+        <!-- ====== 最新订单菜品图大图预览（对齐美团订单卡片交互） ====== -->
+        <!-- 修改点：Vue2 下 van-* 禁自闭合，:show.sync 替代 v-model:show（my-evaluations.html 权威写法） -->
+        <van-image-preview :show.sync="previewShow" :images="previewImages" :start-position="previewIndex"></van-image-preview>
+
+        <!-- ====== 编辑资料弹窗（修改点 2026-09-16：昵称 + 性别，复用 PUT /user/info） ====== -->
+        <van-dialog
+            v-model="editProfileShow"
+            title="编辑资料"
+            show-cancel-button
+            confirm-button-text="保存"
+            confirm-button-color="var(--color-primary)"
+            cancel-button-text="取消"
+            :before-close="onEditProfileBeforeClose">
+            <div class="edit-profile-body">
+                <div class="ep-field">
+                    <label class="ep-label">昵称</label>
+                    <input v-model.trim="editName" class="ep-input" maxlength="20" placeholder="请输入昵称" aria-label="昵称"/>
+                </div>
+                <div class="ep-field">
+                    <label class="ep-label">性别</label>
+                    <div class="ep-gender">
+                        <span :class="['ep-gender-opt', editSex === '1' ? 'active' : '']" @click="editSex = '1'">男</span>
+                        <span :class="['ep-gender-opt', editSex === '0' ? 'active' : '']" @click="editSex = '0'">女</span>
+                        <span :class="['ep-gender-opt', editSex === '' ? 'active' : '']" @click="editSex = ''">保密</span>
+                    </div>
+                </div>
+            </div>
+        </van-dialog>
+
+        <!-- ====== 底部 Tab 导航（点餐 / 订单 / 我的） ====== -->
+        <van-tabbar v-model="activeTab" class="app-tabbar" @change="onTabChange">
+            <van-tabbar-item>
+                <span>点餐</span>
+                <i slot="icon" class="ri-restaurant-line"></i>
+            </van-tabbar-item>
+            <van-tabbar-item>
+                <span>订单</span>
+                <i slot="icon" class="ri-file-list-line"></i>
+            </van-tabbar-item>
+            <van-tabbar-item>
+                <span>我的</span>
+                <i slot="icon" class="ri-user-3-line"></i>
+            </van-tabbar-item>
+        </van-tabbar>
+      </cend-shell>
+    </div>
+    <script src="../../backend/plugins/vue/vue.js"></script>
+    <script src="./../js/vant.min.js"></script>
+    <script src="../../backend/plugins/axios/axios.min.js"></script>
+    <script src="./../js/request.js?v=20260930"></script>
+    <script src="./../api/main.js?v=20260917"></script>
+    <script src="./../js/common.js?v=20260930b"></script>
+    <script src="./../js/components-cend.js?v=20260922"></script>
+    <script src="./../api/order.js?v=20260917"></script>
+    <script src="./../api/login.js?v=20260917"></script>
+    <script src="./../api/member-center.js?v=20260917"></script>
+    <script src="./../api/invoice.js?v=20260917"></script>
+    <script src="./../api/recommend.js?v=20260917"></script>
+    <script>
+        new Vue({
+            el:"#user",
+            data: function(){
+                return {
+                    userPhone: '', userName: '', userAvatar: '', userGender: undefined,
+                    pageLoading: false, refreshing: false, addOrderLoading: false, logoutLoading: false,
+                    memberInfo: null,
+                    pendingCount: 0,
+                    unreadCount: 0,
+                    // 修改点：初始为空数组，v-if="order[0]" 先渲染 false（隐藏卡片），
+                    // 避免旧 dummy 对象在加载间隙闪现「xundefined」/「共0件,实付 ¥NaN」
+                    order: [],
+                    // 修改点：底部 Tab 导航当前项（0=点餐 1=订单 2=我的）
+                    activeTab: 2,
+                    // 修改点：最新订单菜品图大图预览（van-image-preview）
+                    previewShow: false, previewImages: [], previewIndex: 0,
+                    // 修改点(2026-09-16)：头像上传与编辑资料状态
+                    avatarUploading: false, avatarDragging: false, prevAvatar: '',
+                    editProfileShow: false, editName: '', editSex: ''
+                }
+            },
+            computed:{
+                // 用户头像：有头像走 imgPath 鉴权地址，无头像用默认头像
+                // 修改点(2026-09-26)：与首页 user-btn 统一同一头像源，原直接绑定相对路径导致真实头像显示不出
+                avatarSrc: function(){
+                    return this.userAvatar ? imgPath(this.userAvatar) : '/front/images/headPage.png';
+                },
+                maskedPhone: function(){
+                    var phone = this.userPhone
+                    if(!phone || phone.length < 7) return phone || ''
+                    return phone.substring(0, 3) + '****' + phone.substring(phone.length - 4)
+                }
+            },
+            created: function(){
+                this.userPhone = sessionStorage.getItem("userPhone") || ''
+                this.loadData()
+            },
+            methods:{
+                // 头像加载失败兜底默认头像（保持「人头」语义，不用 noImg 占位图）
+                onAvatarError: function(e){
+                    if (e.target.src.indexOf('headPage.png') >= 0) return
+                    e.target.src = '/front/images/headPage.png'
+                },
+                // 修改点：下拉刷新
+                onRefresh(){
+                    var self = this
+                    // 成功提示由 van-pull-refresh 的 success-text 统一展示，不再手动 Toast 造成双重提示
+                    this.loadData().catch(function(){}).finally(function(){
+                        self.refreshing = false
+                    })
+                },
+                async loadData(){
+                    this.pageLoading = true
+                    try {
+                        await Promise.all([
+                            this.fetchUserInfo(),
+                            this.fetchMemberInfo(),
+                            this.getLatestOrder(),
+                            this.fetchUnreadCount(),
+                            this.fetchPendingCount()
+                        ])
+                    } finally { this.pageLoading = false }
+                },
+                async fetchUserInfo(){
+                    try {
+                        var res = await getUserInfoApi()
+                        if(res.code === 1 && res.data){
+                            this.userName = res.data.name || ''
+                            this.userAvatar = res.data.avatar || ''
+                            // 仅接受完整手机号：后端可能返回脱敏号(如 138****8000)，
+                            // 让它覆盖会污染 sessionStorage，导致点餐联系人手机预填失效
+                            if(res.data.phone && /^1\d{10}$/.test(res.data.phone)){
+                                this.userPhone = res.data.phone
+                            }
+                            this.userGender = res.data.sex !== undefined ? res.data.sex : undefined
+                            sessionStorage.setItem("userName", this.userName)
+                            sessionStorage.setItem("userAvatar", this.userAvatar)
+                            sessionStorage.setItem("userPhone", this.userPhone)
+                        }
+                    } catch(e) { console.warn('[user] fetchUserInfo 失败:', e) }
+                },
+                async fetchMemberInfo(){
+                    try {
+                        var res = await getMyMemberInfo()
+                        if(res.code === 1) {
+                            this.memberInfo = res.data
+                            if (res.data.isMember && res.data.member) {
+                                sessionStorage.setItem("memberId", res.data.member.id)
+                            }
+                        }
+                    } catch(e) { console.warn('[user] fetchMemberInfo 失败:', e) }
+                },
+                async fetchUnreadCount(){
+                    try {
+                        var res = await recommendApi.getUnreadCount()
+                        if(res.code === 1 && res.data !== undefined) {
+                            this.unreadCount = res.data || 0
+                        }
+                    } catch(e) { console.warn('[user] fetchUnreadCount 失败:', e) }
+                },
+                async fetchPendingCount(){
+                    try {
+                        var res = await orderPagingApi({ page:1, pageSize:1, status: 1 })
+                        if(res.code === 1 && res.data && res.data.total !== undefined) {
+                            this.pendingCount = res.data.total || 0
+                        }
+                    } catch(e) { console.warn('[user] fetchPendingCount 失败:', e) }
+                },
+                // 修改点：底部 Tab 切换（0=点餐 1=订单 2=我的）
+                onTabChange: function(active){
+                    if(active === 2){
+                        // 已在个人中心：仅保持选中态，不重复跳转
+                        return
+                    }
+                    var urlMap = { 0: '/front/index.html', 1: '/front/page/order.html' }
+                    var url = urlMap[active]
+                    if(!url) return
+                    window.requestAnimationFrame(function(){ window.location.href = url })
+                },
+                getStatus: function(status){ return getStatus(status) },
+                getStatusClass: function(status){
+                    // 修改点(2026-09-14)：与历史订单页统一的 6 类状态映射
+                    var map = { 1: 'status-pending', 2: 'status-accepted', 3: 'status-shipped', 4: 'status-completed', 5: 'status-cancelled', 6: 'status-refunding' }
+                    return map[status] || ''
+                },
+                toOrderPageWithStatus: function(status){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/order.html?status=' + status })
+                },
+                // 修改点：图片加载失败兜底占位图
+                imgError: function(e){
+                    var src = e.target && e.target.src
+                    if (src && src.indexOf('noImg.png') >= 0) return
+                    e.target.src = './../images/noImg.png'
+                },
+                // 修改点：最新订单菜品图大图预览（van-image-preview，复用 my-evaluations.html 权威模式）
+                previewDishImage: function(url, index){
+                    if (!url) return
+                    this.previewImages = [url]
+                    this.previewIndex = index || 0
+                    this.previewShow = true
+                },
+                goMemberCenter: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/member-center.html' })
+                },
+                toAddressPage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/address.html' })
+                },
+                toOrderPage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/order.html' })
+                },
+                toFrequentPage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/frequent-orders.html' })
+                },
+                toQueuePage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/queue.html' })
+                },
+                toReservationPage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/reservation.html' })
+                },
+                toFavoritePage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/my-favorites.html' })
+                },
+                toCouponCenterPage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/coupon-center.html' })
+                },
+                toBrowseHistoryPage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/browse-history.html' })
+                },
+                toEvaluationPage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/my-evaluations.html' })
+                },
+                toInvoicePage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/my-invoice.html' })
+                },
+                // 联系客服（拨打电话或显示联系方式）
+                contactService: function(){
+                    // C 端在线客服 / 投诉：进入客服会话页（仅需登录态，未登录由该页跳登录）
+                    window.requestAnimationFrame(function(){
+                        window.location.href = '/front/page/customer-service.html'
+                    })
+                },
+                toMessagePage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/message.html' })
+                },
+                async getLatestOrder(){
+                    try {
+                        var res = await orderPagingApi({ page:1, pageSize:1 })
+                        if(res.code === 1 && res.data && res.data.records){
+                            this.order = res.data.records
+                            if(this.order.length > 0 && this.order[0].orderDetails){
+                                var number = 0
+                                this.order[0].orderDetails.forEach(function(item){ number += item.number })
+                                this.order[0].sumNum = number
+                            }
+                        } else {
+                            // 修改点：请求失败时置空列表，隐藏"最新订单"卡片，避免渲染 dummy 数据「共0件,实付 ¥NaN」
+                            this.order = []
+                        }
+                    } catch(e) {
+                        console.warn('[user.html] 加载最新订单失败:', e)
+                        this.order = []
+                    }
+                },
+                async addOrderAgain(){
+                    if(this.addOrderLoading) return;
+                    this.addOrderLoading = true
+                    try {
+                        var res = await orderAgainApi({id:this.order[0].id})
+                        if(res.code === 1){
+                            await cartListApi({})
+                            window.requestAnimationFrame(function(){ window.location.href = '/front/index.html' })
+                        }else{
+                            vant.Toast.fail(res.msg || '再来一单失败');
+                            this.addOrderLoading = false
+                        }
+                    } catch(e) { vant.Toast.fail('再来一单失败'); this.addOrderLoading = false }
+                },
+                async toPageLogin(){
+                    if(this.logoutLoading) return;
+                    var self = this
+                    vant.Dialog.confirm({
+                        title: '确认退出', message: '退出登录后需要重新登录，确认退出吗？',
+                        confirmButtonText: '确认退出', confirmButtonColor: cssVar('--color-danger'), cancelButtonText: '取消'
+                    }).then(function(){ self.doLogout() }).catch(function(e){ console.warn('[user.html] 用户取消退出登录:', e) })
+                },
+                async doLogout(){
+                    this.logoutLoading = true
+                    try {
+                        var res = await loginoutApi()
+                        if(res.code === 1){
+                            sessionStorage.removeItem("userPhone")
+                            sessionStorage.removeItem("userId")
+                            sessionStorage.removeItem("userName")
+                            sessionStorage.removeItem("userAvatar")
+                            sessionStorage.removeItem("memberId")
+                            // CSRF Token 同时从 sessionStorage 和 Cookie 清掉，
+                            // 否则旧 token 残留可能被下一用户的首个变更请求携带
+                            sessionStorage.removeItem("csrfToken")
+                            document.cookie = 'csrfToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
+                            window.requestAnimationFrame(function(){ goLogin() })
+                        }else{
+                            vant.Toast.fail(res.msg || '退出失败');
+                            this.logoutLoading = false
+                        }
+                    } catch(e) { this.logoutLoading = false }
+                },
+                // ===== 修改点(2026-09-16)：头像上传（点击 / 拖拽 + 即时预览 + 持久化） =====
+                triggerAvatarInput: function(){
+                    if(this.avatarUploading) return;
+                    if(this.$refs.avatarInput) this.$refs.avatarInput.click();
+                },
+                onAvatarDragOver: function(){ this.avatarDragging = true; },
+                onAvatarDragLeave: function(){ this.avatarDragging = false; },
+                onAvatarChange: function(e){
+                    var f = e.target.files && e.target.files[0];
+                    if(f) this.uploadAndSaveAvatar(f);
+                    // 清空 value，保证再次选择同一文件也能触发 change
+                    if(e.target) e.target.value = '';
+                },
+                onAvatarDrop: function(e){
+                    this.avatarDragging = false;
+                    var dt = e.dataTransfer;
+                    var f = dt && dt.files && dt.files[0];
+                    if(f) this.uploadAndSaveAvatar(f);
+                },
+                // 校验图片格式与大小（与后端 /common/upload 一致：JPG/PNG/GIF，≤5MB）
+                validateAvatar: function(file){
+                    if(!file) return { ok: false, msg: '未选择文件' };
+                    var type = file.type || '';
+                    var name = file.name || '';
+                    var ext = name.indexOf('.') >= 0 ? name.split('.').pop().toLowerCase() : '';
+                    var okType = type === 'image/jpeg' || type === 'image/png' || type === 'image/gif'
+                        || ['jpg','jpeg','png','gif'].indexOf(ext) >= 0;
+                    if(!okType) return { ok: false, msg: '仅支持 JPG / PNG / GIF 格式' };
+                    if(file.size > 5 * 1024 * 1024) return { ok: false, msg: '图片大小不能超过 5MB' };
+                    return { ok: true };
+                },
+                uploadAndSaveAvatar: function(file){
+                    var self = this;
+                    var v = self.validateAvatar(file);
+                    if(!v.ok){ vant.Toast(v.msg); return; }
+                    self.prevAvatar = self.userAvatar;
+                    self.avatarUploading = true;
+                    // 修改点：本地即时预览（不等上传完成即可看到效果）
+                    try {
+                        var reader = new FileReader();
+                        reader.onload = function(ev){ self.userAvatar = ev.target.result; };
+                        reader.readAsDataURL(file);
+                    } catch(e) { /* 个别环境无 FileReader 时走上传后回显 */ }
+                    var fd = new FormData();
+                    fd.append('file', file);
+                    fd.append('bizType', 'avatar');
+                    $axios({ url: '/common/upload', method: 'post', data: fd })
+                        .then(function(up){
+                            if(up && up.code === 1 && up.data){
+                                return updateUserInfoApi({ avatar: up.data }).then(function(res){
+                                    if(res && res.code === 1 && res.data){
+                                        self.userAvatar = res.data.avatar || up.data;
+                                        try { sessionStorage.setItem('userAvatar', self.userAvatar); } catch(e) {}
+                                        vant.Toast.success('头像已更新');
+                                    } else {
+                                        throw new Error((res && res.msg) || '更新失败');
+                                    }
+                                });
+                            }
+                            throw new Error((up && up.msg) || '上传失败');
+                        })
+                        .catch(function(err){
+                            vant.Toast.fail((err && err.message) ? err.message : '上传失败，请重试');
+                            self.userAvatar = self.prevAvatar;
+                        })
+                        .finally(function(){ self.avatarUploading = false; });
+                },
+                // ===== 修改点(2026-09-16)：编辑资料（昵称 + 性别） =====
+                openEditProfile: function(){
+                    this.editName = this.userName || '';
+                    this.editSex = (this.userGender === undefined || this.userGender === null) ? '' : String(this.userGender);
+                    this.editProfileShow = true;
+                },
+                // van-dialog before-close：校验昵称非空并异步保存
+                onEditProfileBeforeClose: function(action, done){
+                    var self = this;
+                    if(action === 'confirm'){
+                        if(!self.editName || !self.editName.trim()){
+                            vant.Toast('昵称不能为空');
+                            done(false);
+                            return;
+                        }
+                        self.saveProfile(done);
+                    } else {
+                        done();
+                    }
+                },
+                saveProfile: function(done){
+                    var self = this;
+                    updateUserInfoApi({ name: self.editName.trim(), sex: self.editSex })
+                        .then(function(res){
+                            if(res && res.code === 1 && res.data){
+                                self.userName = res.data.name || self.userName;
+                                self.userGender = res.data.sex !== undefined ? res.data.sex : self.userGender;
+                                try { sessionStorage.setItem('userName', self.userName); } catch(e) {}
+                                if(done) done();
+                                vant.Toast.success('资料已保存');
+                            } else {
+                                vant.Toast.fail((res && res.msg) || '保存失败');
+                                if(done) done(false);
+                            }
+                        })
+                        .catch(function(){
+                            vant.Toast.fail('保存失败，请重试');
+                            if(done) done(false);
+                        });
+                },
+                // 修改点(2026-09-18)：积分精确显示（千分位整数），不再缩写成 w/k 让用户无法得知准确积分
+                fmtPoints: function(v){
+                    if (v == null || v === '') return '0'
+                    var n = Number(v)
+                    return isNaN(n) ? '0' : n.toLocaleString('zh-CN')
+                },
+                // 修改点(2026-09-18)：余额是金额，必须精确到分（千分位+两位小数），
+                // 原 fmtThousand 把 1234.56 缩写成 1.2k、15600 缩写成 1.6w，金额严重失真
+                fmtMoney: function(v){
+                    if (v == null || v === '') return '0.00'
+                    var n = Number(v)
+                    return isNaN(n) ? '0.00'
+                        : n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                }
+            }
+        })
+    </script>
+</body>
+</html>

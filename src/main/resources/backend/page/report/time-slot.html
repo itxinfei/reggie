@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>时段分析 - 瑞吉外卖管理端</title>
+
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/chart-panel.css?v=20260926" />
+  <script src="../../plugins/echarts/echarts.min.js"></script>
+  <style>
+    html, body { height: 100%; margin: 0; padding: 0;
+      background: var(--bg-page);
+      font-family: var(--font-family-base); }
+    /* 防抖动（2026-09-20）：滚动统一由 body 承担；若 html 也产生滚动条，append-to-body 的
+       下拉浮层超出视口底部时会撑高 html、闪现第二滚动条挤占宽度，表格随之左右横跳 */
+    html { overflow: hidden; }
+    body { overflow-x: hidden; overflow-y: auto; }
+    .timeslot-page { min-height: 100%; display: flex; flex-direction: column; }
+    .timeslot-page .container { flex: 1; background: transparent; padding: 10px;
+      min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+    /* 工具栏统一走 table-bar 组件 + page.css 的 .container .tableBar 纯 flex 栏规则，
+       不再私有卡片化覆盖；toolbar-label/spacer 旧类已无引用。 */
+
+    .timeslot-page .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .timeslot-page .chart-box { width: 100%; height: 380px; min-height: 300px; }
+    @media (max-width: 1200px) { .timeslot-page .charts-row { grid-template-columns: 1fr; } }
+    @media (max-width: 768px) { .timeslot-page .container { padding: var(--space-2); }
+      .timeslot-page .chart-box { height: 300px; min-height: 260px; } }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="timeslot-page" id="report-timeslot-app" v-loading="loading">
+    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+
+      
+      
+
+      <!-- 修改点：使用 stat-cards 统一组件替代手写 KPI 卡片 -->
+      <stat-cards :cards="statsCards"></stat-cards>
+
+      <!-- 修改点：搜索栏使用 table-bar 统一组件 -->
+      <table-bar
+        :search-items="searchItems"
+        :actions="searchActions"
+        :loading="loading"
+        :show-refresh="true"
+        @refresh="loadData()"
+        @search="handleSearch"
+        @reset="handleReset"
+        @action="handleAction">
+      </table-bar>
+
+
+
+      <!-- ========== 时段分布图表 ========== -->
+      <chart-panel title="时段订单与营业额分布" icon="ri-bar-chart-2-line">
+        <div class="charts-row">
+          <div id="barChart" class="chart-box"></div>
+          <div id="pieChart" class="chart-box"></div>
+        </div>
+      </chart-panel>
+
+      <!-- ========== 工作日×时段热力图 ========== -->
+      <chart-panel title="工作日 × 时段 客流量热力图" icon="ri-map-2-line">
+        <div id="heatmapChart" style="width:100%;height:420px;min-height:320px;"></div>
+      </chart-panel>
+
+      <!-- ========== 数据表格（统一 crud-table 组件，替代手写 el-table） ========== -->
+      <crud-table
+        empty-hint="暂无相关记录"
+        :data="tableData"
+        :columns="timeSlotColumns"
+        :loading="loading"
+        :show-pagination="false"
+        :stripe="true"
+        :border="true"
+        :selection="true"
+        aria-label="时段分布数据"
+        @selection-change="onSelectionChange"
+      >
+        <template #col-ratio="{ row }"><span>{{ calcPercent(row.count) }}%</span></template>
+        <template #col-amount="{ row }"><span>¥{{ formatMoney(row.amount) }}</span></template>
+        <template #col-heat="{ row }">
+          <el-progress :percentage="calcPercent(row.count)" :show-text="true"
+            :stroke-width="12" :format="function(p) { return p + '%'; }"
+            :color="slotHeatColor(row)">
+          </el-progress>
+        </template>
+      </crud-table>
+
+    </main>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/report.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../js/chart-panel.js?v=20260926"></script>
+  <script>
+    (function() {
+      // 修改点：颜色统一走 window.RgPalette（单一来源），不再硬编码 hex
+      const COLORS = [RgPalette.brand600, RgPalette.success, RgPalette.warning, RgPalette.danger, RgPalette.linkBlue, RgPalette.seriesViolet, RgPalette.emerald, RgPalette.orange500];
+      new Vue({
+        el: '#report-timeslot-app',
+        data: function() {
+          return {
+            loading: false, dateRange: [], tableData: [],
+            // 勾选要导出的时段行（聚合结果，直接用行对象）
+            exportRows: [],
+            // 修改点：table-bar 统一组件配置
+            searchItems: [{ type: 'daterange', field: 'dateRange', placeholder: '日期范围' }],
+            searchActions: [{ key: 'export', text: '导出 CSV', type: 'success', icon: 'ri-download-line', disabled: true }],
+            // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
+            timeSlotColumns: [
+              { prop: 'name', label: '时段', width: 120, align: 'center' },
+              { prop: 'count', label: '订单数', width: 120, type: 'number' },
+              { prop: 'ratio', label: '占比', width: 120, align: 'center', slot: true },
+              { prop: 'amount', label: '营业额（元）', width: 150, slot: true, type: 'money' },
+              { prop: 'heat', label: '时段热度', width: 160, align: 'center', slot: true }
+            ],
+            barChart: null, pieChart: null, heatmapChart: null,
+            resizeHandler: null, observer: null
+          }
+        },
+        computed: {
+          totalCount: function() { return this.tableData.reduce(function(s, r) { return s + (r.count || 0); }, 0); },
+          totalAmount: function() { return this.tableData.reduce(function(s, r) { return s + (Number(r.amount) || 0); }, 0); },
+          peakSlot: function() {
+            if (!this.tableData.length) return '--';
+            var p = this.tableData.reduce(function(m, r) { return (r.count || 0) > (m.count || 0) ? r : m; }, this.tableData[0]);
+            return p.name || '--';
+          },
+          // 修改点：statsCards 统一卡片配置（供 stat-cards 组件使用）
+          statsCards: function() {
+            const self = this;
+            return [
+              { key: '时段', icon: 'ri-time-line', label: '时段数量', value: self.tableData.length || 0, color: 'primary' },
+              { key: '订单', icon: 'ri-file-list-3-line', label: '总订单数', value: self.totalCount, color: 'success' },
+              { key: '营业额', icon: 'ri-money-cny-circle-line', label: '总营业额（元）', value: '¥' + self.formatMoney(self.totalAmount), color: 'warning' },
+              { key: '高峰', icon: 'ri-fire-line', label: '高峰时段', value: self.peakSlot, color: 'info' }
+            ]
+          }
+        },
+        created: function() {
+          this.dateRange = this.defaultRange();
+        },
+        mounted: function() {
+          const self = this;
+          self.$nextTick(function() {
+            self.initCharts();
+            self.loadData();
+          });
+        },
+        beforeDestroy: function() {
+          if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler);
+          if (this.observer) this.observer.disconnect();
+          [this.barChart, this.pieChart, this.heatmapChart].forEach(function(ch) {
+            if (ch) try { ch.dispose(); } catch(e) {}
+          });
+        },
+        methods: {
+          // 默认查询区间：本月 1 日 ~ 月末（created 初始化与重置共用）
+          defaultRange: function() {
+            const now = new Date();
+            const first = new Date(now.getFullYear(), now.getMonth(), 1);
+            const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+            return [fmt(first), fmt(last)];
+          },
+          // 修改点：独立初始化逻辑，增加安全判断与延迟 resize 防止变形
+          initCharts: function() {
+            const self = this;
+            var tryInit = function(id, key) {
+              const el = document.getElementById(id);
+              if (!el) { console.warn('[time-slot] 图表容器未找到:', id); return null; }
+              const ch = echarts.init(el);
+              // 修改点：延迟手动 resize 确保父子容器尺寸稳定后再渲染
+              setTimeout(function() { if (ch && !ch.isDisposed()) ch.resize(); }, 300);
+              return ch;
+            };
+            self.barChart = tryInit('barChart', 'barChart');
+            self.pieChart = tryInit('pieChart', 'pieChart');
+            self.heatmapChart = tryInit('heatmapChart', 'heatmapChart');
+            self.resizeHandler = function() {
+              [self.barChart, self.pieChart, self.heatmapChart].forEach(function(ch) {
+                if (ch && !ch.isDisposed()) ch.resize();
+              });
+            };
+            window.addEventListener('resize', self.resizeHandler);
+            // 修改点：ResizeObserver 监听图表父容器尺寸变化
+            if (typeof ResizeObserver !== 'undefined') {
+              try {
+                self.observer = new ResizeObserver(function() {
+                  [self.barChart, self.pieChart, self.heatmapChart].forEach(function(ch) {
+                    if (ch && !ch.isDisposed()) ch.resize();
+                  });
+                });
+                const chartPanel = document.querySelector('.timeslot-page .chart-panel');
+                if (chartPanel) self.observer.observe(chartPanel.parentElement || chartPanel);
+              } catch(e) { console.warn('[time-slot] ResizeObserver 初始化失败:', e); }
+            }
+          },
+          loadData: function() {
+            const self = this;
+            if (!self.dateRange || self.dateRange.length < 2) {
+              ReggieUI.warning('请选择日期范围'); return;
+            }
+            self.loading = true;
+            reportTimeSlot({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(res) {
+              if (String(res.code) === '1') {
+                self.tableData = res.data || [];
+                self.$nextTick(function() { self.renderCharts(); self.loadHeatmap(); });
+              } else { ReggieUI.error(res.msg || '加载时段数据失败'); }
+            }).catch(function(err) { ReggieUI.error('请求失败：' + (err || '网络异常')); })
+            .finally(function() { self.loading = false; });
+          },
+          loadHeatmap: function() {
+            const self = this; if (!self.heatmapChart) return;
+            reportTimeSlotHeatmap({ startDate: self.dateRange[0], endDate: self.dateRange[1] })
+              .then(function(res) {
+                if (res.code === 1 && res.data) {
+                  self.renderHeatmap(res.data);
+                } else {
+                  // 修改点：此前仅 console.warn 静默，失败无用户提示
+                  ReggieUI.error((res && res.msg) || '加载热力图失败');
+                }
+              })
+              .catch(function(err) { ReggieUI.error('加载热力图失败：' + (err || '网络异常')); });
+          },
+          renderHeatmap: function(data) {
+            if (!this.heatmapChart) return;
+            // 修改点：补齐坐标轴标签（后端仅返回 dayIdx/slotIdx/value 计数矩阵，此处前端按后端固定顺序构造 7天×5时段 标签）
+            // 与 ReportServiceImpl.SLOT_NAMES = {早市/午市/下午茶/晚市/夜市}、dayIdx 周一=0 对齐
+            const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+            const slots = ['早市(6-10)', '午市(10-14)', '下午茶(14-17)', '晚市(17-21)', '夜市(21-6)'];
+            var heatData = (data.data || []).map(function(d) { return [d.slotIdx || 0, d.dayIdx || 0, d.value || 0]; });
+            const maxVal = data.maxVal || 100;
+            // 空数据（无格子或全部为 0）时给居中占位，避免图区永久空白
+            var isEmpty = !heatData.length || heatData.every(function(d) { return !d[2]; });
+            if (isEmpty) {
+              this.heatmapChart.setOption({
+                title: { text: '暂无时段销售数据', left: 'center', top: 'center',
+                  textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+              }, true);
+              return;
+            }
+            this.heatmapChart.setOption({
+              tooltip: { formatter: function(p) { return days[p.value[1]] + ' ' + slots[p.value[0]] + ': ' + p.value[2] + ' 单'; },
+                backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
+                textStyle: { color: RgPalette.textPrimary, fontSize: 13 } },
+              grid: { left: 80, right: 30, top: 15, bottom: 70 },
+              xAxis: { type: 'category', data: slots, splitArea: { show: true },
+                axisLabel: { fontSize: 12, color: RgPalette.textRegular } },
+              yAxis: { type: 'category', data: days, splitArea: { show: true },
+                axisLabel: { fontSize: 12, color: RgPalette.textRegular } },
+              visualMap: { min: 0, max: maxVal, calculable: true,
+                orient: 'horizontal', left: 'center', bottom: 8,
+                inRange: { color: [RgPalette.blueSoft,RgPalette.blueSoft2,RgPalette.linkBlue,RgPalette.blueDark,RgPalette.blueDarkest] },
+                text: ['高', '低'], textStyle: { fontSize: 11, color: RgPalette.textRegular } },
+              series: [{ type: 'heatmap', data: heatData,
+                label: { show: true, fontSize: 12, color: function(p) { return p.value[2] > maxVal * 0.6 ? RgPalette.white : RgPalette.textPrimary; } },
+                emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' } } }]
+            }, true);
+          },
+          calcPercent: function(count) {
+            const t = this.totalCount; if (!t) return 0;
+            // 修改点：Number 包裹，避免 toFixed 字符串触发 el-progress percentage 类型告警
+            return Number((count / t * 100).toFixed(1));
+          },
+          formatMoney: function(val) { return window.RgFormat.formatMoney(val) },
+          slotHeatColor: function(row) {
+            if (!this.tableData.length) return RgPalette.textSecondary;
+            var max = this.tableData.reduce(function(m, r) { return Math.max(m, r.count || 0); }, 1);
+            const r = (row.count || 0) / max;
+            if (r > 0.8) return RgPalette.seriesRed; if (r > 0.5) return RgPalette.warning; return RgPalette.linkBlue;
+          },
+          renderCharts: function() {
+            const self = this;
+            // 修改点：渲染前先保障容器尺寸稳定
+            [self.barChart, self.pieChart].forEach(function(ch) {
+              if (ch && !ch.isDisposed()) ch.resize();
+            });
+            self.renderBar(); self.renderPie();
+          },
+          renderBar: function() {
+            if (!this.barChart) return;
+            if (!this.tableData.length) {
+              this.barChart.setOption({ title: { text: '暂无时段数据', left: 'center', top: 'center',
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } } }, true); return;
+            }
+            var names = this.tableData.map(function(r) { return r.name; });
+            var counts = this.tableData.map(function(r) { return r.count; });
+            var amounts = this.tableData.map(function(r) { return Number(r.amount || 0).toFixed(2); });
+            const barW = names.length <= 3 ? 40 : names.length <= 5 ? 30 : 22;
+            this.barChart.setOption({
+              tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+                backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
+                textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
+                formatter: function(ps) {
+                  // 修改点：h 需累加拼接，声明为 const 会抛 "Assignment to constant variable"（悬停图表即崩溃）
+                  let h = '<b>' + ps[0].axisValue + '</b><br/>';
+                  ps.forEach(function(p) {
+                    const v = p.seriesName === '营业额' ? '¥' + Number(p.value).toFixed(2) : p.value + ' 单';
+                    h += p.marker + ' ' + p.seriesName + '：<b>' + v + '</b><br/>';
+                  }); return h;
+                } },
+              legend: { data: ['订单数', '营业额'], bottom: 4, textStyle: { fontSize: 12, color: RgPalette.textRegular } },
+              // 修改点：增大右 padding 防止营业额标签被裁剪
+              grid: { left: 50, right: 70, top: 25, bottom: 48 },
+              xAxis: { type: 'category', data: names, axisTick: { show: false },
+                axisLabel: { color: RgPalette.textRegular, interval: 0, fontSize: 13 } },
+              yAxis: [
+                { type: 'value', name: '订单数(单)',
+                  nameTextStyle: { color: RgPalette.textSecondary, fontSize: 11 },
+                  splitLine: { lineStyle: { type: 'dashed', color: RgPalette.bgLight } },
+                  axisLabel: { color: RgPalette.textSecondary, fontSize: 12 } },
+                { type: 'value', name: '营业额(元)',
+                  nameTextStyle: { color: RgPalette.textSecondary, fontSize: 11 },
+                  axisLabel: { formatter: '¥{value}', color: RgPalette.textSecondary, fontSize: 12 },
+                  splitLine: { show: false } }
+              ],
+              series: [
+                { name: '订单数', type: 'bar', data: counts, barWidth: barW,
+                  itemStyle: { borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0],
+                    color: function(p) { return COLORS[p.dataIndex % COLORS.length]; } },
+                  label: { show: true, position: 'top', fontSize: 12, fontWeight: 600, formatter: '{c} 单' } },
+                { name: '营业额', type: 'line', yAxisIndex: 1, data: amounts,
+                  smooth: true, symbol: 'emptyCircle', symbolSize: 8,
+                  lineStyle: { color: RgPalette.seriesOrange, width: 3 },
+                  itemStyle: { color: RgPalette.seriesOrange, borderColor: RgPalette.white, borderWidth: 2 },
+                  label: { show: true, position: 'top', fontSize: 12, fontWeight: 700, color: RgPalette.warning,
+                    formatter: function(p) { return '¥' + Number(p.value).toFixed(0); } } }
+              ]
+            }, true);
+          },
+          renderPie: function() {
+            if (!this.pieChart) return;
+            var pieData = this.tableData.map(function(r, i) { return { name: r.name, value: r.count,
+              itemStyle: { color: COLORS[i % COLORS.length] } }; });
+            var isEmpty = pieData.every(function(d) { return !d.value; }) || !pieData.length;
+            // 空态：与柱线图统一的居中文字范式（不渲染灰色假饼，legend 也不出现「暂无数据」）
+            if (isEmpty) {
+              this.pieChart.setOption({ title: { text: '暂无时段数据', left: 'center', top: 'center',
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } } }, true);
+              return;
+            }
+            this.pieChart.setOption({
+              tooltip: { trigger: 'item', backgroundColor: RgPalette.white,
+                borderColor: RgPalette.borderLighter2, borderWidth: 1, textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
+                formatter: function(p) { return '<b>' + p.name + '</b><br/>' + p.marker + ' 订单：<b>' + p.value + ' 单</b>（' + p.percent + '%）'; } },
+              legend: { bottom: 0, left: 'center', itemWidth: 10, itemHeight: 10,
+                textStyle: { color: RgPalette.textRegular, fontSize: 12 } },
+              title: { show: false },
+              series: [{ type: 'pie', radius: ['45%','68%'], center: ['50%','44%'],
+                avoidLabelOverlap: false, itemStyle: { borderRadius: RgPalette.radiusMd, borderColor: RgPalette.white, borderWidth: 3 },
+                label: { show: true, position: 'outside', formatter: '{b}\n{d}%',
+                  fontSize: 13, lineHeight: 18, color: RgPalette.textRegular },
+                labelLine: { show: true, length: 25, length2: 20, lineStyle: { color: RgPalette.borderBase } },
+                emphasis: { scaleSize: 10, label: { fontSize: 16, fontWeight: 'bold' } },
+                data: pieData }]
+            }, true);
+          },
+          // 修改点：改为导出当前表格数据生成 CSV（此前误调日报接口且扩展名 .csv 内容为 xlsx）
+          handleExport: function() {
+            const self = this;
+            if (!self.dateRange || self.dateRange.length < 2) { ReggieUI.warning('请先选择日期范围'); return; }
+            if (!self.exportRows || !self.exportRows.length) { ReggieUI.warning('请先勾选要导出的记录'); return; }
+            const esc = function(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"' }
+            const header = ['时段', '订单数', '营业额（元）', '占比']
+            const lines = self.exportRows.map(function(r) {
+              return [r.name, r.count, r.amount != null ? r.amount : 0, self.calcPercent(r.count) + '%'].map(esc).join(',')
+            })
+            const csv = '\uFEFF' + header.map(esc).join(',') + '\r\n' + lines.join('\r\n')
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = '时段分析_' + self.dateRange[0] + '_' + self.dateRange[1] + '.csv';
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+            ReggieUI.success('导出成功');
+          },
+          // 修改点：table-bar 组件回调桥接
+          handleSearch: function(params) {
+            // table-bar daterange 下发 dateRangeBegin/End（yyyy-MM-dd HH:mm:ss），本页口径纯日期，截取前10位
+            if (params && params.dateRangeBegin && params.dateRangeEnd) {
+              this.dateRange = [String(params.dateRangeBegin).substring(0, 10), String(params.dateRangeEnd).substring(0, 10)];
+            }
+            this.loadData();
+          },
+          handleReset: function() {
+            // 重置为默认本月区间再查询；清空后立即 loadData 必然触发“请选择日期范围”警告
+            this.dateRange = this.defaultRange();
+            this.tableData = [];
+            this.loadData();
+          },
+          handleAction: function(action) { if (action.key === 'export') this.handleExport(); },
+          // 勾选变化：存勾选行并联动导出按钮
+          onSelectionChange: function(payload) {
+            this.exportRows = (payload && payload.rows) ? payload.rows : [];
+            this.searchActions[0].disabled = this.exportRows.length === 0;
+          }
+        }
+      })
+    })();
+  </script>
+</body>
+</html>

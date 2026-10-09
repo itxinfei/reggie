@@ -1,0 +1,1144 @@
+/* ============================================================
+ * 用户端登录页样式 v5 — 美团 H5 登录页式极简布局
+ * 适配375px基准屏幕，1rem ≈ 1px (由base.js动态计算)
+ * 更新：2026-09-24
+ * 修改点(2026-09-24)：完全参考美团 H5 登录页布局重构 ——
+ *   白底（去暖色渐变）、顶部居中小 logo、大标题左对齐 + 副标题、
+ *   无边框大号输入行（底部细分割线）、金色胶囊登录按钮。
+ *   颜色不变：全部沿用品牌金令牌体系；协议弹窗样式原样保留。
+ * ============================================================ */
+
+/* ---- 登录页专属暖色系令牌（仅本页使用，2026-09-28 收敛） ----
+   可复用色一律直接引用 styles/index.css 语义令牌，不在此重复定义；
+   登录专用色统一 --login- 前缀集中收口，不向全局提升。 */
+:root {
+  --login-text-dark: #3a2a10;
+  --login-text-medium: #5a3e10;
+  --login-text-brand: #4a3000;
+  --login-text-muted-warm: #a09080;
+  /* 修改点(2026-09-26 二轮·方案A)：#b8b0a0 on 白仅 2.0:1，加深达标（白底 4.0:1 / 填充底 3.5:1） */
+  --login-text-placeholder: #8f856c;
+  --login-border-input: #d8c8a8;
+  --login-bg-disabled: #f0ece0;
+  /* 2026-09-24：输入行底部分割线（美团式浅金灰） */
+  --login-line: #f0ebe0;
+  /* 2026-09-24 三轮：桌面端页面底色（中性浅灰、无渐变，衬托白色卡片） */
+  --login-bg-page: #f7f8fa;
+  /* 2026-10-02：以下三色原裸 hex 用法收敛为令牌（单一真源，零视觉回归） */
+  --login-bg-cream: #FDF9F0;    /* 登录页主底色（暖米白） */
+  --login-input-bg: #F6F1E6;    /* 输入行圆角填充底 */
+  --login-text-slogan: #5d4404; /* 标语深金棕（最浅底上对比 ≥4.5:1） */
+}
+
+/* ---- 品牌 logo SVG（用 CSS 变量控制颜色，便于换肤） ---- */
+/* logo SVG 配色直接引用全局语义令牌（原 --logo-* 纯别名已删除） */
+.brandIcon .logo-bowl { fill: var(--color-primary); }
+.brandIcon .logo-rim { fill: var(--color-primary-dark); }
+.brandIcon .logo-rice { fill: var(--color-primary-light); }
+.brandIcon .logo-highlight { fill: var(--color-text-white); }
+.brandIcon .logo-steam { stroke: var(--color-primary); }
+.brandIcon .logo-shadow { fill: var(--mask-soft); }
+.brandIcon .logo-grad-stop { stop-color: var(--color-primary); }
+
+/* ---- 页面容器 ---- */
+/* 修改点(2026-09-24)：美团式白底页面 —— 去渐变背景，纯白 + 内容左对齐布局 */
+body.login-page {
+  overflow: visible;
+  background: transparent;
+  max-width: none;
+  height: auto;
+  min-height: 100vh;
+  /* 三轮：动态视口高度，软键盘弹出/收起时不产生底部空隙 */
+  min-height: 100dvh;
+  margin: 0;
+}
+#login {
+  min-height: 100vh;
+  /* 修改点(2026-09-24 三轮)：新手机（iOS 15+/Android 12+）小视口适配 ——
+     100dvh 动态视口高度，避免软键盘弹出/收起时底部留白或裁切；不支持时回退 100vh */
+  min-height: 100dvh;
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* 修改点(2026-09-26 二轮·方案A)：页面底色改暖米白，衬托白色表单卡片 */
+  background: var(--login-bg-cream);
+  padding: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- 金色氛围头图区（修改点 2026-09-26）---- */
+/* 修改点(二轮·方案A)：三段深金琥珀渐变 + 顶部柔光/左上光斑，质感更沉；
+   底部由 .hero-wave 波浪曲线过渡进白色卡片 */
+#login .loginHero {
+  position: relative;
+  min-height: 300rem;
+  padding-top: env(safe-area-inset-top, 0px);
+  background:
+    radial-gradient(140% 55% at 50% -12%, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0) 60%),
+    radial-gradient(90% 70% at 12% 8%, rgba(255, 236, 170, 0.55) 0%, rgba(255, 236, 170, 0) 55%),
+    linear-gradient(158deg, #ffcf3f 0%, #ffb300 46%, #f08c00 78%, #e27705 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* 漂浮光环圈（装饰） */
+#login .hero-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2rem solid rgba(255, 255, 255, 0.28);
+}
+#login .hero-ring.ring-a {
+  top: 34rem;
+  right: -52rem;
+  width: 190rem;
+  height: 190rem;
+  animation: ringFloat 7s ease-in-out infinite;
+}
+#login .hero-ring.ring-b {
+  bottom: 66rem;
+  left: -64rem;
+  width: 160rem;
+  height: 160rem;
+  border-color: rgba(255, 255, 255, 0.2);
+  animation: ringFloat 9s ease-in-out -3s infinite;
+}
+@keyframes ringFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-14rem); }
+}
+
+/* 金色星点（装饰，微闪） */
+#login .hero-spark {
+  position: absolute;
+  width: 8rem;
+  height: 8rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 12rem rgba(255, 255, 255, 0.8);
+  animation: sparkTwinkle 3.4s ease-in-out infinite;
+}
+#login .hero-spark.sp1 { top: 60rem;  left: 52rem;  width: 6rem; height: 6rem; }
+#login .hero-spark.sp2 { top: 110rem; right: 78rem; width: 9rem; height: 9rem; animation-delay: 0.8s; }
+#login .hero-spark.sp3 { top: 190rem; right: 42rem; width: 5rem; height: 5rem; animation-delay: 1.7s; }
+#login .hero-spark.sp4 { top: 220rem; left: 36rem;  width: 7rem; height: 7rem; animation-delay: 2.4s; }
+@keyframes sparkTwinkle {
+  0%, 100% { opacity: 0.25; transform: scale(0.7); }
+  50%      { opacity: 0.95; transform: scale(1.15); }
+}
+
+/* 底部波浪（hero 与白卡的柔和分界） */
+#login .hero-wave {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  width: 100%;
+  height: 30rem;
+  display: block;
+}
+
+/* ---- 表单白色浮起卡片（方案A：顶部改平，波浪已承担过渡；卡片底即页面暖米白上的白面） ---- */
+#login .loginFormCard {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--color-text-white);
+  border-radius: 0;
+  margin-top: 0;
+  padding: 18rem 28rem calc(32rem + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- 入场动画（修改点 2026-09-26：头图先淡入，白色卡片随后上滑） ---- */
+#login .loginHero {
+  animation: heroFade 0.5s ease-out forwards;
+  opacity: 0;
+}
+#login .brandArea,
+#login .loginHeading,
+#login .loginSubHeading,
+#login .divContainer,
+#login .btnLogin,
+#login .agreementRow {
+  animation: fadeInUp 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  opacity: 0;
+}
+#login .loginFormCard {
+  animation: cardRise 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes heroFade {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes cardRise {
+  0%   { opacity: 0; transform: translateY(36rem); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+#login .brandArea       { animation-delay: 0.15s; }
+#login .loginHeading    { animation-delay: 0.26s; }
+#login .loginSubHeading { animation-delay: 0.30s; }
+#login .divContainer    { animation-delay: 0.34s; }
+#login .btnLogin        { animation-delay: 0.46s; }
+#login .agreementRow    { animation-delay: 0.56s; }
+
+@keyframes fadeInUp {
+  0%   { opacity: 0; transform: translateY(24rem); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- 品牌区域（修改点 2026-09-26：移入金色 hero 内垂直居中） ---- */
+#login .brandArea {
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: 0;
+  padding-bottom: 0;
+  position: relative;
+  /* 压在装饰圆之上 */
+  z-index: 1;
+}
+
+/* 修改点(2026-09-26 二轮·方案A)：logo 容器升级 —— 毛玻璃方块改纯白圆徽章，
+   双层柔影（近影+金色远辉光），更精致 */
+#login .brandIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 96rem;
+  height: 96rem;
+  line-height: 0;
+  background: var(--color-text-white);
+  border-radius: 50%;
+  box-shadow: 0 6rem 18rem rgba(190, 110, 0, 0.22), 0 18rem 44rem rgba(255, 150, 0, 0.28);
+  animation: logoFloat 3.2s ease-in-out infinite;
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6rem); }
+}
+
+#login .brandIcon svg {
+  width: 64rem;
+  height: 64rem;
+}
+
+/* 品牌名（修改点 2026-09-26 二轮：白字 on 亮金对比仅 ~1.9:1 不达标，
+   改回全站「金底深字」约定 —— 深金棕文字，对比 ~5:1） */
+#login .brandName {
+  margin-top: 14rem;
+  font-size: 22rem;
+  font-weight: 700;
+  color: var(--color-primary-text);
+  font-family: "PingFangSC-Semibold", Microsoft YaHei, sans-serif;
+  letter-spacing: 4rem;
+  text-indent: 4rem;
+}
+
+/* 标语（同上：深金棕；13px 小字取 #5d4404，最浅底上对比 ≥4.5:1） */
+#login .brandSlogan {
+  margin-top: 8rem;
+  font-size: 13rem;
+  font-weight: 400;
+  color: var(--login-text-slogan);
+  letter-spacing: 6rem;
+  text-indent: 6rem;
+  font-family: "PingFangSC", Microsoft YaHei, sans-serif;
+}
+
+/* ---- 大标题（修改点(2026-09-24 三轮)：整页居中布局 —— 标题居中） ---- */
+#login .loginHeading {
+  font-size: 26rem;
+  font-weight: 700;
+  color: var(--login-text-dark);
+  text-align: center;
+  font-family: "PingFangSC-Semibold", Microsoft YaHei, sans-serif;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  box-sizing: border-box;
+  /* 修改点 2026-09-26：卡片自带 30rem 顶部留白，收紧标题上边距 */
+  margin-top: 4rem;
+  margin-bottom: 8rem;
+  line-height: 1.3;
+}
+
+/* ---- 副标题（居中说明行） ---- */
+#login .loginSubHeading {
+  font-size: 13rem;
+  font-family: "PingFangSC", Microsoft YaHei, sans-serif;
+  color: var(--login-text-medium);
+  opacity: 0.75;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 30rem;
+  line-height: 18rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* ---- 表单区（美团式：去卡片化 —— 无边框无底色，输入行间用底部细分割线） ---- */
+#login .divContainer {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 36rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* 输入项容器 */
+#login .inputItem {
+  padding: 0;
+  position: relative;
+}
+
+/* 输入行 wrapper（修改点(2026-09-26 二轮·方案A)：描边式改浅暖灰填充圆角——
+   现代 App 登录主流样式，聚焦时浮白底+金光圈） */
+#login .divContainer .input-wrapper {
+  display: flex;
+  align-items: center;
+  background: var(--login-input-bg);
+  border: 1.5px solid transparent;
+  border-radius: 16rem;
+  padding: 0 16rem;
+  transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+}
+/* 聚焦：白底 + 金色描边 + 浅金光圈 */
+#login .divContainer .input-wrapper:focus-within {
+  border-color: var(--color-primary);
+  background: var(--color-text-white);
+  box-shadow: 0 0 0 4rem var(--color-primary-tint);
+}
+
+/* 大号输入框（美团式：高度 56px、字号 18px、无前缀图标） */
+#login .divContainer .code-input {
+  border: 0 !important;
+  height: 56rem;
+  line-height: 56rem;
+  font-size: 17rem;
+  font-weight: 500;
+  color: var(--login-text-dark);
+  padding: 0 !important;
+  background: transparent;
+  border-radius: 0;
+  flex: 1;
+  min-width: 0;
+  outline: none;
+  caret-color: var(--color-primary);
+  transition: color 0.2s;
+}
+
+#login .divContainer .code-input::placeholder {
+  color: var(--login-text-placeholder);
+  font-size: 16rem;
+  font-weight: 400;
+  transition: color 0.25s;
+}
+
+/* ---- 手机号校验状态（四轮：只变描边，不加底色） ---- */
+/* 校验通过：绿色描边 + 绿色勾（无底色） */
+#login .divContainer .input-wrapper.is-valid {
+  border-color: var(--color-success);
+  background: var(--color-text-white);
+}
+#login .divContainer .input-wrapper.is-valid:focus-within {
+  border-color: var(--color-success);
+  box-shadow: 0 0 0 4rem var(--color-success-tint);
+}
+#login .divContainer .validIcon {
+  font-size: 20rem;
+  color: var(--color-success-text);
+  flex-shrink: 0;
+  padding: 0 2rem 0 10rem;
+  line-height: 56rem;
+  animation: checkPop 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@keyframes checkPop {
+  0%   { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 校验失败：红色描边（无底色，错误提示仍由 .inputHint 行内文字承担） */
+#login .divContainer .input-wrapper.is-error {
+  border-color: var(--color-danger);
+  background: var(--color-text-white);
+}
+#login .divContainer .input-wrapper.is-error:focus-within {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 4rem var(--login-danger-ring, rgba(245, 34, 45, 0.12));
+}
+
+/* 行内错误提示文字 */
+#login .inputHint {
+  font-size: 12rem;
+  color: var(--color-danger);
+  font-family: "PingFangSC", Microsoft YaHei, sans-serif;
+  padding: 6rem 0 0 2rem;
+  line-height: 18rem;
+  animation: fadeInUp 0.25s ease-out;
+}
+
+/* ---- 验证码按钮（修改点(2026-09-26 二轮·方案A)：纯文字升级为浅金胶囊，
+   与填充式输入行搭配更有"按钮感"） ---- */
+/* 修改点(2026-09-24)：视觉 30rem 低于 44px 触控标准 —— 加透明 ::after 把命中区
+   扩到 44rem（复用 main.css 菜品加购钮同款方案），不改视觉尺寸 */
+#login .codeBtn {
+  position: relative;
+  flex-shrink: 0;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  height: 36rem;
+  margin-right: 10rem;
+  padding: 0 14rem;
+  border-left: none;
+  border-radius: 999rem;
+  background: var(--color-primary-tint);
+  font-size: 13rem;
+  font-family: "PingFangSC-Semibold", Microsoft YaHei, sans-serif;
+  font-weight: 600;
+  color: var(--color-primary-text);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.2s, transform 0.15s;
+}
+
+#login .codeBtn:hover {
+  opacity: 0.75;
+}
+
+/* 透明热区扩容：44rem 命中区居中覆盖，不改变视觉尺寸 */
+#login .codeBtn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44rem;
+  height: 44rem;
+  transform: translate(-50%, -50%);
+}
+
+#login .codeBtn:active {
+  opacity: 0.6;
+}
+
+#login .codeDisabled {
+  color: var(--login-text-placeholder) !important;
+  cursor: not-allowed !important;
+}
+#login .codeBtn.codeDisabled:hover,
+#login .codeBtn.codeDisabled:active {
+  opacity: 1;
+}
+
+/* ---- 错误提示（三轮：居中布局同步） ---- */
+#login .divMsg {
+  font-size: 12rem;
+  font-family: "PingFangSC", Microsoft YaHei, sans-serif;
+  font-weight: 400;
+  color: var(--color-danger);
+  text-align: center;
+  line-height: 20rem;
+  margin-bottom: 6rem;
+  animation: shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15%      { transform: translateX(-6rem); }
+  30%      { transform: translateX(6rem); }
+  45%      { transform: translateX(-4rem); }
+  60%      { transform: translateX(4rem); }
+  75%      { transform: translateX(-2rem); }
+}
+
+/* ---- 登录按钮（美团式：金色胶囊大按钮，颜色不变） ---- */
+#login .btnLogin {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  height: 48rem;
+  border-radius: 999rem;
+  border: 0;
+  font-size: 17rem;
+  font-family: "PingFangSC-Semibold", Microsoft YaHei, sans-serif;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 3rem;
+  text-indent: 3rem;
+  transition: background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1), color 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 8rem;
+  margin-bottom: 20rem;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* 按钮微光扫过 */
+#login .btnActive::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--surface-white-25), transparent);
+  transition: left 0.5s;
+}
+
+#login .btnActive:hover::after {
+  left: 100%;
+}
+
+/* 激活态 — 金色渐变（二轮加顶部高光内衬；方案A：加深金色投影提升悬浮质感） */
+#login .btnActive {
+  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 50%, var(--color-primary-dark) 100%);
+  color: var(--login-text-brand);
+  box-shadow: 0 8rem 22rem rgba(255, 158, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+#login .btnActive:hover {
+  box-shadow: var(--shadow-cta), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  transform: translateY(-1.5rem);
+}
+
+#login .btnActive:active {
+  background: var(--color-primary-dark);
+  box-shadow: var(--shadow-sm), inset 0 2px 4px rgba(74, 48, 0, 0.18);
+  transform: scale(0.975);
+}
+
+/* Loading态 */
+#login .btnActive.is-loading,
+#login .btnActive.is-loading:hover {
+  background: var(--color-primary-dark) !important;
+  color: var(--login-text-brand) !important;
+  opacity: 0.85;
+  transform: translateY(0);
+}
+
+/* 禁用态 */
+#login .btnDisabled {
+  background: var(--login-bg-disabled);
+  /* 修改点(2026-09-26)：placeholder 色 on 禁用底 1.8:1，"登录"是关键动作文字须可读 */
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+#login .btnDisabled:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+/* ================================================================
+ * 协议区域 — 纯文字样式，无卡片/按钮外观
+ * 修改点(2026-09-24 五轮)：内容左对齐 —— 勾选框与上方输入框左缘对齐
+ * （行本身已是 100% 宽、与输入框同宽，此前内容居中显得窄且不对齐）；
+ * 文字 12→13rem 提升存在感
+ * ================================================================ */
+#login .agreementRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 12rem;
+  margin-bottom: 24rem;
+  padding: 10rem 0;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  transition: opacity 0.2s;
+}
+#login .agreementRow:active {
+  opacity: 0.7;
+}
+
+/* 自定义勾选框 — 热区精确 44rem：20rem 视觉 + 纵向 12rem×2 扩展（原 22+14×2=50 偏大） */
+#login .agreementCheckbox {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  margin-right: 6rem;
+  flex-shrink: 0;
+  padding: 12rem 0;
+  margin-top: -12rem;
+  margin-bottom: -12rem;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+
+#login .agreementCheckbox:hover {
+  background: var(--color-primary-tint);
+}
+
+#login .checkIcon {
+  width: 20rem;
+  height: 20rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--login-border-input);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s cubic-bezier(0.22, 0.61, 0.36, 1), border-color 0.3s cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+  background: var(--color-text-white);
+}
+
+#login .checkIcon:hover {
+  border-color: var(--color-primary);
+  background: rgba(255, 244, 210, 0.7);
+}
+
+#login .checkIcon.checked {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  border-color: var(--color-primary);
+  box-shadow: 0 2rem 6rem var(--color-primary-shadow);
+}
+
+#login .checkIcon .check-mark {
+  font-size: 12rem;
+  color: var(--login-text-brand);
+  font-weight: bold;
+}
+
+/* 协议文字（五轮：12→13rem，与勾选框组合后视觉宽度更饱满，左缘与输入框对齐） */
+#login .agreementText {
+  font-size: 13rem;
+  font-family: "PingFangSC", Microsoft YaHei, sans-serif;
+  color: rgba(90, 62, 16, 0.85);
+  line-height: 20rem;
+  user-select: none;
+}
+
+#login .agreementLink {
+  color: var(--color-primary-text);
+  cursor: pointer;
+  transition: color 0.25s;
+  font-weight: 600;
+  position: relative;
+  white-space: nowrap;
+}
+
+#login .agreementLink:hover {
+  color: var(--color-primary-text);
+}
+
+#login .agreementLink:active {
+  color: var(--color-primary-text);
+}
+
+#login .agreementLink::after {
+  content: '';
+  position: absolute;
+  bottom: -1rem;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--color-primary-dark);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#login .agreementLink:hover::after {
+  width: 100%;
+}
+
+/* ---- 协议弹窗样式（原样保留） ---- */
+.agreementModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.agreementModal .modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--mask-strong);
+}
+.agreementModal .modal-close {
+  position: absolute;
+  right: 14rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18rem;
+  color: var(--login-text-muted-warm);
+  cursor: pointer;
+  padding: 4rem;
+  line-height: 1;
+}
+.agreementDialog {
+  position: relative;
+  z-index: 2001;
+  width: 90%;
+  max-width: 420px;
+  background: var(--bg-card);
+  border-radius: 16rem;
+  overflow: hidden;
+  box-shadow: 0 8rem 32rem var(--mask-medium);
+}
+
+.agreementDialog .modal-header {
+  position: relative;
+  background: var(--color-text-white);
+  border-bottom: 1px solid var(--login-line);
+  padding: 18rem 44rem 14rem 20rem;
+  text-align: center;
+}
+
+.agreementDialog .modal-title {
+  font-size: 17rem;
+  font-family: "PingFangSC-Semibold", Microsoft YaHei, sans-serif;
+  color: var(--login-text-dark);
+  font-weight: 600;
+}
+
+.agreementDialog .modal-body {
+  padding: 0 20rem 6rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.agreementDialog .modal-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.agreementDialog .modal-body::-webkit-scrollbar-thumb {
+  background: var(--login-border-input);
+  border-radius: 2px;
+}
+
+/* 协议内容文字 */
+#login .agreementContent {
+  font-family: "PingFangSC", Microsoft YaHei, sans-serif;
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+  font-size: 13rem;
+}
+
+#login .agreementContent h3 {
+  font-size: 17rem;
+  font-weight: 700;
+  color: var(--login-text-dark);
+  text-align: center;
+  margin: 10rem 0 4rem;
+}
+
+#login .agreementContent .updateDate {
+  text-align: center;
+  font-size: 11rem;
+  color: var(--login-text-muted-warm);
+  margin-bottom: 2rem;
+}
+
+#login .agreementContent .policySection {
+  margin-bottom: 16rem;
+}
+
+#login .agreementContent .policySection h4 {
+  font-size: 14rem;
+  font-weight: 600;
+  color: var(--login-text-medium);
+  margin-bottom: 8rem;
+  padding-left: 4rem;
+  border-left: 3rem solid var(--color-primary);
+  line-height: 1.3;
+}
+
+#login .agreementContent .policySection p {
+  font-size: 13rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 6rem;
+  padding-left: 8rem;
+}
+
+/* 弹窗底部按钮 */
+.agreementDialog .modal-footer {
+  text-align: center;
+  padding: 6rem 10rem 10rem;
+}
+
+.agreementDialog .dialogConfirmBtn {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)) !important;
+  border: 0 !important;
+  border-radius: 20rem !important;
+  padding: 10rem 40rem !important;
+  font-size: 14rem !important;
+  font-family: "PingFangSC", Microsoft YaHei, sans-serif !important;
+  font-weight: 600 !important;
+  color: var(--login-text-brand) !important;
+  transition: background-color 0.3s, box-shadow 0.3s, transform 0.3s !important;
+  min-width: 140rem;
+}
+
+.agreementDialog .dialogConfirmBtn:hover {
+  background: var(--color-primary-dark) !important;
+  box-shadow: 0 4rem 14rem var(--color-primary-shadow) !important;
+  transform: translateY(-1rem);
+}
+
+.agreementDialog .dialogConfirmBtn:active {
+  transform: scale(0.97) !important;
+}
+
+/* ---- loading 遮罩（保留） ---- */
+#login .loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-white-50);
+}
+#login .loading-spinner {
+  width: 36rem;
+  height: 36rem;
+  border: 3px solid var(--color-primary-tint);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: loginSpin 0.8s linear infinite;
+}
+@keyframes loginSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+ * 响应式适配
+ * ============================================================ */
+
+/* 小屏手机 (< 320px) */
+@media screen and (max-width: 320px) {
+  #login .loginHero {
+    /* 2026-09-26：小屏压缩头图高度，给表单留空间 */
+    min-height: 220rem;
+  }
+  #login .loginFormCard {
+    padding: 24rem 20rem calc(28rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  #login .loginHeading {
+    font-size: 24rem;
+  }
+
+  #login .btnLogin {
+    height: 44rem;
+  }
+
+  #login .divContainer .code-input {
+    font-size: 15rem;
+  }
+}
+
+/* 桌面端 (> 750px) — px 单位（base.js 将根字号锁为 28px，元素会放大，桌面端用 px） */
+@media screen and (min-width: 751px) {
+  html {
+    max-width: none !important;
+    width: 100%;
+  }
+
+  body.login-page {
+    max-width: none !important;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    /* 修改点(2026-09-24 三轮)：桌面端同步去渐变 —— 中性浅灰纯色底，主色只留在表单内 */
+    background: var(--login-bg-page);
+  }
+
+  /* 修改点(2026-09-26)：桌面端居中卡片 —— 顶部金色 hero + 下方白色表单区，整卡圆角裁切 */
+  #login {
+    padding: 0;
+    min-height: auto;
+    width: 400px;
+    max-width: 92vw;
+    border-radius: 16px;
+    background: var(--color-text-white);
+    box-shadow: 0 4px 24px rgba(255, 160, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+  }
+
+  #login .loginHero {
+    min-height: 0;
+    height: 190px;
+  }
+
+  #login .hero-wave {
+    height: 22px;
+  }
+
+  #login .hero-spark.sp1 { top: 40px;  left: 46px; }
+  #login .hero-spark.sp2 { top: 74px;  right: 64px; }
+  #login .hero-spark.sp3 { top: 128px; right: 34px; }
+  #login .hero-spark.sp4 { top: 148px; left: 32px; }
+
+  #login .loginFormCard {
+    margin-top: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 10px 0 40px;
+  }
+
+  #login .brandArea {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  #login .brandIcon {
+    /* 方案A：白圆徽章（桌面端 84px） */
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(190, 110, 0, 0.22), 0 12px 28px rgba(255, 150, 0, 0.28);
+    /* 三轮：合并原重复规则 —— 桌面端关闭呼吸动效，改悬停放大反馈 */
+    animation: none;
+    transition: transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 0.3s;
+  }
+
+  #login .brandIcon svg {
+    width: 56px;
+    height: 56px;
+  }
+
+  #login .brandName {
+    font-size: 19px;
+    letter-spacing: 2px;
+    text-indent: 2px;
+    margin-top: 10px;
+  }
+
+  #login .brandSlogan {
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-indent: 3px;
+    margin-top: 6px;
+  }
+
+  #login .brandArea:hover .brandIcon {
+    transform: translateY(-2px);
+  }
+
+  #login .loginHeading {
+    font-size: 24px;
+    /* 方案A：卡片顶衬仅 10px，标题留出呼吸 */
+    margin-top: 14px;
+    margin-bottom: 6px;
+    padding: 0 32px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  #login .loginSubHeading {
+    font-size: 12px;
+    margin-bottom: 28px;
+    padding: 0 32px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  #login .divContainer {
+    margin-bottom: 28px;
+    padding: 0 32px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  #login .divContainer .code-input {
+    height: 52px !important;
+    line-height: 52px !important;
+    font-size: 16px !important;
+  }
+  #login .divContainer .code-input::placeholder {
+    font-size: 15px !important;
+  }
+
+  #login .divContainer .validIcon {
+    font-size: 18px;
+    padding: 0 2px 0 10px;
+    line-height: 52px;
+  }
+  #login .inputHint {
+    font-size: 11px;
+    padding: 4px 0 0 2px;
+    line-height: 16px;
+  }
+
+  /* 修改点(2026-09-27)：桌面端根字号为 2px，移动端的 height:36rem / 热区 44rem
+     在此会被放大成 72px / 88px，把验证码行 wrapper 从 54px 撑到 74px，
+     导致验证码框比手机号框高出一截；桌面端统一锁回 px，保证两行等高 */
+  #login .codeBtn {
+    height: 36px;
+    font-size: 13px;
+    padding: 0 0 0 14px;
+  }
+  #login .codeBtn::after {
+    width: 44px;
+    height: 44px;
+  }
+
+  #login .divMsg {
+    padding: 0 32px;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 11px;
+    line-height: 18px;
+    margin-bottom: 4px;
+  }
+
+  #login .btnLogin {
+    width: calc(100% - 64px) !important;
+    margin-left: 32px;
+    margin-right: 32px;
+    height: 48px !important;
+    border-radius: 999px !important;
+    font-size: 16px !important;
+    letter-spacing: 3px;
+    margin-top: 4px;
+    margin-bottom: 16px;
+  }
+
+  #login .agreementRow {
+    width: calc(100% - 64px);
+    margin: 0 auto 12px;
+    padding: 4px 0;
+    cursor: pointer;
+  }
+
+  #login .agreementText {
+    font-size: 11px;
+    line-height: 18px;
+  }
+
+  #login .checkIcon {
+    width: 20px;
+    height: 20px;
+  }
+  #login .checkIcon .check-mark {
+    font-size: 12px;
+  }
+
+  #login .agreementCheckbox {
+    padding: 10px 0;
+    margin-top: -10px;
+    margin-bottom: -10px;
+  }
+
+  /* 协议弹窗（桌面端） */
+  .agreementDialog {
+    max-width: 480px !important;
+    border-radius: 12px !important;
+  }
+  .agreementDialog .modal-header {
+    padding: 14px 40px 12px 16px;
+  }
+  .agreementDialog .modal-title {
+    font-size: 16px;
+  }
+  .agreementDialog .modal-body {
+    padding: 0 16px 4px;
+    max-height: 50vh;
+  }
+  #login .agreementContent {
+    font-size: 12px;
+  }
+  #login .agreementContent h3 {
+    font-size: 15px;
+    margin: 8px 0 4px;
+  }
+  #login .agreementContent .updateDate {
+    font-size: 10px;
+  }
+  #login .agreementContent .policySection {
+    margin-bottom: 12px;
+  }
+  #login .agreementContent .policySection h4 {
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+  #login .agreementContent .policySection p {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  .agreementDialog .dialogConfirmBtn {
+    border-radius: 18px !important;
+    padding: 8px 36px !important;
+    font-size: 13px !important;
+    min-width: 120px;
+  }
+
+  /* 动画 — px 单位 */
+  @keyframes fadeInUpDesktop {
+    0%   { opacity: 0; transform: translateY(16px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  #login .brandArea,
+  #login .loginHeading,
+  #login .loginSubHeading,
+  #login .divContainer,
+  #login .btnLogin,
+  #login .agreementRow {
+    animation-name: fadeInUpDesktop;
+    animation-duration: 0.45s;
+  }
+  /* 2026-09-26：与移动端节奏一致 —— hero 先淡入、卡片上滑，卡内元素依次跟进 */
+  #login .loginFormCard   { animation-name: cardRiseDesktop; }
+  #login .brandArea       { animation-delay: 0.15s; }
+  #login .loginHeading    { animation-delay: 0.26s; }
+  #login .loginSubHeading { animation-delay: 0.30s; }
+  #login .divContainer    { animation-delay: 0.34s; }
+  #login .btnLogin        { animation-delay: 0.46s; }
+  #login .agreementRow    { animation-delay: 0.56s; }
+
+  @keyframes cardRiseDesktop {
+    0%   { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* 修改点(2026-09-17)：登录页为品牌暖色主题，不跟随系统暗色（与主流 App 登录页一致，
+   全局暗色令牌在此按子树覆盖回浅色） */
+@media (prefers-color-scheme: dark) {
+  #login {
+    --bg-page: #ffffff;
+    --bg-card: #ffffff;
+    --color-text-primary: #333333;
+    --color-text-secondary: #666666;
+    --color-text-hint: #999999;
+    --border-light: #eeeeee;
+  }
+}

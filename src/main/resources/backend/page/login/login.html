@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>登录 - 瑞吉外卖管理端</title>
+  <link rel="shortcut icon" href="../../favicon.ico">
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <!-- 修改点：补设计令牌（全站后台页均已加载，登录页此前漏链，导致 login.css 内 var(--color-brand-500)/var(--color-white) 等令牌 undefined、配色错乱） -->
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926">
+  <link rel="stylesheet" href="../../styles/login.css?v=20260926">
+  <link href="../../plugins/remixicon/remixicon.css" rel="stylesheet" />
+</head>
+
+<body class="login-page">
+  <div id="login-app" role="main" aria-label="登录">
+    <div class="login-shell">
+      <!-- 左侧品牌区 -->
+      <div class="shell-left" aria-hidden="true">
+        <div class="left-inner">
+          <div class="left-brand">
+            <span class="brand-icon"><i class="ri-restaurant-2-fill"></i></span>
+            <span class="brand-name">瑞吉外卖</span>
+          </div>
+          <h1 class="left-heading">智能餐饮管理平台</h1>
+          <p class="left-sub">门店经营 · 菜品管理 · 订单履约 · 数据分析</p>
+        </div>
+      </div>
+
+      <!-- 右侧登录表单 -->
+      <div class="shell-right">
+        <div class="login-card" :class="{ in: loaded }">
+          <div class="card-top">
+            <span class="card-badge"><i class="ri-shield-user-line"></i></span>
+            <h2 class="card-h2">管理员登录</h2>
+            <p class="card-p">请输入您的账号信息</p>
+          </div>
+
+          <el-form ref="loginForm" :model="form" :rules="rules" class="login-form"
+                   @submit.native.prevent="doLogin">
+            <!-- 用户名 -->
+            <el-form-item prop="username" class="fi">
+              <div class="inp-wrap" :class="{ on: focus === 'u', ok: form.username && !err('username'), bad: err('username') }">
+                <span class="inp-icon"><i class="ri-user-3-line"></i></span>
+                <el-input v-model="form.username" placeholder="用户名" maxlength="50"
+                          autocomplete="username" aria-label="用户名"
+                          @focus="focus='u'" @blur="focus=''"
+                          @keyup.enter.native="focusPass"></el-input>
+                <span class="inp-ok" v-show="form.username && !err('username')"><i class="ri-check-line"></i></span>
+              </div>
+            </el-form-item>
+
+            <!-- 密码 -->
+            <el-form-item prop="password" class="fi">
+              <div class="inp-wrap" :class="{ on: focus === 'p', bad: err('password') }">
+                <span class="inp-icon"><i class="ri-lock-2-line"></i></span>
+                <el-input v-model="form.password" :type="seePass ? 'text' : 'password'"
+                          placeholder="密码" maxlength="20"
+                          autocomplete="current-password" aria-label="密码"
+                          @focus="focus='p'" @blur="focus=''"
+                          @keyup.enter.native="doLogin"></el-input>
+                <button type="button" class="inp-eye" :aria-label="seePass?'隐藏密码':'显示密码'"
+                        @click="seePass=!seePass">
+                  <i :class="seePass ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
+                </button>
+              </div>
+            </el-form-item>
+
+            <!-- 登录按钮 -->
+            <el-form-item class="fi-btn">
+              <button type="button" :disabled="loading" class="btn-login"
+                      :class="{ spin: loading }" @click="doLogin" aria-label="登录">
+                <span v-if="!loading"><i class="ri-login-box-line"></i> 登 录</span>
+                <span v-else><i class="btn-dot"></i> 验证中...</span>
+              </button>
+            </el-form-item>
+          </el-form>
+
+          <div class="card-foot">
+            <span>&copy; 2026 瑞吉外卖</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主题切换 -->
+    <button class="theme-btn" :title="dark ? '浅色模式' : '深色模式'"
+            :aria-label="dark ? '浅色模式' : '深色模式'" @click="toggleTheme">
+      <i :class="dark ? 'ri-sun-line' : 'ri-moon-line'"></i>
+    </button>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/validate.js?v=20260926"></script>
+  <script src="../../api/login.js?v=20260926"></script>
+
+  <script>
+    new Vue({
+      el: '#login-app',
+      data: function() {
+        return {
+          form:     { username: '', password: '' },
+          loading:  false,
+          loaded:   false,
+          focus:    '',
+          seePass:  false,
+          dark:     false
+          // 修改点：删除未接入的死代码。后端 /employee/forgot-password 端点存在且需 SMS 验证码(code)，
+          // 但登录页无忘记密码入口、模板无 fpFormRef 表单，调用即抛错；员工侧短信发送端点未确认，故移除半成品实现。
+        }
+      },
+      computed: {
+        rules: function() {
+          return {
+            username: [{ validator: this.chkUser, trigger: 'blur' }],
+            password: [{ validator: this.chkPass, trigger: 'blur' }]
+          }
+        }
+      },
+      created: function() {
+        const t = localStorage.getItem('login-theme')
+        this.dark = t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme:dark)').matches)
+        this.setTheme()
+        // 记住上次用户名
+        const u = localStorage.getItem('login-username')
+        if (u) this.form.username = u
+      },
+      mounted: function() {
+        const self = this
+        setTimeout(function() { self.loaded = true }, 120)
+      },
+      methods: {
+        /* ========== 表单校验 ========== */
+        chkUser: function(rule, v, cb) {
+          cb(v && v.length >= 1 ? undefined : new Error('请输入用户名'))
+        },
+        chkPass: function(rule, v, cb) {
+          cb(v && v.length >= 6 ? undefined : new Error('密码至少6位'))
+        },
+        err: function(field) {
+          const fs = this.$refs.loginForm ? this.$refs.loginForm.fields : null
+          if (!fs) return false
+          for (let i = 0; i < fs.length; i++) {
+            if (fs[i].prop === field) return fs[i].validateState === 'error'
+          }
+          return false
+        },
+        /* ========== 主题切换 ========== */
+        setTheme: function() {
+          document.documentElement.classList.toggle('dark-theme', this.dark)
+          document.documentElement.classList.toggle('light-theme', !this.dark)
+        },
+        toggleTheme: function() {
+          this.dark = !this.dark
+          localStorage.setItem('login-theme', this.dark ? 'dark' : 'light')
+          this.setTheme()
+        },
+        /* ========== 登录流程 ========== */
+        focusPass: function() {
+          const el = this.$refs.loginForm.$el.querySelector('input[type="password"]')
+          if (el) el.focus()
+        },
+        doLogin: function() {
+          const self = this
+          this.$refs.loginForm.validate(function(ok) {
+            if (!ok || self.loading) return
+            self.loading = true
+            localStorage.setItem('login-username', self.form.username)
+
+            loginApi(self.form).then(function(res) {
+              if (String(res.code) === '1') {
+                // 修改点：只存储非敏感的用户基本信息，避免localStorage泄露完整用户信息
+                // 不存储密码、手机号、身份证等敏感字段
+                // 修改点：使用后端返回的role字段判断权限，避免硬编码admin字符串
+                const safeUserInfo = { id: res.data.id, username: res.data.username, name: res.data.name, role: res.data.role }
+                localStorage.setItem('userInfo', JSON.stringify(safeUserInfo))
+                window.location.href = '/backend/index.html'
+              } else {
+                ReggieUI.error(res.msg || '登录失败')
+                self.loading = false
+              }
+            }).catch(function(err) {
+              ReggieUI.error((err && err.message) || '网络异常，请稍后重试')
+              self.loading = false
+            })
+          })
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,1109 @@
+/* ================================================================
+   全局设计 Token 系统 — 瑞吉外卖 v5
+   所有页面统一引用，确保品牌一致性
+   ================================================================ */
+:root {
+  /* ---- 品牌色 ---- */
+  --color-primary: #ffc200;
+  --color-primary-dark: #ff9a00;
+  --color-primary-light: #ffd54f;
+  /* 金底按钮上的深色文字（收银台/失效按钮，替代硬编码 #4a3500） */
+  --color-primary-text: #4a3500;
+  --color-primary-gradient: linear-gradient(135deg, #ffc200 0%, #ff9a00 100%);
+  /* 会员中心专属深金渐变（头图 / 会员卡），收敛硬编码为令牌，视觉与 v5 一致 */
+  --color-primary-gradient-deep: linear-gradient(160deg, #e0a800 0%, #d89b00 40%, #b87d00 100%);
+  --color-primary-gradient-card: linear-gradient(135deg, #ffd54f 0%, #ffb300 50%, #e09000 100%);
+  /* 首页头部纵向品牌渐变（main.css 头部背景，收敛硬编码） */
+  --color-primary-gradient-header: linear-gradient(180deg, #ffd54f 0%, #ffc200 70%, #ffb300 100%);
+
+  /* ---- 金色表面（金底上的文字/点缀，替代页面硬编码 rgba） ---- */
+  /* 金底文字三档层级：强（标题）/ 常规（正文）/ 弱（说明），alpha 让金底透出 */
+  --gold-text-strong: rgba(51,51,51,0.85);
+  --gold-text:        rgba(51,51,51,0.65);
+  --gold-text-muted:  rgba(51,51,51,0.6);
+  /* 金色点缀底（徽标/激活态/头像底），alpha 金 */
+  --color-primary-tint:       rgba(255, 194, 0, 0.1);
+  --color-primary-tint-strong: rgba(255, 194, 0, 0.12);
+
+  /* ---- 外部平台品牌色（配送单平台标签，语义化收敛硬编码 hex） ---- */
+  --platform-meituan: #ffc200; /* 美团黄（同品牌金） */
+  --platform-eleme:   #0096ff; /* 饿了么蓝 */
+  --platform-douyin:  #fe2c55; /* 抖音红 */
+
+  /* ---- 文字色 ---- */
+  --color-text-primary: #333333;
+  --color-text-secondary: #666666;
+  /* 修改点(2026-09-26)：#999 on 白仅 2.85:1，hint 被大量用于正文说明，加深至 AA 全表面达标（白5.10/页面灰底4.61/输入灰底4.86） */
+  --color-text-hint: #6e6e6e;
+  --color-text-disabled: #cccccc;
+  /* 修改点(2026-09-27 审查P1对比度族)：占位符专用档（Vant 默认 #c8c9cc 仅 1.5:1） */
+  --color-text-placeholder: #6e6e6e;
+  --color-text-white: #ffffff;
+
+  /* ---- 外部平台品牌色（支付/配送单平台标签，语义化收敛硬编码 hex） ---- */
+  --platform-alipay:  #1677ff; /* 支付宝官方蓝（仅用于支付宝图标/标签） */
+
+  /* ---- 功能色 ---- */
+  --color-danger: #e94e3c;
+  --color-success: #07c160;
+  --color-warning: #ffb300;
+  /* 修改点(2026-09-26)：功能色作正文/图标色时不达 AA（#07c160 2.4:1 / #ffb300 1.8:1），补深档文字令牌 */
+  --color-success-text: #0a7d43;
+  --color-warning-text: #955f00;
+  /* 修改点(2026-09-27 审查P1对比度族)：品牌橙作浅底文字仅 2.13:1，文字场景统一用此深棕金档（on 白 5.36:1） */
+  --color-primary-text-strong: #955f00;
+  --color-warning-tint: rgba(255, 179, 0, 0.12);
+  /* info：历史遗留语义——为防全站蓝主色回退，覆盖为品牌金。
+     若需第三方平台真实蓝，请使用 --platform-xxx 令牌而非 --color-info */
+  --color-info: #ffc200;
+  --color-price: #FF4A26;
+
+  /* ================================================================
+     订单状态色（语义化，2026-09-14 全站统一）
+     —— 新增状态只需：① 加 --status-xxx / --status-xxx-bg 令牌
+        ② 在下方「状态色语义类」中加一行类映射，不必改各页面
+     ================================================================ */
+  /* 待付款：需用户行动（去支付），用醒目橙，区别于品牌金 */
+  --status-pending: #FF7D00;
+  --status-pending-bg: rgba(255, 125, 0, 0.10);
+  /* 待接单 / 待发货：商家处理中，用品牌深金 */
+  --status-accepted: #FF9A00;
+  --status-accepted-bg: rgba(255, 154, 0, 0.10);
+  /* 已发货 / 配送中：流程推进顺利，用成功绿 */
+  --status-shipped: #07C160;
+  --status-shipped-bg: rgba(7, 193, 96, 0.10);
+  /* 已完成：终态，中性灰 */
+  --status-completed: #8C8C8C;
+  --status-completed-bg: rgba(140, 140, 140, 0.10);
+  /* 已取消：失效终态，浅灰（比“已完成”更弱） */
+  --status-cancelled: #BFBFBF;
+  --status-cancelled-bg: rgba(191, 191, 191, 0.14);
+  /* 售后中 / 退款中：需人工关注，用危险红 */
+  --status-refunding: #E94E3C;
+  --status-refunding-bg: rgba(233, 78, 60, 0.10);
+
+  /* ---- 星级（评价/评分统一） ---- */
+  /* 修改点(2026-09-26)：#f7ba2a 实心星 on 白 1.75:1，深金化后达大图形 3:1（同渐变深金档） */
+  --color-star: #b87d00;
+  --color-star-tint: rgba(247, 186, 42, 0.14);
+
+  /* ---- 购物车底部栏（深色） ---- */
+  --bg-cart-bar: #3B3B3B;
+  /* 深底栏内空购物车圆底（有货时切品牌金） */
+  --bg-cart-icon-idle: #4d4d4d;
+
+  /* ---- 背景色 ---- */
+  --bg-page: #f3f2f7;
+  --bg-card: #ffffff;
+  /* 桌面端宽屏视口底色（手机预览外框留白） */
+  --bg-viewport: #e9e9ef;
+  --bg-input: #f8f9fa;
+  --bg-hover: #f5f5f5;
+
+  /* ---- 边框色（通用浅灰分割线/边框，全站统一） ---- */
+  --border-light: #eeeeee;   /* 浅边框/分割线 */
+  --border-medium: #dddddd;  /* 中等边框（输入框/卡片边框） */
+
+  /* ---- 圆角 ---- */
+  --radius-sm: 4rem;
+  --radius-md: 8rem;
+  --radius-lg: 12rem;
+  --radius-xl: 16rem;
+  --radius-round: 50%;
+
+  /* ---- 间距 ---- */
+  --spacing-xs: 4rem;
+  --spacing-sm: 8rem;
+  --spacing-md: 12rem;
+  --spacing-lg: 16rem;
+  --spacing-xl: 20rem;
+  --spacing-2xl: 24rem;
+  --spacing-3xl: 32rem;
+
+  /* ---- 头部 ---- */
+  --header-height: 88rem;              /* 旧金色重头部（存量页，逐步退场） */
+  --header-title-font-size: 17rem;
+  /* 白底轻导航（对标美团二级页：低高度、纯白底、品牌色仅作点缀） */
+  --navbar-height: 44rem;
+  --navbar-bg: #ffffff;
+
+  /* ---- 字体 ---- */
+  --font-family-base: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft Yahei", sans-serif;
+  --font-family-title: "PingFangSC", "PingFangSC-Semibold", -apple-system, "PingFang SC", "Microsoft Yahei", sans-serif;
+  --font-family-body: "PingFangSC", "PingFangSC-Regular", -apple-system, "PingFang SC", "Microsoft Yahei", sans-serif;
+  --font-family-number: DIN, DIN-Medium;
+
+  /* ---- 字号 ---- */
+  --font-size-xs: 10rem;
+  --font-size-sm: 12rem;
+  --font-size-md: 14rem;
+  --font-size-lg: 16rem;
+  --font-size-xl: 18rem;
+  --font-size-2xl: 20rem;
+  --font-size-3xl: 24rem;
+  --font-size-display: 28rem;
+
+  /* ---- 语义叠加层（2026-09-07 收敛 main.css 等处的硬编码 rgba，禁止再散写） ---- */
+  /* 价格红 / 危险色 / 品牌金的低透明底与投影 */
+  --color-price-tint:        rgba(255, 74, 38, 0.06);
+  --color-price-tint-strong: rgba(255, 74, 38, 0.2);
+  --color-price-shadow:      rgba(255, 74, 38, 0.45);
+  --color-danger-shadow:     rgba(233, 78, 60, 0.4);
+  --color-primary-shadow:    rgba(255, 209, 0, 0.35);
+  /* 白色表面（金底 / 深底上的白卡、搜索框） */
+  --surface-white-85: rgba(255, 255, 255, 0.85);
+  --surface-white-95: rgba(255, 255, 255, 0.95);
+  /* 深色表面上的文字（禁用态按钮等） */
+  --text-on-dark-60: rgba(255, 255, 255, 0.6);
+  /* 中性蒙层（圆形关闭按钮底 / 按下态） */
+  --mask-light:        rgba(0, 0, 0, 0.05);
+  --mask-light-active: rgba(0, 0, 0, 0.12);
+  /* 头像描边 / 图片容器极细边框 */
+  --avatar-ring: rgba(51, 51, 51, 0.18);
+  --border-hair: rgba(0, 0, 0, 0.04);
+
+  /* 中性蒙层（遮罩 / 按下态，按强度分档） */
+  --mask-medium: rgba(0, 0, 0, 0.15);
+  --mask-strong: rgba(0, 0, 0, 0.5);
+  /* 品牌金 / 深金的低透明底（标签、激活态、进度条），按浓度分档 */
+  --color-primary-tint-md:      rgba(255, 194, 0, 0.15);
+  --color-primary-tint-lg:      rgba(255, 194, 0, 0.25);
+  --color-primary-dark-tint:    rgba(255, 154, 0, 0.12);
+  --color-primary-dark-tint-lg: rgba(255, 154, 0, 0.25);
+  /* 成功绿 / 危险红的低透明底 */
+  --color-success-tint: rgba(7, 193, 96, 0.12);
+  --color-danger-tint:  rgba(233, 78, 60, 0.12);
+  /* 中性蒙层最浅档（卡片浅投影） */
+  --mask-soft: rgba(0, 0, 0, 0.08);
+  /* 成功绿 / 危险红的不透明浅底（标签、提示条幅） */
+  --color-success-bg: #f6ffed;
+  --color-danger-bg:  #fff2f0;
+
+  /* ---- 地址标签色板（address 列表页与 address-edit 编辑页共用，2026-09-28 收口） ---- */
+  /* 公司标签：品牌金 */
+  --addr-tag-company-gradient: linear-gradient(135deg, var(--color-primary-light), var(--color-primary-light));
+  --addr-tag-company-border: var(--color-primary);
+  --addr-tag-company-shadow: var(--color-primary-dark-tint);
+  --addr-tag-company-fg: var(--color-primary-text);
+  /* 家标签：橙色系 */
+  --addr-tag-home-gradient: linear-gradient(135deg, #fff3e0, #ffe0b2);
+  --addr-tag-home-border: #ff9800;
+  --addr-tag-home-shadow: rgba(255, 152, 0, 0.12);
+  --addr-tag-home-fg: #9a4400;
+  /* 学校标签：绿色系 */
+  --addr-tag-school-gradient: linear-gradient(135deg, #e6faf3, #ccf0e2);
+  --addr-tag-school-border: #7fd4b0;
+  --addr-tag-school-shadow: var(--color-success-tint);
+  /* 无标签：中性灰渐变结束色 */
+  --addr-tag-none-gradient-end: var(--border-light);
+  /* 白色表面更浅的两档（深底上的次级白面） */
+  --surface-white-50: rgba(255, 255, 255, 0.5);
+  --surface-white-25: rgba(255, 255, 255, 0.25);
+
+  /* ---- 阴影 ---- */
+  --shadow-sm: 0 1rem 3rem rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2rem 8rem rgba(0, 0, 0, 0.06);
+  --shadow-cart-bar: 0 -2rem 8rem rgba(0, 0, 0, 0.12);
+  --shadow-cart-icon: 0 2rem 6rem rgba(0, 0, 0, 0.25);
+  --shadow-card: 0 2rem 8rem rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 4rem 16rem rgba(0, 0, 0, 0.08);
+
+  /* ---- 骨架屏（全站统一）---- */
+  --skeleton-gradient: linear-gradient(90deg, var(--bg-hover) 25%, var(--border-light) 50%, var(--bg-hover) 75%);
+
+  /* ---- 动画 ---- */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ================================================================
+     2026-09-21 对标美团/饿了么增补：功能图标多色 / 线条 / CTA / 弹窗
+     规则：金色只留品牌头部、主 CTA、选中态；功能图标一律走下方语义色
+     ================================================================ */
+  /* 功能图标多色体系（图标色 + 10% 底色，低饱和） */
+  --icon-order: #4a7dff;
+  --icon-order-bg: rgba(74, 125, 255, 0.10);     /* 订单蓝 */
+  --icon-coupon: #ff4a26;
+  --icon-coupon-bg: rgba(255, 74, 38, 0.10);     /* 红包红 */
+  --icon-address: #2ba471;
+  --icon-address-bg: rgba(43, 164, 113, 0.10);   /* 地址绿 */
+  --icon-favorite: #ff8800;
+  --icon-favorite-bg: rgba(255, 136, 0, 0.10);   /* 收藏橙 */
+  --icon-service: #13c2c2;
+  --icon-service-bg: rgba(19, 194, 194, 0.10);   /* 客服蓝绿 */
+  --icon-invoice: #7a6cf5;
+  --icon-invoice-bg: rgba(122, 108, 245, 0.10);  /* 发票紫 */
+  --icon-message: #fa8c16;
+  --icon-message-bg: rgba(250, 140, 22, 0.10);   /* 消息橙 */
+
+  /* 线条（全站禁用 2px/2rem/3px 分隔线，进度线/时间线除外） */
+  --separator: 1px solid var(--border-light);
+  --separator-dashed: 1px dashed var(--border-light);
+  /* 发丝边：卡片内部行分隔，比 --separator 更淡，对标美团卡内细线 */
+  --hairline: 1px solid var(--border-hair);
+
+  /* 按钮 / CTA 规范 */
+  --btn-h: 44rem;
+  --btn-md-h: 36rem;
+  --btn-sm-h: 28rem;
+  /* 大控件：搜索栏 / 主结算条 / 吸底行动点 */
+  --control-h-lg: 48rem;
+  --control-h-xl: 50rem;
+  --btn-radius: 999rem;
+  --btn-font: 16rem;
+  --btn-px: 28rem;
+  --btn-secondary-border: 1px solid var(--border-medium);
+  --shadow-cta: 0 4rem 12rem rgba(255, 154, 0, 0.25);
+  /* 浮层/底部弹层顶投影（悬浮提升场景复用现有 --shadow-card-hover） */
+  --shadow-sheet: 0 -4rem 20rem rgba(0, 0, 0, 0.08);
+
+  /* 弹窗统一尺寸 */
+  --dialog-width: 335rem;
+  --dialog-radius: var(--radius-xl);
+
+  /* ---- 层级（z-index 命名刻度，2026-09-25 收口魔数） ---- */
+  --z-overlay: 999;    /* 遮罩/全屏 loading */
+  --z-modal: 1000;     /* 侧边栏/弹窗 */
+  --z-toast: 2000;
+  --z-lightbox: 3000;  /* 大图预览 */
+
+  /* ---- 浅灰头像底/禁用发送钮底（客服页） ---- */
+  --bg-avatar: #e7e7e7;
+
+  /* ---- 客服工单状态色（文字 + 12% 底，状态识别功能色） ---- */
+  --tag-pending: #ff976a;
+  --tag-pending-bg: rgba(255, 151, 106, 0.12);
+  --tag-processing: #1989fa;
+  --tag-processing-bg: rgba(25, 137, 250, 0.12);
+  --tag-done: #07c160;
+  --tag-done-bg: rgba(7, 193, 96, 0.12);
+
+  /* ---- 代码块配色（明暗模式均深底；暗色 bg 覆盖见 ai-assistant.css） ---- */
+  --color-code-bg: #1f2937;
+  --color-code-text: #e5e7eb;
+  --color-code-inline-dark-bg: rgba(255, 255, 255, 0.12);
+  --color-code-inline-dark-text: #fca5a5;
+
+  /* ---- 聊天气泡/灯箱投影（收敛散写 rgba） ---- */
+  --shadow-bubble-assistant: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-bubble-user: 0 2px 8px rgba(201, 146, 0, 0.25);
+  --shadow-lightbox: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+  /* ---- C 端页面内联样式复用令牌（Vant 标准灰阶 / 品牌色 / 中性文字，避免裸 hex） ---- */
+  --c-gray-1:     #f2f3f5; /* Vant 灰阶-1：浅底背景 */
+  --c-gray-3:     #dcdee0; /* Vant 灰阶-3：极淡文字/线条 */
+  --c-gray-4:     #c8c9cc; /* Vant 灰阶-4：占位/辅助文字 */
+  --c-gray-5:     #969799; /* Vant 灰阶-5：次要文字 */
+  --c-gray-400:   #9ca3af; /* Tailwind 灰-400：提示/空态文字 */
+  --c-gray-500:   #6b7280; /* Tailwind 灰-500：元信息文字 */
+  --c-gray-600:   #4b5563; /* Tailwind 灰-600：小标题文字 */
+  --c-gray-800:   #1f2937; /* Tailwind 灰-800：重点文字（与 --color-code-bg 同值，专用于前景色） */
+  --c-text:       #323233; /* Vant 主文字色 */
+  --c-red:        #ee0a24; /* Vant 品牌红（优惠券价值/图标强调） */
+  --c-orange:     #ff976a; /* Vant 橙（积分券底色） */
+}
+/* 修改点(2026-09-17)：全站骨架屏动画统一为 @keyframes rg-skeleton-shine，各页面删除独立定义 */
+@keyframes rg-skeleton-shine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ================================================================
+   桌面端全局约束 — 所有页面 750px 居中，两侧浅灰背景
+   ================================================================ */
+@media screen and (min-width: 751px) {
+  body {
+    max-width: 750px;
+    margin: 0 auto;
+    position: relative;
+    box-shadow: 0 0 40rem rgba(0, 0, 0, 0.08);
+  }
+}
+
+/* ================================================================
+   订单状态色 — 语义类（共享层，全站任何页面直接复用）
+   用法：<span class="status-shipped">配送中</span>
+        或胶囊标签：<span class="status-tag status-shipped">配送中</span>
+   ================================================================ */
+.status-pending   { color: var(--status-pending); }
+.status-accepted  { color: var(--status-accepted); }
+.status-shipped   { color: var(--status-shipped); }
+.status-completed { color: var(--status-completed); }
+.status-cancelled { color: var(--status-cancelled); }
+.status-refunding { color: var(--status-refunding); }
+
+/* 兼容历史类名（历史订单/个人中心曾用），语义与上方保持一致，避免改一处漏一处 */
+.status-delivering { color: var(--status-shipped); }
+.status-complete   { color: var(--status-completed); }
+.status-cancel     { color: var(--status-cancelled); }
+
+/* 状态胶囊标签（订单详情/列表头部等需要"标签感"的场景） */
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20rem;
+  padding: 0 8rem;
+  border-radius: 999rem;
+  font-size: 11rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.status-tag.status-pending   { color: var(--status-pending);   background: var(--status-pending-bg); }
+.status-tag.status-accepted  { color: var(--status-accepted);  background: var(--status-accepted-bg); }
+.status-tag.status-shipped   { color: var(--status-shipped);   background: var(--status-shipped-bg); }
+.status-tag.status-completed { color: var(--status-completed); background: var(--status-completed-bg); }
+.status-tag.status-cancelled { color: var(--status-cancelled); background: var(--status-cancelled-bg); }
+.status-tag.status-refunding { color: var(--status-refunding); background: var(--status-refunding-bg); }
+
+/* ================================================================
+   全局基础样式
+   ================================================================ */
+html,
+body {
+  height: 100%;
+  background: var(--bg-page);
+  font-family: var(--font-family-base);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  /* 去除移动端点击灰块/黑块，贴近原生 App 手感 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+ul,
+li {
+  margin: 0;
+  padding: 0;
+}
+
+ul,
+li {
+  list-style: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: normal;
+}
+
+h3 {
+  font-size: 16px;
+}
+
+h4 {
+  font-size: 14px;
+}
+
+p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ---- Vant 弹窗内容文字恢复 -- 全局 p 强制缩小，需单独恢复弹窗内文字 ---- */
+.van-dialog__message p {
+  font-size: 15px !important;
+  line-height: 1.7 !important;
+}
+
+em,
+i {
+  font-style: normal;
+}
+
+/* ================================================================
+   全局工具类（2026-09-22 新增，对标美团地基；新代码优先用这些）
+   ================================================================ */
+
+/* 输入控件字号统一 16rem(=16px@375)：小于 16px 会触发 iOS Safari 聚焦自动放大页面 */
+input,
+textarea,
+select {
+  font-size: 16rem;
+}
+
+/* flex 基础工具 */
+.flex { display: flex; }
+.flex-col { display: flex; flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.flex-1 { flex: 1; min-width: 0; }
+/* 修改点(2026-09-24)：补充定位/外距工具类，收敛各页骨架屏与布局内联 style */
+.relative { position: relative; }
+.ml-auto { margin-left: auto; }
+.mt-12 { margin-top: 12rem; }
+.mb-12 { margin-bottom: 12rem; }
+.mb-10 { margin-bottom: 10rem; }
+.mb-8 { margin-bottom: 8rem; }
+
+/* 间距工具：基线 iOS14.5 原生支持 gap；@supports not 给更早 WebView 留 margin 兜底 */
+.gap-8,
+.gap-12,
+.gap-16 { display: flex; }
+@supports (gap: 1rem) {
+  .gap-8 { gap: 8rem; }
+  .gap-12 { gap: 12rem; }
+  .gap-16 { gap: 16rem; }
+}
+@supports not (gap: 1rem) {
+  /* 横向：作用于相邻子元素；与 .flex-col 组合时改为纵向间距 */
+  .gap-8 > * + * { margin-left: 8rem; }
+  .flex-col.gap-8 > * + * { margin-left: 0; margin-top: 8rem; }
+  .gap-12 > * + * { margin-left: 12rem; }
+  .flex-col.gap-12 > * + * { margin-left: 0; margin-top: 12rem; }
+  .gap-16 > * + * { margin-left: 16rem; }
+  .flex-col.gap-16 > * + * { margin-left: 0; margin-top: 16rem; }
+}
+
+/* sticky：补 iOS 旧前缀 */
+.sticky-top {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* 安全区：刘海顶 / Home 指示条底。老 iOS 用 constant()，新 iOS 用 env()，顺序覆盖 */
+.safe-top {
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* cend-shell 根：满高纵向 flex，替代各页脆弱的 calc 高度链（2026-09-22） */
+.cend-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* 2026-09-30 审查：slot 直接子级为 van-pull-refresh 的页面（如我的评价），
+   Vant 默认 overflow:hidden 会把超出 shell 剩余高度的列表裁掉且无法滚动，
+   统一在此建立滚动高度链；非直接子级（订单页 divBody 内）不受影响 */
+.cend-page > .van-pull-refresh {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ================================================================
+   cend-shell 导航栏（跨页统一；组件不命中各页 .divHead 金色作用域）
+   ================================================================ */
+.cend-navbar {
+  position: relative;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 总高 = 导航内容 + 刘海安全区；内容区固定 navbar-height */
+  height: calc(var(--navbar-height) + constant(safe-area-inset-top));
+  height: calc(var(--navbar-height) + env(safe-area-inset-top));
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+  box-sizing: content-box;
+  flex-shrink: 0;
+}
+.cend-navbar__title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  line-height: 1;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cend-navbar__btn {
+  position: absolute;
+  height: var(--navbar-height);
+  top: constant(safe-area-inset-top);
+  top: env(safe-area-inset-top);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44rem;
+  font-size: 24rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.cend-navbar__btn:active { opacity: 0.6; }
+/* 必须靠这两个类定到左右两侧：只写 .cend-navbar__btn 时 left/right 均 auto，
+   图标会停在 flex 居中布局的假设位置、与标题重叠（2026-09-24 实测故障） */
+.cend-navbar__back { left: 4rem; right: auto; }
+.cend-navbar__home { right: 4rem; left: auto; }
+/* 右侧自定义区（具名插槽 #right：视图切换/全部已读等），绝对定位于导航右侧 */
+.cend-navbar__right {
+  position: absolute;
+  right: 8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8rem;
+}
+/* 插槽内的导航图标按钮：取消绝对定位，由右侧容器统一布局 */
+.cend-navbar__right .cend-navbar__btn {
+  position: static;
+  top: auto;
+  height: auto;
+  width: auto;
+  font-size: 22rem;
+}
+.cend-navbar__right .cend-navbar__btn:active { opacity: 0.6; }
+
+/* 白底轻导航（对标美团二级页） */
+.cend-navbar.is-light {
+  background: var(--navbar-bg);
+  border-bottom: var(--hairline);
+}
+.cend-navbar.is-light .cend-navbar__title,
+.cend-navbar.is-light .cend-navbar__btn { color: var(--color-text-primary); }
+
+/* 品牌金导航（首页/活动页） */
+.cend-navbar.is-brand {
+  background: var(--color-primary-gradient);
+}
+.cend-navbar.is-brand .cend-navbar__title,
+.cend-navbar.is-brand .cend-navbar__btn { color: var(--color-text-primary); }
+
+@font-face {
+  font-family: "DIN-Medium";
+  src: url("../fonts/DIN-Medium.otf");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "DIN";
+  src: url("../fonts/DIN-Bold.otf");
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* 修改点：移除 3 个 PingFangSC webfont @font-face（约 31MB）——
+   这些字体为 CFF 轮廓、无法子集化，且 font-display:swap 下 Android 无系统 PingFangSC，
+   一直靠 Microsoft YaHei 渲染。改用系统字体栈兜底（Android→YaHei、iOS/macOS→系统 PingFang SC），
+   视觉差异极小，首屏加载省 ~10MB x N。CSS 家族名引用全部保留（含引号+回退栈）。
+   如需还原：git checkout -- styles/index.css 前版本。 */
+
+.app {
+  height: 100%;
+}
+
+/* ---- cend-shell 头部右侧操作区（首页图标等） ---- */
+.divHead {
+  position: relative;
+}
+.divHead-right {
+  position: absolute;
+  right: var(--spacing-lg, 16rem);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md, 12rem);
+  font-size: var(--font-size-xl, 22rem);
+  /* 修改点(2026-09-24)：原 var(--text-primary, #1a1a1a) 引用了不存在的变量名且 hex 兜底，
+     归并到标准令牌 --color-text-primary */
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.divHead-right i:active {
+  opacity: 0.6;
+  transform: scale(0.9);
+}
+
+/* ---- 通用返回箭头 (纯CSS，无需ElementUI依赖) ---- */
+.icon-back-arrow {
+  display: inline-block;
+  width: 10rem;
+  height: 10rem;
+  border-left: 2rem solid currentColor;
+  border-bottom: 2rem solid currentColor;
+  transform: rotate(45deg);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+
+/* ---- 通用右箭头 ---- */
+.icon-arrow-right {
+  display: inline-block;
+  width: 8rem;
+  height: 8rem;
+  border-right: 2rem solid currentColor;
+  border-top: 2rem solid currentColor;
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+/* ---- 通用定位图标 (替代el-icon-location-outline) ---- */
+.icon-location-outline {
+  display: inline-block;
+  width: 36rem;
+  height: 36rem;
+  border: 3rem solid var(--color-text-hint);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  position: relative;
+}
+
+.icon-location-outline::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 10rem;
+  height: 10rem;
+  background: var(--color-text-hint);
+  border-radius: 50%;
+}
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--surface-white-85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.loading-spinner {
+  width: 32rem;
+  height: 32rem;
+  border: 3rem solid var(--color-text-disabled);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: loading-spin 0.8s linear infinite;
+}
+
+@keyframes loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 修改点：ElementUI 替换 —— 搜索图标（放大镜） */
+.icon-search {
+  display: inline-block;
+  width: 14rem;
+  height: 14rem;
+  border: 2rem solid currentColor;
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+}
+.icon-search::after {
+  content: '';
+  position: absolute;
+  bottom: -2rem;
+  right: -2rem;
+  width: 7rem;
+  height: 2rem;
+  background: currentColor;
+  transform: rotate(45deg);
+  transform-origin: left center;
+  border-radius: 1rem;
+}
+
+/* 修改点：ElementUI 替换 —— 向下箭头图标 */
+.icon-arrow-down {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 5rem solid transparent;
+  border-right: 5rem solid transparent;
+  border-top: 6rem solid currentColor;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* 修改点：ElementUI 替换 —— 圆形关闭图标 */
+.icon-circle-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20rem;
+  height: 20rem;
+  border-radius: 50%;
+  background: var(--color-text-disabled);
+  color: var(--color-text-white);
+  font-size: 14rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition: background 0.2s;
+}
+.icon-circle-close:active {
+  background: var(--color-text-hint);
+}
+/* 修改点：扩展点击热区至 ≥44rem（视觉保持 20rem） */
+.icon-circle-close::after {
+  content: '';
+  position: absolute;
+  inset: -12rem;
+  border-radius: 50%;
+}
+
+.van-dialog {
+  overflow: inherit;
+}
+
+::-webkit-input-placeholder {
+  font-size: 13px;
+  font-family: "PingFangSC", "PingFangSC-Regular";
+  font-weight: 400;
+  text-align: left;
+  color: var(--color-text-hint);
+}
+
+:-moz-placeholder {
+  /* Firefox 18- */
+  font-size: 13px;
+  font-family: "PingFangSC", "PingFangSC-Regular";
+  font-weight: 400;
+  text-align: left;
+  color: var(--color-text-hint);
+}
+::-moz-placeholder {
+  /* Firefox 19+ */
+  font-size: 13px;
+  font-family: "PingFangSC", "PingFangSC-Regular";
+  font-weight: 400;
+  text-align: left;
+  color: var(--color-text-hint);
+}
+
+:-ms-input-placeholder {
+  font-size: 13px;
+  font-family: "PingFangSC", "PingFangSC-Regular";
+  font-weight: 400;
+  text-align: left;
+  color: var(--color-text-hint);
+}
+
+/* ================================================================
+   通用品牌头兜底样式（无前缀，供未单独定制的页面使用）
+   页面级 #xxx .divHead 选择器优先级更高，会自动覆盖此兜底。
+   覆盖页面：my-evaluations / tracking / frequent-orders
+   ================================================================ */
+.divHead {
+  width: 100%;
+  /* 总高 = 头部内容 + 刘海安全区；border-box 下 height 含 padding，内容区仍为 header-height */
+  height: var(--header-height);
+  height: calc(var(--header-height) + constant(safe-area-inset-top));
+  height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  background: var(--color-primary-gradient);
+  padding: 0 var(--spacing-lg);
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top, 0px);
+  /* width:100% 内含左右 padding，content-box 会使头部右侧溢出（客服/发票/消息等页受影响） */
+  box-sizing: border-box;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.divHead .divTitle {
+  font-size: var(--header-title-font-size);
+  font-family: var(--font-family-title);
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-text-primary);
+  line-height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.divHead .divTitle .ri-arrow-left-s-line {
+  position: absolute;
+  left: var(--spacing-lg);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-primary);
+  font-size: 18rem;
+  cursor: pointer;
+}
+
+.divHead .divTitle .ri-arrow-left-s-line:active {
+  opacity: 0.6;
+}
+
+/* ================================================================
+   桌面端修复：移动端 H5 在宽屏浏览器中居中呈现为“手机”预览，
+   两侧留白使用中性背景，避免内容缩在左上角、观感像“页面坏了”。
+   base.js 已把设计宽度封顶 750px，这里再把容器居中并加投影。
+   ================================================================ */
+@media screen and (min-width: 751px) {
+  html {
+    background: var(--bg-viewport);
+  }
+  #main {
+    max-width: 750px;
+    margin: 0 auto;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.12);
+  }
+  /* 修改点(2026-09-27 审查P2桌面居中族)：fixed 元素相对视口定位，桌面会逃逸
+     750px 居中列。Vant 底部弹层/通知条统一收敛回列内（left+right+auto 边距
+     居中法，不用 translateX 以免破坏 Vant 位移动画）。 */
+  .van-popup--bottom,
+  .van-popup--top {
+    left: 0 !important;
+    right: 0 !important;
+    width: auto !important;
+    max-width: 750px;
+    margin: 0 auto;
+  }
+  .van-notify {
+    max-width: 750px;
+    margin: 0 auto;
+  }
+  /* 全屏搜索浮层：随列收敛，避免桌面盖满浏览器窗口 */
+  .search-overlay {
+    max-width: 750px;
+    margin: 0 auto;
+  }
+}
+
+/* ================================================================
+   Vant 主按钮品牌化：Vant 默认微信绿 (#07c160) 统一为品牌金
+   ----------------------------------------------------------------
+   覆盖点（vant.min.css 中）：
+     .van-button--primary{color:#fff;background-color:#07c160;border:1px solid #07c160}
+     .van-button--plain.van-button--primary{color:#07c160}
+   说明：
+     - index.css 在部分页面先于 vant.min.css 加载、部分页面后加载，
+       故一律使用 !important 保证覆盖稳定生效。
+     - 金色背景配深色文字（--color-text-primary），与后台 .el-button--primary
+       （金底深字）及前端其它金色区域（quick-header 等）一致，满足可读性。
+   ================================================================ */
+.van-button--primary {
+  background-color: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-text-primary) !important;
+}
+.van-button--primary:active {
+  background-color: var(--color-primary-dark) !important;
+  border-color: var(--color-primary-dark) !important;
+  color: var(--color-text-primary) !important;
+}
+/* 描边态：白底 + 金边 + 金字 */
+.van-button--primary.van-button--plain {
+  background-color: var(--color-text-white) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary-text) !important;
+}
+/* 禁用态 */
+.van-button--primary.van-button--disabled,
+.van-button--primary[disabled] {
+  background-color: var(--color-text-disabled) !important;
+  border-color: var(--color-text-disabled) !important;
+  color: var(--color-text-white) !important;
+}
+
+/* ================================================================
+   Vant 输入框占位符对比度修正（2026-09-27 审查P1对比度族）
+   ----------------------------------------------------------------
+   vant.min.css 默认 .van-field__control::placeholder{color:#c8c9cc}
+   在白底仅 1.61:1，近乎不可见 → 统一为 --color-text-placeholder。
+   index.css 与 vant.min.css 加载顺序因页面而异，故用 !important。
+   ================================================================ */
+.van-field__control::placeholder {
+  color: var(--color-text-placeholder) !important;
+}
+
+/* ================================================================
+   Vant 蓝→品牌金统一（2026-09-27 审查P1蓝金混用族）
+   ----------------------------------------------------------------
+   Vant 默认交互蓝 #1989fa 与品牌金冲突，全站收敛：
+   - .van-notify--primary：全局新消息/客服通知条（request.js type:'primary'）
+     金底配深金字（金底必须深金字，白字 on #ffc200 仅 1.6:1）；
+   - .van-radio__icon--checked：发票抬头选中对勾。
+   豁免保留：--tag-processing（客服工单"处理中"状态语义橙/蓝/绿三色之一，
+   非品牌装饰蓝）；微信绿/支付宝蓝仅限支付渠道品牌图标。
+   ================================================================ */
+.van-notify--primary {
+  background-color: var(--color-primary) !important;
+  color: var(--color-primary-text) !important;
+}
+/* 2026-09-30 审查：错误通知条（request.js type:'warning'）Vant 默认浅橙底 #ff976a + 白字仅 2.1:1，
+   浅底必须深字（同金底深金字规则），深字 on #ff976a ≈ 6.0:1 */
+.van-notify--warning {
+  color: var(--color-text-primary) !important;
+}
+.van-radio__icon--checked .van-icon {
+  background-color: var(--color-primary) !important;
+  border-color: var(--color-primary-dark) !important;
+  color: var(--color-primary-text) !important;
+}
+
+/* ================================================================
+   无障碍（a11y）基线 — 键盘焦点可见 + 减弱动效
+   ----------------------------------------------------------------
+   - 可聚焦交互元素在键盘导航（:focus-visible）时显示品牌深金描边，
+     鼠标点击（:focus）不触发，避免干扰；覆盖原生默认 outline。
+   - 尊重 prefers-reduced-motion，关闭非必要动画（入场/微光/弹跳等），
+     照顾前庭功能障碍用户。
+   ================================================================ */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible,
+.van-button:focus-visible,
+.btnSubmitActive:focus-visible,
+.tabbar-item:focus-visible,
+.agreementRow:focus-visible,
+.agreementCheckbox:focus-visible {
+  outline: 2px solid var(--color-primary-dark);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* ========== 统一空状态组件 ========== */
+/* 用法：<div class="empty-state"><i class="ri-xxx-line"></i><p class="empty-text">提示文案</p><div class="empty-action">操作</div></div> */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rem 20rem;
+  text-align: center;
+}
+.empty-state i {
+  font-size: 60rem;
+  color: var(--color-text-disabled);
+  margin-bottom: 16rem;
+}
+.empty-state img {
+  width: 120rem;
+  height: 120rem;
+  opacity: 0.5;
+  margin-bottom: 16rem;
+  object-fit: contain;
+}
+.empty-state .empty-text {
+  color: var(--color-text-hint);
+  font-size: 14rem;
+  line-height: 22rem;
+}
+.empty-state .empty-sub {
+  /* 修改点(2026-09-26)：disabled(#ccc) on 页面底仅 1.4:1 近乎不可见，辅助说明须可读 */
+  color: var(--color-text-hint);
+  font-size: 12rem;
+  margin-top: 6rem;
+}
+.empty-state .empty-action {
+  display: inline-block;
+  height: 36rem;
+  line-height: 36rem;
+  padding: 0 32rem;
+  margin-top: 16rem;
+  background: var(--color-primary-gradient);
+  border-radius: var(--radius-xl);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: transform var(--transition-normal), opacity var(--transition-normal);
+}
+.empty-state .empty-action:active {
+  transform: scale(0.95);
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ================================================================
+   二级页「回首页」入口（修改点 2026-09-17）
+   底部 Tab 仅覆盖 点餐/订单/我的 三个一级页，二级页（我的评价/常购清单/配送追踪等）
+   此前只能靠左上角返回箭头，深层路径易迷路。对齐大厂做法：二级页提供回到首页入口。
+   依赖 .divHead 为定位元素（sticky/relative 均可作为绝对定位包含块）。
+   ================================================================ */
+.head-home-btn {
+  position: absolute;
+  right: 12rem;
+  /* 头部含顶部安全区，按钮居中于其下的 header-height 内容区（非整个头部），避免被安全区顶偏 */
+  top: 50%;
+  top: calc(constant(safe-area-inset-top) + (var(--header-height) - 32rem) / 2);
+  top: calc(env(safe-area-inset-top, 0px) + (var(--header-height) - 32rem) / 2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32rem;
+  height: 32rem;
+  font-size: 18rem;
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: var(--radius-round);
+  cursor: pointer;
+  z-index: 2;
+}
+.head-home-btn:active { opacity: 0.7; }
+
+/* 修改点(2026-09-17)：尊重系统「减少动态效果」偏好（可访问性 WCAG 2.3.3） */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 修改点(2026-09-17)：暗色模式（跟随系统）——仅覆盖中性色令牌，品牌金主色保持不变以维持品牌识别度 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-page: #121212;
+    --bg-card: #1e1e1e;
+    --bg-hover: #2a2a2a;
+    --color-text-primary: #f5f5f5;
+    --color-text-secondary: #b0b0b0;
+    --color-text-hint: #8c8c8c;
+    /* 占位符随暗色底翻浅（#6e6e6e on #1e1e1e 仅 3.0:1） */
+    --color-text-placeholder: #9e9e9e;
+    /* 修改点(2026-09-27 审查P1对比度族)：深金文字档随暗色底翻浅（#955f00 on #1e1e1e 仅 2.6:1） */
+    --color-primary-text-strong: #ffd54f;
+    --color-warning-text: #ffd54f;
+    --color-success-text: #4ade80;
+    --border-light: #2f2f2f;
+    /* 修改点(2026-09-26)：白透胶囊面(公告条/搜索框/状态Tab等)在暗色下配浅色文字=白字白底不可读，随令牌翻深 */
+    --surface-white-85: rgba(30, 30, 30, 0.85);
+  }
+}
+
+/* 修改点(2026-09-17)：键盘可见焦点（可访问性）——仅键盘聚焦时显示轮廓，鼠标点击不显示 */
+:focus-visible {
+  outline: 2px solid var(--color-primary-dark);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}

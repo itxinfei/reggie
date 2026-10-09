@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>订单明细 - 瑞吉外卖管理端</title>
+
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260921" />
+  <style>
+    /* 内部备注编辑行（原详情弹窗内联样式收口；间距走令牌） */
+    .od-kv--top { align-items: flex-start; }
+    /* 修改点(P0-6)：取餐码醒目展示，便于店员报码 */
+    .od-pickup-code { font-weight: 700; letter-spacing: 2px; font-size: 16px; }
+    .od-note-field { flex: 1; display: flex; gap: var(--space-2); align-items: flex-start; }
+    .od-note-input { flex: 1; }
+    .od-note-btn { flex-shrink: 0; margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
+  <div class="dashboard-container" id="order-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
+      <h1 class="sr-only" id="page-title">订单明细</h1>
+
+      <!-- 数据统计卡片 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
+
+      <!-- 搜索 + 操作栏（导出按钮内联在 tableBar 中） -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        :show-refresh="true"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+        @refresh="init(false)"
+      ></table-bar>
+
+      <!-- 数据表格 -->
+      <crud-table
+        ref="crudTable"
+        empty-hint="试试调整筛选条件"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :selection="true"
+        row-key="id"
+        :show-actions="true"
+        :actions-width="240"
+        @selection-change="onSelectionChange"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-status="{ row }">
+          <el-tag :type="getOrderTagType(row)" size="small">{{ getOrderType(row) }}</el-tag>
+        </template>
+        <template #col-payMethod="{ row }">
+          {{ payMethodText(row.payMethod) }}
+        </template>
+        <template #col-source="{ row }">
+          {{ formatDiningType(row.source) }}
+        </template>
+        <template #col-amount="{ row }">
+          <span>¥{{ formatMoney(row.amount) }}</span>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" @click="goDetail(row)" class="btn-view">查看</el-button>
+          <el-button type="text" size="small" @click="printReceipt(row)" class="btn-view">打印</el-button>
+          <!-- 派单（指派骑手）仅外卖单；堂食/自提单无骑手配送环节 -->
+          <el-button v-if="row.status === 2 && !row.riderId && !isEatInOrder(row) && !isSelfPickupOrder(row)" type="text" size="small" @click="openDispatch(row)" class="btn-success">派单</el-button>
+          <!-- 堂食：待接单→开始制作；自提：接单制作；外卖：待接单→派送 -->
+          <el-button v-if="row.status === 2" type="text" size="small" @click="advanceStatus(row)" class="btn-success">{{ isEatInOrder(row) ? '开始制作' : (isSelfPickupOrder(row) ? '接单制作' : '派送') }}</el-button>
+          <!-- 待接单：商家拒单（自动退款/回库存） -->
+          <el-button v-if="row.status === 2" type="text" size="small" class="btn-delete" @click="rejectOrderRow(row)">拒单</el-button>
+          <!-- 堂食：制作中→上菜完成(释放桌台)；自提：核销取餐码；外卖：配送中→确认送达 -->
+          <el-button v-if="row.status === 3 && !isSelfPickupOrder(row)" type="text" size="small" @click="advanceStatus(row)" class="btn-success">{{ isEatInOrder(row) ? '上菜完成' : '完成' }}</el-button>
+          <el-button v-if="row.status === 3 && isSelfPickupOrder(row)" type="text" size="small" @click="openVerify(row)" class="btn-success">核销取餐</el-button>
+          <el-button v-if="row.status === 4" type="text" size="small" class="btn-delete" @click="openRefund(row)">退款</el-button>
+          <el-button v-if="row.status === 2 || row.status === 3" type="text" size="small" class="btn-warning" @click="cancelOrder(row)">取消</el-button>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- 订单详情弹窗（只读，仅有关闭按钮） -->
+    <crud-dialog
+      title="订单详情"
+      :visible.sync="dialogVisible"
+      size="xl"
+      :show-submit="false"
+      :show-cancel="true"
+      cancel-text="关 闭"
+      :close-on-click-modal="true"
+      @close="diaForm = {}"
+    >
+      <div v-if="diaForm" class="od-body">
+        <!-- 顶部定位条：订单号 + 状态（最显眼） -->
+        <div class="od-header">
+          <div class="od-header-main">
+            <span class="od-header-label">订单号</span>
+            <span class="od-header-no">{{ diaForm.number || '-' }}</span>
+          </div>
+          <el-tag :type="getOrderTagType(diaForm)" size="medium" effect="dark" class="od-header-status">
+            {{ getOrderType(diaForm) }}
+          </el-tag>
+        </div>
+
+        <!-- 流程步骤：横向扁条，全宽 -->
+        <el-steps v-if="statusSteps.length > 1" :active="diaForm.status - 1" finish-status="success"
+          simple class="od-steps">
+          <el-step v-for="step in statusSteps" :key="step.key" :title="step.label"></el-step>
+        </el-steps>
+
+        <!-- 两栏主体 -->
+        <div class="od-grid">
+          <!-- 左栏：商品明细（主） -->
+          <section class="od-col od-col--main">
+            <div class="od-section-label">
+              商品明细
+              <el-tag size="small" type="info" v-if="diaForm.orderDetails">{{ diaForm.orderDetails.length }} 项</el-tag>
+            </div>
+            <div v-if="diaForm.orderDetails && diaForm.orderDetails.length > 0" class="od-items">
+              <div v-for="(item, idx) in diaForm.orderDetails" :key="idx" class="od-item">
+                <el-image v-if="item.image" :src="item.image" class="od-item-img" fit="cover"
+                          :preview-src-list="[item.image]" alt="订单菜品图片"></el-image>
+                <div v-else class="od-item-img od-item-img--ph"><i class="ri-image-line"></i></div>
+                <div class="od-item-body">
+                  <div class="od-item-name">{{ item.name }}</div>
+                  <div class="od-item-meta">
+                    <span v-if="item.dishFlavor" class="od-item-flavor">口味：{{ item.dishFlavor }}</span>
+                    <span class="od-item-qty">x {{ item.number }}</span>
+                  </div>
+                </div>
+                <div class="od-item-amount">¥{{ (Number(item.amount) || 0).toFixed(2) }}</div>
+              </div>
+            </div>
+            <div v-else class="od-empty">暂无菜品明细</div>
+          </section>
+
+          <!-- 右栏：金额 + 信息（辅） -->
+          <aside class="od-col od-col--side">
+            <div class="od-card od-card--amount">
+              <div class="od-card-title">金额汇总</div>
+              <div class="od-amount-row">
+                <span>商品金额</span>
+                <span>¥{{ formatMoney(goodsTotal) }}</span>
+              </div>
+              <div v-if="Number(diaForm.amount) - goodsTotal !== 0" class="od-amount-row">
+                <span>其他费用</span>
+                <span>{{ (Number(diaForm.amount) - goodsTotal) > 0 ? '+' : '-' }}
+                  ¥{{ formatMoney(Math.abs(Number(diaForm.amount) - goodsTotal)) }}</span>
+              </div>
+              <div class="od-amount-total">
+                <span>实付金额</span>
+                <span>¥{{ formatMoney(diaForm.amount) }}</span>
+              </div>
+            </div>
+
+            <div class="od-card">
+              <div class="od-card-title">收货信息</div>
+              <div class="od-kv"><span>收货人</span><span>{{ diaForm.consignee || '-' }}</span></div>
+              <div class="od-kv"><span>联系电话</span><span>{{ diaForm.phone || '-' }}</span></div>
+              <div class="od-kv"><span>收货地址</span><span>{{ diaForm.address || '-' }}</span></div>
+            </div>
+
+            <div class="od-card">
+              <div class="od-card-title">订单信息</div>
+              <div class="od-kv"><span>支付方式</span><span>{{ payMethodText(diaForm.payMethod) }}</span></div>
+              <div class="od-kv"><span>就餐方式</span><span>{{ formatDiningType(diaForm.source) }}</span></div>
+              <div class="od-kv" v-if="diaForm.tableName"><span>桌台</span><span>{{ diaForm.tableName }}</span></div>
+              <div class="od-kv"><span>下单时间</span><span>{{ diaForm.orderTime || '-' }}</span></div>
+              <div class="od-kv" v-if="diaForm.checkoutTime"><span>结账时间</span><span>{{ diaForm.checkoutTime }}</span></div>
+              <div class="od-kv" v-if="diaForm.remark"><span>备注</span><span>{{ diaForm.remark }}</span></div>
+              <!-- 修改点(P0-5)：取消原因回执（独立字段，与顾客端同源，便于店员核对"为什么取消"） -->
+              <div class="od-kv od-kv--top" v-if="diaForm.cancelReason && (diaForm.status === 5 || diaForm.status === 6)">
+                <span>取消原因</span><span>{{ diaForm.cancelReason }}</span>
+              </div>
+              <!-- 修改点(P0-6)：取餐码（店员报码给骑手核销） -->
+              <div class="od-kv" v-if="diaForm.pickupCode">
+                <span>取餐码</span><span class="od-pickup-code">{{ diaForm.pickupCode }}</span>
+              </div>
+              <!-- 修改点：内部备注可编辑，店员可补充运营信息（如"少辣""骑手已联系"） -->
+              <div class="od-kv od-kv--top">
+                <span>内部备注</span>
+                <div class="od-note-field">
+                  <el-input v-model="internalNote" type="textarea" :rows="2" size="small" placeholder="仅后台可见，用于记录运营信息" class="od-note-input"></el-input>
+                  <el-button type="primary" size="small" @click="saveNote" :loading="noteSaving" class="od-note-btn">保存</el-button>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </crud-dialog>
+
+    <!-- 退款弹框 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      title="订单退款"
+      :visible.sync="refundVisible"
+      size="sm"
+      :submit-loading="refundLoading"
+      submit-text="确认退款"
+      @submit="submitRefund"
+      @close="refundVisible = false"
+    >
+      <el-form :model="refundForm" :rules="refundRules" ref="refundFormRef" label-width="80px" size="small" class="refund-form">
+        <el-form-item label="订单号"><span>{{ refundForm.number }}</span></el-form-item>
+        <el-form-item label="订单金额"><span class="des-danger">¥{{ refundForm.orderAmount }}</span></el-form-item>
+        <el-form-item prop="amount" label="退款金额">
+          <el-input-number v-model="refundForm.amount" :max="refundForm.maxAmount" :min="0.01" :step="0.01" :precision="2" controls-position="right"></el-input-number>
+        </el-form-item>
+        <el-form-item label="可退上限"><span class="des-danger">¥{{ refundForm.maxAmount }}</span></el-form-item>
+        <el-form-item prop="reasonType" label="退款原因">
+          <el-select v-model="refundForm.reasonType" placeholder="请选择退款原因">
+            <el-option label="口味问题" value="口味问题"></el-option>
+            <el-option label="配送超时" value="配送超时"></el-option>
+            <el-option label="商品不符" value="商品不符"></el-option>
+            <el-option label="用户取消" value="用户取消"></el-option>
+            <el-option label="其他原因" value="其他原因"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="refundForm.reasonType === '其他原因'" prop="reasonDetail" label="详细说明">
+          <el-input v-model="refundForm.reasonDetail" type="textarea" :rows="2" placeholder="请填写退款原因"></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- 店长派单弹窗：选择骑手 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      title="订单派单"
+      :visible.sync="dispatchVisible"
+      size="sm"
+      :submit-loading="dispatchLoading"
+      submit-text="确认派单"
+      @submit="submitDispatch"
+      @close="dispatchVisible = false"
+    >
+      <el-form label-width="80px" size="small">
+        <el-form-item label="订单号">
+          <span>{{ dispatchForm.number }}</span>
+        </el-form-item>
+        <el-form-item label="收货地址">
+          <span>{{ dispatchForm.address }}</span>
+        </el-form-item>
+        <el-form-item label="选择骑手">
+          <el-select v-model="dispatchForm.riderId" placeholder="请选择骑手" style="width:100%;">
+            <el-option
+              v-for="r in riderOptions"
+              :key="r.id"
+              :label="r.name + '（' + riderStatusText(r.status) + '）'"
+              :value="r.id"
+              :disabled="r.status === 0"
+            ></el-option>
+          </el-select>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- 自提核销弹窗：输入顾客取餐码 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      title="自提核销"
+      :visible.sync="verifyVisible"
+      size="sm"
+      :submit-loading="verifyLoading"
+      submit-text="确认核销"
+      @submit="submitVerify"
+      @close="verifyVisible = false"
+    >
+      <el-form :model="verifyForm" :rules="verifyRules" ref="verifyFormRef" label-width="80px" size="small">
+        <el-form-item label="订单号"><span>{{ verifyForm.number }}</span></el-form-item>
+        <el-form-item prop="pickupCode" label="取餐码">
+          <el-input v-model="verifyForm.pickupCode" placeholder="请输入顾客出示的取餐码" maxlength="10"></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- 商家取消弹窗：填写取消原因（已支付订单将按此原因自动退款） -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      title="取消订单"
+      :visible.sync="cancelDiaVisible"
+      size="sm"
+      :submit-loading="cancelDiaLoading"
+      submit-text="确认取消"
+      @submit="submitCancelOrder"
+      @close="cancelDiaVisible = false"
+    >
+      <el-form :model="cancelDiaForm" :rules="cancelDiaRules" ref="cancelDiaFormRef" label-width="80px" size="small">
+        <el-form-item label="订单号"><span>{{ cancelDiaForm.number }}</span></el-form-item>
+        <el-form-item prop="reason" label="取消原因">
+          <el-input v-model="cancelDiaForm.reason" type="textarea" :rows="2" placeholder="请填写取消原因，将展示给顾客"></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../js/print-util.js?v=20260921"></script>
+  <script src="../../api/order.js?v=20260926"></script>
+  <script src="../../api/delivery.js?v=20260924"></script>
+  <script src="../../api/printer.js?v=20260921"></script>
+  <script src="../../api/payment.js?v=20260926"></script>
+  <script src="../../api/export.js?v=20260926"></script>
+  <script src="../../api/meta.js?v=20260926"></script>
+  <script>
+    // 订单状态兜底常量（与后端 com.reggie.enums.OrderStatus 严格一致，1 基）
+    // 仅在 /api/meta/enums 不可用时使用，保证任何情况下显示都不会出错
+    var ORDER_STATUS_FALLBACK = {
+      '1': '待付款', '2': '待接单', '3': '配送中',
+      '4': '已完成', '5': '已取消', '6': '已退款'
+    }
+
+    new Vue({
+      el: '#order-app',
+      data: function() {
+        return {
+          loading: false,
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          tableData: [],
+          // 统计数据（修改点：改走 /order/statistics，含分状态计数）
+          stats: { todayRevenue: 0, pendingOrders: 0, deliveringOrders: 0, totalOrders: 0 },
+          activeFilter: '',
+          // 搜索配置
+          searchConfig: [
+            { type: 'input', field: 'number', placeholder: '请输入订单号', width: '200px' },
+            { type: 'date', field: 'orderTime', placeholder: '选择日期', width: '360px',
+              beginField: 'beginTime', endField: 'endTime' }
+          ],
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'exportExcel', text: '导出Excel', type: 'success', icon: 'ri-download-line', disabled: true },
+            { key: 'exportPdf', text: '导出PDF', type: 'danger', icon: 'ri-file-text-line', disabled: true }
+          ],
+          // 表格列配置
+          columns: [
+            { prop: 'number', label: '订单号', minWidth: 130 },
+            { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
+            { prop: 'userName', label: '用户', width: 80, align: 'center' },
+            { prop: 'phone', label: '手机号', width: 110, align: 'center' },
+            { prop: 'amount', label: '金额', slot: true, width: 110, type: 'money' },
+            { prop: 'payMethod', label: '支付', width: 70, align: 'center', slot: true },
+            { prop: 'source', label: '就餐', width: 70, align: 'center', slot: true },
+            { prop: 'tableName', label: '桌台', width: 60, align: 'center' },
+            { prop: 'orderTime', label: '下单时间', width: 160, align: 'center' },
+          ],
+          // 缓存搜索参数
+          lastSearch: {},
+          // 勾选行 ID（跨翻页保留）；为空时导出按当前筛选
+          selectedIds: [],
+          // 修改点：枚举字典（订单状态等），由后端 /api/meta/enums 下发；
+          // 下方 ORDER_STATUS_FALLBACK 为兜底常量，接口失败时仍能正确显示
+          enums: {},
+          // 弹窗数据
+          dialogVisible: false,
+          diaForm: {},
+          refundVisible: false,
+          refundLoading: false,
+          refundForm: { id: null, number: '', amount: 0, maxAmount: 0, reasonType: '', reasonDetail: '' },
+          // 店长派单
+          dispatchVisible: false,
+          dispatchLoading: false,
+          dispatchForm: { orderId: null, number: '', address: '', riderId: null },
+          riderOptions: [],
+          // 修改点：内部备注（仅后台可见，用于店员记录运营信息）
+          internalNote: '',
+          noteSaving: false,
+          // 自提核销
+          verifyVisible: false,
+          verifyLoading: false,
+          verifyForm: { id: null, number: '', pickupCode: '' },
+          // 商家取消（走状态机，已支付自动退款）
+          cancelDiaVisible: false,
+          cancelDiaLoading: false,
+          cancelDiaForm: { id: null, number: '', reason: '' }
+        }
+      },
+      computed: {
+        statsCards: function() {
+          const self = this
+          return [
+            { key: 'revenue', icon: 'ri-money-cny-circle-line', label: '今日营业额 (元)', value: self.formatMoney(self.stats.todayRevenue), color: 'success' },
+            { key: 'pending', icon: 'ri-time-line', label: '待接单', value: self.stats.pendingOrders, color: 'warning', clickable: true, active: self.activeFilter === 'pending' },
+            { key: 'delivering', icon: 'ri-truck-line', label: '配送中', value: self.stats.deliveringOrders, color: 'primary', clickable: true, active: self.activeFilter === 'delivering' },
+            { key: 'all', icon: 'ri-bar-chart-2-line', label: '总订单数', value: self.stats.totalOrders, color: 'danger', clickable: true, active: self.activeFilter === 'all' }
+          ]
+        },
+        // 修改点：订单状态步骤条数据（待付款→待接单→配送中→已完成；取消/退款为终态）
+        statusSteps: function() {
+          const s = this.diaForm && this.diaForm.status
+          if (s === 5) return [{ label: '已取消' }]
+          if (s === 6) return [{ label: '已退款' }]
+          // 堂食单无配送环节：第3步为"后厨制作"；外卖单为"配送中"
+          const eatIn = this.diaForm && this.diaForm.source === 'EAT_IN'
+          const flow = [
+            { key: 1, label: '待付款' },
+            { key: 2, label: '待接单' },
+            { key: 3, label: eatIn ? '后厨制作' : '配送中' },
+            { key: 4, label: '已完成' }
+          ]
+          return flow.map(function(step) {
+            return { key: step.key, label: step.label, done: s > step.key, current: s === step.key, pending: s < step.key }
+          })
+        },
+        // 修改点：商品明细金额合计（用于金额明细分区展示）
+        goodsTotal: function() {
+          const list = this.diaForm && this.diaForm.orderDetails
+          if (!list || !list.length) return 0
+          return list.reduce(function(sum, it) { return sum + (Number(it.amount) || 0) }, 0)
+        },
+        // 退款弹窗校验规则（computed 使 validator 闭包可读取动态可退上限；错误 inline 显示）
+        refundRules: function() {
+          var self = this
+          return {
+            amount: [
+              { required: true, validator: function(rule, value, cb) {
+                  var v = parseFloat(value)
+                  if (isNaN(v) || v <= 0) return cb(new Error('请输入有效的退款金额'))
+                  if (v > parseFloat(self.refundForm.maxAmount)) return cb(new Error('退款金额不能超过可退上限 ¥' + self.refundForm.maxAmount))
+                  cb()
+                }, trigger: 'change' }
+            ],
+            reasonType: [
+              { required: true, message: '请选择退款原因', trigger: 'change' }
+            ],
+            reasonDetail: [
+              { required: true, message: '请填写详细退款原因', trigger: 'blur' }
+            ]
+          }
+        },
+        verifyRules: function() {
+          return {
+            pickupCode: [
+              { required: true, message: '请输入取餐码', trigger: 'blur' }
+            ]
+          }
+        },
+        cancelDiaRules: function() {
+          return {
+            reason: [
+              { required: true, message: '请填写取消原因', trigger: 'blur' }
+            ]
+          }
+        }
+      },
+      created: function() {
+        // 修改点：支持 URL 预筛（工作台待办跳转，如 ?status=2 待接单 / ?status=3 配送中 / ?status=4 已完成）
+        const statusParam = new URLSearchParams(window.location.search).get('status')
+        if (statusParam) {
+          this.activeFilter = statusParam === '2' ? 'pending' : (statusParam === '3' ? 'delivering' : '')
+          this.lastSearch = { status: Number(statusParam) }
+        }
+        this.init()
+        this.loadEnums()
+      },
+      methods: {
+        // 修改点：拉取后端枚举字典（订单状态唯一真源），失败时静默使用本地兜底常量
+        loadEnums: function() {
+          const self = this
+          metaEnums().then(function(res) {
+            if (res && String(res.code) === '1' && res.data) {
+              const d = res.data
+              self.enums = {
+                orderStatusMap: toEnumMap(d.orderStatus),
+                payMethodMap: toEnumMap(d.payMethod),
+                orderSourceMap: toEnumMap(d.orderSource)
+              }
+            }
+          }).catch(function(e) {
+            // 字典加载失败不影响主流程：getOrderType 会回退到 ORDER_STATUS_FALLBACK
+            console.warn('枚举字典加载失败，使用本地兜底:', e)
+          })
+        },
+        // 修改点：F9 性能 — 列表与全局统计分离，reloadStats=true 才重算（分页传 false）
+        async init(reloadStats = true) {
+          this.loading = true
+          const self = this
+          // 修改点：合并 lastSearch 搜索条件并下发分页参数（原仅用 activeFilter，导致订单号/日期搜索与翻页全部失效）
+          const params = Object.assign({}, self.lastSearch, { page: self.page, pageSize: self.pageSize })
+          if (self.activeFilter === 'pending') params.status = 2
+          const requests = [getOrderDetailPage(params)]
+          if (reloadStats) { requests.push(self.loadOrderStats()) }
+          // 修改点：try/finally 保证 loading 必复位（接口异常时表格退出骨架屏并展示空态，避免永久转圈）
+          try {
+            const results = await Promise.all(requests)
+            const orderRes = results[0]
+            if (orderRes && String(orderRes.code) === '1') { var orderPage = orderRes.data || {}; self.tableData = orderPage.records || []; self.counts = orderPage.total }
+            if (reloadStats) {
+              const statsRes = results[1]
+              if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
+            }
+          } catch (err) {
+            console.warn('加载订单列表失败:', err)
+          } finally {
+            self.loading = false
+          }
+        },
+        // 修改点：统计改走后端 /order/statistics 单接口（含待接单/配送中分状态计数），
+        // 不再用 dashboard 聚合（原 pendingOrders 为"待付款+待接单"混合，无法支撑状态筛选卡片）
+        async loadOrderStats() {
+          try {
+            const res = await getOrderStatistics()
+            if (res && String(res.code) === '1' && res.data) {
+              const d = res.data
+              return { code: 1, data: {
+                todayRevenue: d.todayRevenue || 0,
+                pendingOrders: d.pendingOrders || 0,
+                deliveringOrders: d.deliveringOrders || 0,
+                totalOrders: d.totalOrders || 0
+              }}
+            }
+          } catch (err) { console.warn('加载订单统计数据失败:', err) }
+          return { code: 0 }
+        },
+        // stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
+        onCardClick: function(payload) {
+          // 修改点：状态卡点击即按状态筛选（待接单=2 / 配送中=3 / 全部清空），一屏直达
+          if (payload.activeKey === 'pending') this.lastSearch = { status: 2 }
+          else if (payload.activeKey === 'delivering') this.lastSearch = { status: 3 }
+          else this.lastSearch = {}
+          this.clearSelection()
+          this.page = 1
+          this.init()
+        },
+        // 勾选行变化（跨翻页保留）：同步导出按钮禁用态（必须勾选才能导出）
+        onSelectionChange: function(payload) {
+          this.selectedIds = (payload && payload.ids) ? payload.ids : []
+          var noSel = this.selectedIds.length === 0
+          this.actionConfig[0].disabled = noSel
+          this.actionConfig[1].disabled = noSel
+        },
+        clearSelection: function() {
+          this.selectedIds = []
+          if (this.$refs.crudTable && this.$refs.crudTable.clearSelection) this.$refs.crudTable.clearSelection()
+        },
+        // table-bar 回调
+        onSearch: function(searchParams) {
+          this.activeFilter = ''
+          this.lastSearch = searchParams
+          this.clearSelection()
+          this.page = 1; this.init()
+        },
+        onReset: function() {
+          this.activeFilter = ''
+          this.lastSearch = {}
+          this.clearSelection()
+          this.page = 1; this.init()
+        },
+        onAction: function(payload) {
+          if (payload.key === 'exportExcel') this.exportOrders('excel')
+          else if (payload.key === 'exportPdf') this.exportOrders('pdf')
+        },
+        onPageChange: function(payload) { this.page = payload.page; this.init(false) },
+        onSizeChange: function(payload) { this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload; this.page = 1; this.init(false) },
+        // 状态工具方法
+        // 修改点（重要 Bug 修复）：原映射为 0 基 {0:待付款, 1:待接单 ...}，
+        // 但后端 Orders/OrderStatus 定义为 1 基（1=待付款, 2=待接单, 3=配送中, 4=已完成, 5=已取消, 6=已退款），
+        // 导致 status=1（待付款）被显示成"待接单"、status=2（待接单）显示成"待配送"，两个状态显示错误。
+        // 现改为优先取后端枚举字典，失败时用下方 1 基兜底常量。
+        getOrderType: function(row) {
+          // 堂食单 status=3 为后厨制作环节，全局字典的"配送中"不适用
+          if (row.status === 3 && row.source === 'EAT_IN') return '制作中'
+          const dict = this.enums.orderStatusMap || {}
+          const val = dict[String(row.status)]
+          if (val) return val
+          return ORDER_STATUS_FALLBACK[String(row.status)] || '未知'
+        },
+        getOrderTagType: function(row) {
+          const map = { 1: 'info', 2: 'warning', 3: 'warning', 4: 'success', 5: 'info', 6: 'info' }
+          return map[row.status] || 'info'
+        },
+        formatDiningType: function(val) {
+          if (!val) return '-'
+          // 与 /api/meta/enums orderSource 字典一致；OUTSIDE/DELIVERY/TAKEOUT 均为外卖配送
+          // （OUTSIDE 为瑞吉原版下单写入值，DELIVERY 为加列前老数据默认值）
+          const map = { DELIVERY: '外卖配送', TAKEOUT: '外卖配送', OUTSIDE: '外卖配送', EAT_IN: '堂食扫码', QUEUE: '排队', RESERVATION: '预订' }
+          return map[val] || val
+        },
+        // 支付方式文案（与 /api/meta/enums payMethod 字典一致：1现金/2微信/3支付宝/4银行卡/5储值/6货到付款）
+        payMethodText: function(val) {
+          if (val == null || val === '') return '-'
+          const map = { 1: '现金', 2: '微信支付', 3: '支付宝', 4: '银行卡', 5: '会员储值', 6: '货到付款' }
+          return map[val] || '-'
+        },
+        // 手动打印小票：后端渲染文本并落一条打印记录，返回文本后由浏览器调本地打印机
+        printReceipt: function(row) {
+          printerPrint(row.id, 'BILL').then(function(res) {
+            if (res && String(res.code) === '1' && res.data) {
+              window.PrintUtil.printText(res.data, '小票 ' + (row.number || row.id))
+            } else {
+              window.ReggieUI.error((res && res.msg) || '打印失败')
+            }
+          }).catch(function() {})
+        },
+        goDetail: function(row) {
+          this.dialogVisible = true
+          // 修改点：用当前行数据预填充 diaForm（表格已有完整字段），避免弹窗从空内容膨胀导致抖动
+          this.diaForm = { ...row }
+          // 修改点：加载内部备注（remark 字段已含客户备注，内部备注用 internalRemark 字段）
+          this.internalNote = row.internalRemark || ''
+          this.noteSaving = false
+          // 异步获取完整订单详情（含 orderDetails 菜品明细），静默更新不触发额外重排
+          const self = this
+          queryOrderDetailById(row.id).then(function(res) {
+            if (res && res.code === 1 && res.data) {
+              self.diaForm = res.data
+              self.internalNote = res.data.internalRemark || ''
+            }
+          }).catch(function(err) { console.warn('[order] 获取订单详情失败:', err) })
+        },
+        /* 修改点：保存内部备注（仅后台可见） */
+        saveNote: function() {
+          if (this.noteSaving) return
+          if (!this.diaForm || !this.diaForm.id) return
+          var self = this
+          self.noteSaving = true
+          updateInternalRemark(self.diaForm.id, self.internalNote || '').then(function(res) {
+            if (res && res.code === 1) {
+              ReggieUI.success('备注已保存')
+              // 同步更新 diaForm 避免再次打开弹窗时数据过期
+              self.diaForm.internalRemark = self.internalNote
+            } else {
+              ReggieUI.error((res && res.msg) || '保存失败')
+            }
+          }).catch(function(err) {
+            ReggieUI.error('保存失败')
+            console.warn('[order] 保存内部备注失败:', err)
+          }).finally(function() { self.noteSaving = false })
+        },
+        // 打开商家取消弹窗（走 /order/cancel 状态机：回库存/退款/发取消事件）
+        cancelOrder: function(row) {
+          this.cancelDiaForm = { id: row.id, number: row.number, reason: '' }
+          this.cancelDiaVisible = true
+          this.$nextTick(function() {
+            if (this.$refs.cancelDiaFormRef) this.$refs.cancelDiaFormRef.clearValidate()
+          })
+        },
+        submitCancelOrder: function() {
+          const self = this
+          this.$refs.cancelDiaFormRef.validate(function(valid) {
+            if (!valid) return
+            self.cancelDiaLoading = true
+            cancelOrderApi({ id: self.cancelDiaForm.id, reason: self.cancelDiaForm.reason })
+              .then(function(res) {
+                if (res && res.code === 1) {
+                  ReggieUI.success('订单已取消')
+                  self.cancelDiaVisible = false
+                  self.init()
+                } else { ReggieUI.error((res && res.msg) || '取消失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
+              .finally(function() { self.cancelDiaLoading = false })
+          })
+        },
+        // 堂食单判定：以订单来源 EAT_IN 为准（桌台扫码/开台），与桌台结账/释放逻辑同口径
+        isEatInOrder: function(row) {
+          return !!row && row.source === 'EAT_IN'
+        },
+        // 自提单判定：source=SELF_PICKUP，与自提下单口径一致
+        isSelfPickupOrder: function(row) {
+          return !!row && row.source === 'SELF_PICKUP'
+        },
+        // 商家拒单：待接单单，confirm 后走 /order/reject（自动退款/回库存）
+        rejectOrderRow: function(row) {
+          const self = this
+          ReggieUI.confirm('确认拒单？已支付订单将自动全额退款，库存与优惠将回退。', '拒单确认',
+            { confirmButtonText: '确定拒单', cancelButtonText: '再想想', type: 'warning' })
+            .then(function() {
+              rejectOrderApi({ id: row.id }).then(function(res) {
+                if (res && res.code === 1) { ReggieUI.success('已拒单'); self.init() }
+                else { ReggieUI.error((res && res.msg) || '拒单失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
+            })
+        },
+        // 自提核销弹窗
+        openVerify: function(row) {
+          this.verifyForm = { id: row.id, number: row.number, pickupCode: '' }
+          this.verifyVisible = true
+          this.$nextTick(function() {
+            if (this.$refs.verifyFormRef) this.$refs.verifyFormRef.clearValidate()
+          })
+        },
+        submitVerify: function() {
+          const self = this
+          this.$refs.verifyFormRef.validate(function(valid) {
+            if (!valid) return
+            self.verifyLoading = true
+            verifySelfPickupApi({ id: self.verifyForm.id, pickupCode: self.verifyForm.pickupCode })
+              .then(function(res) {
+                if (res && res.code === 1) {
+                  ReggieUI.success('核销成功')
+                  self.verifyVisible = false
+                  self.init()
+                } else { ReggieUI.error((res && res.msg) || '核销失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
+              .finally(function() { self.verifyLoading = false })
+          })
+        },
+        // 状态推进（2→3→4），文案随堂食/外卖切换
+        advanceStatus: function(row) {
+          const self = this
+          const eatIn = this.isEatInOrder(row)
+          const selfPickup = this.isSelfPickupOrder(row)
+          const tip = row.status === 2
+            ? (eatIn ? '确认后厨已接单并开始制作？' : (selfPickup ? '确认接单并开始制作？' : '确认接单？'))
+            : (eatIn ? '确认上菜完成？完成后桌台将自动释放为空闲。' : '确认订单已送达并完成？')
+          const okMsg = row.status === 2
+            ? (eatIn ? '已开始制作' : (selfPickup ? '已接单制作' : '已接单'))
+            : (eatIn ? '已上菜完成，桌台已释放' : '订单已完成')
+          ReggieUI.confirm(tip, '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+            .then(function() {
+              // 走状态机：2→3 confirm，3→4 complete（不再用通用 PUT /order 绕过联动）
+              const apiCall = row.status === 2
+                ? confirmOrderApi({ id: row.id })
+                : completeOrderApi({ id: row.id })
+              apiCall.then(function(res) {
+                if (res.code === 1) { ReggieUI.success(okMsg); self.init() }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
+            })
+        },
+        // ---- 店长派单 ----
+        riderStatusText: function(status) {
+          // 0离线 1空闲 2配送中（与 Rider 常量一致）
+          if (status === 1) return '空闲'
+          if (status === 2) return '配送中'
+          return '离线'
+        },
+        openDispatch: async function(row) {
+          this.dispatchForm = { orderId: row.id, number: row.number, address: row.address, riderId: null }
+          this.riderOptions = []
+          this.dispatchVisible = true
+          try {
+            const res = await getRiderListApi()
+            if (res.code === 1) this.riderOptions = res.data || []
+          } catch (e) {
+            console.warn('[order] 加载骑手列表失败:', e)
+          }
+        },
+        submitDispatch: async function() {
+          const self = this
+          if (self.dispatchLoading) return
+          if (!self.dispatchForm.riderId) { ReggieUI.warning('请选择骑手'); return }
+          self.dispatchLoading = true
+          try {
+            const res = await dispatchOrderApi({ orderId: self.dispatchForm.orderId, riderId: self.dispatchForm.riderId })
+            if (res.code === 1) {
+              ReggieUI.success('派单成功')
+              self.dispatchVisible = false
+              self.init(false)
+            }
+          } finally {
+            self.dispatchLoading = false
+          }
+        },
+        openRefund: function(row) {
+          this.refundForm = { id: row.id, number: row.number, orderAmount: row.amount, amount: row.amount, maxAmount: row.amount, reasonType: '', reasonDetail: '' }
+          this.refundVisible = true
+        },
+        async submitRefund() {
+          const self = this
+          // 修改点：防重保护（原无守卫，快速双击可并发退款）
+          if (self.refundLoading) return
+          // 表单校验：错误 inline 显示在字段下方（el-form rules + validate），替代 toast 逐个拦截
+          try {
+            await self.$refs.refundFormRef.validate()
+          } catch (e) {
+            return
+          }
+          let reason = self.refundForm.reasonType
+          if (reason === '其他原因') reason = self.refundForm.reasonDetail
+          // 修改点：退款为资金敏感操作，ReggieUI.confirm 二次确认
+          try {
+            await ReggieUI.confirm('确认向用户退款 ¥' + self.refundForm.amount + '？退款后不可撤销。', '订单退款确认', { confirmButtonText: '确认退款', cancelButtonText: '再想想', type: 'warning' })
+          } catch (canceled) { return }
+          self.refundLoading = true
+          try {
+            var paymentRes = await paymentPage({ page: 1, pageSize: 1, orderId: self.refundForm.id })
+            let paymentOrderId = null
+            if (paymentRes && paymentRes.code === 1 && paymentRes.data && paymentRes.data.records && paymentRes.data.records.length > 0) {
+              paymentOrderId = paymentRes.data.records[0].id
+            }
+            if (!paymentOrderId) { ReggieUI.error('未找到对应支付订单，无法退款'); self.refundLoading = false; return }
+            const res = await paymentRefund({ paymentOrderId: paymentOrderId, amount: parseFloat(self.refundForm.amount), reason: reason })
+            if (res && res.code === 1) { ReggieUI.success('退款成功'); self.refundVisible = false; self.init() }
+            else { ReggieUI.error(res ? res.msg : '退款失败') }
+          } catch (err) { ReggieUI.error('退款请求失败：' + err) }
+          self.refundLoading = false
+        },
+        exportOrders: async function(format) {
+          // 仅导出勾选行（跨翻页保留；未勾选时导出按钮已禁用）
+          if (this.selectedIds.length === 0) {
+            ReggieUI.warning('请先勾选要导出的订单')
+            return
+          }
+          const params = { ids: this.selectedIds.join(',') }
+          try {
+            const ext = format === 'excel' ? 'xlsx' : 'pdf'
+            const apiCall = format === 'excel' ? exportApi.exportOrdersExcel(params) : exportApi.exportOrdersPdf(params)
+            await exportApi.downloadFile(apiCall, '订单数据.' + ext)
+            ReggieUI.success('已导出选中的 ' + this.selectedIds.length + ' 条订单')
+          } catch (err) { ReggieUI.error('导出失败：' + (err.message || err)) }
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,511 @@
+/* ============================================================
+   C 端在线客服 / 投诉（customer-service.html）
+   全屏：头部固定 + 消息区弹性滚动 + 底部输入栏；投诉表单独立滚动
+   ============================================================ */
+#csPage {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+#csPage .divHead {
+  flex: none;
+}
+.cs-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.chat-wrap,
+.complaint-wrap {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- 顶部提示 ---------- */
+.chat-tip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6rem;
+  padding: 8rem 12rem;
+  font-size: 12rem;
+  line-height: 17rem;
+  color: var(--color-text-secondary);
+  background: var(--color-primary-tint-md);
+}
+.chat-tip i {
+  font-size: 16rem;
+  color: var(--color-primary);
+}
+
+/* ---------- 常见问题 ---------- */
+.quick-asks {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rem;
+  padding: 12rem;
+}
+.quick-ask {
+  padding: 7rem 14rem;
+  font-size: 13rem;
+  color: var(--color-text-primary);
+  background: var(--bg-card);
+  border: 1px solid var(--mask-soft);
+  border-radius: 18rem;
+}
+.quick-ask:active {
+  background: var(--bg-page);
+}
+
+/* ---------- 消息列表 ---------- */
+.msg-list {
+  flex: 1;
+  min-height: 0;
+  padding: 12rem;
+  overflow-y: auto;
+  background: var(--bg-page);
+  box-sizing: border-box;
+}
+.chat-loading {
+  padding: 20rem 0;
+  font-size: 13rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+.chat-loading .retry-link {
+  margin-left: 6rem;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.msg-item {
+  margin-bottom: 14rem;
+}
+/* 聊天时间分隔：居中灰色小字，仅在与上条间隔≥5分钟或跨天时出现 */
+.msg-time-divider {
+  margin: 4rem 0 10rem;
+  font-size: 12rem;
+  line-height: 1;
+  color: var(--color-text-hint);
+  text-align: center;
+}
+.msg-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 14rem;
+}
+.msg-item > .msg-row:last-child {
+  margin-bottom: 0;
+}
+.msg-row.is-system {
+  justify-content: center;
+}
+/* 修改点(2026-09-26)：用户消息此前与客服同侧（左），按聊天惯例右对齐 */
+.msg-row:not(.is-agent):not(.is-system) {
+  justify-content: flex-end;
+}
+.sys-msg {
+  padding: 3rem 12rem;
+  font-size: 12rem;
+  color: var(--color-text-secondary);
+  background: var(--mask-light);
+  border-radius: 6rem;
+}
+.avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36rem;
+  height: 36rem;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+.agent-avatar {
+  margin-right: 8rem;
+  font-size: 20rem;
+  color: var(--color-text-white);
+  background: var(--color-primary);
+}
+.user-avatar {
+  margin-left: 8rem;
+  font-size: 20rem;
+  color: var(--color-text-hint);
+  background: var(--bg-avatar);
+}
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.bubble {
+  max-width: 70%;
+  padding: 10rem 12rem;
+  font-size: 15rem;
+  line-height: 21rem;
+  word-break: break-word;
+  box-sizing: border-box;
+}
+.agent-bubble {
+  color: var(--color-text-primary);
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  border-top-left-radius: 4rem;
+}
+.user-bubble {
+  color: var(--color-text-primary);
+  background: var(--color-primary);
+  border-radius: var(--radius-md);
+  border-top-right-radius: 4rem;
+}
+.bubble-img {
+  display: block;
+  max-width: 160rem;
+  max-height: 200rem;
+  border-radius: var(--radius-md);
+}
+.session-end {
+  padding: 8rem;
+  font-size: 12rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+.session-end .reconsult-btn {
+  display: inline-block;
+  margin-top: 12rem;
+  padding: 10rem 28rem;
+  font-size: 14rem;
+  color: var(--color-text-primary);
+  background: var(--color-primary);
+  border-radius: 22rem;
+}
+.session-end .reconsult-btn:active {
+  opacity: 0.85;
+}
+
+/* ---------- 底部输入栏 ---------- */
+.input-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8rem;
+  padding: 8rem 12rem;
+  /* 贴底输入栏叠加 Home Indicator 安全区，避免被横条压住 */
+  padding-bottom: calc(8rem + constant(safe-area-inset-bottom));
+  padding-bottom: calc(8rem + env(safe-area-inset-bottom, 0px));
+  background: var(--bg-card);
+  border-top: 1px solid var(--mask-light);
+}
+.input-icon {
+  flex: none;
+  font-size: 26rem;
+  color: var(--color-text-secondary);
+}
+.text-input {
+  flex: 1;
+  min-width: 0;
+  height: 38rem;
+  padding: 0 14rem;
+  font-size: 15rem;
+  background: var(--bg-page);
+  border: none;
+  border-radius: 19rem;
+  outline: none;
+  box-sizing: border-box;
+}
+.send-btn {
+  flex: none;
+  height: 36rem;
+  padding: 0 18rem;
+  font-size: 15rem;
+  color: var(--color-text-hint);
+  background: var(--bg-avatar);
+  border: none;
+  border-radius: 18rem;
+}
+.send-btn.active {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  background: var(--color-primary);
+}
+
+/* ============================================================
+   投诉表单
+   ============================================================ */
+.complaint-wrap {
+  overflow-y: auto;
+  padding-bottom: 20rem;
+  background: var(--bg-page);
+}
+.block {
+  margin: 10rem 12rem 0;
+  padding: 12rem;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+}
+.block-label {
+  margin-bottom: 10rem;
+  font-size: 14rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.type-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rem;
+}
+.type-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rem;
+  width: calc((100% - 24rem) / 3);
+  padding: 12rem 0;
+  font-size: 12rem;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--mask-soft);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+}
+.type-cell i {
+  font-size: 24rem;
+}
+.type-cell.on {
+  color: var(--color-text-primary);
+  background: var(--color-primary-tint);
+  border-color: var(--color-primary);
+}
+.type-cell.on i {
+  color: var(--color-primary);
+}
+.order-pick {
+  display: flex;
+  align-items: center;
+  gap: 8rem;
+  font-size: 14rem;
+}
+.order-pick > span:first-child {
+  flex: 1;
+}
+.order-pick .ph {
+  color: var(--color-text-hint);
+}
+.order-pick i {
+  font-size: 18rem;
+  color: var(--color-text-hint);
+}
+.cs-input {
+  width: 100%;
+  height: 40rem;
+  padding: 0 12rem;
+  font-size: 14rem;
+  background: var(--bg-page);
+  border: none;
+  border-radius: var(--radius-md);
+  outline: none;
+  box-sizing: border-box;
+}
+.cs-textarea {
+  width: 100%;
+  height: 120rem;
+  padding: 10rem 12rem;
+  font-size: 14rem;
+  background: var(--bg-page);
+  border: none;
+  border-radius: var(--radius-md);
+  outline: none;
+  resize: none;
+  box-sizing: border-box;
+}
+.char-count {
+  margin-top: 4rem;
+  font-size: 11rem;
+  color: var(--color-text-hint);
+  text-align: right;
+}
+.submit-complaint {
+  display: block;
+  width: calc(100% - 24rem);
+  height: 46rem;
+  margin: 20rem 12rem 0;
+  font-size: 16rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  background: var(--color-primary);
+  border: none;
+  border-radius: 23rem;
+}
+.submit-complaint:active {
+  opacity: .85;
+}
+.submit-complaint:disabled {
+  opacity: .6;
+}
+.complaint-note {
+  margin-top: 10rem;
+  font-size: 12rem;
+  color: var(--color-text-hint);
+  text-align: center;
+}
+
+/* ---------- 关联订单选择弹层 ---------- */
+.order-pick-popup {
+  display: flex;
+  flex-direction: column;
+  max-height: 60vh;
+  background: var(--bg-card);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+.pop-title {
+  flex: none;
+  padding: 14rem;
+  font-size: 15rem;
+  font-weight: 600;
+  text-align: center;
+  border-bottom: 1px solid var(--mask-light);
+}
+.pop-scroll {
+  overflow-y: auto;
+}
+.pop-order {
+  display: flex;
+  align-items: center;
+  padding: 14rem;
+  border-bottom: var(--hairline);
+}
+.pop-order-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4rem;
+}
+.pop-order-no {
+  font-size: 14rem;
+  color: var(--color-text-primary);
+}
+.pop-order-time {
+  font-size: 12rem;
+  color: var(--color-text-hint);
+}
+.pop-order > i {
+  color: var(--color-text-hint);
+}
+.pop-empty {
+  padding: 30rem 0;
+  font-size: 13rem;
+  color: var(--color-text-hint);
+  text-align: center;
+}
+
+/* ============================================================
+   我的投诉记录 / 满意度评价
+   ============================================================ */
+.complaint-record {
+  /* .block 已提供白卡/圆角/内边距，这里仅收紧在弹层内的外边距 */
+  margin: 10rem;
+}
+.cr-top {
+  display: flex;
+  align-items: center;
+  gap: 8rem;
+  margin-bottom: 8rem;
+}
+.mini-tag {
+  padding: 2rem 10rem;
+  font-size: 12rem;
+  border-radius: 6rem;
+}
+/* 状态色属状态识别功能：待处理橙 / 处理中蓝 / 已处理绿 / 已关闭灰 */
+.mini-tag.st-0 { color: var(--tag-pending); background: var(--tag-pending-bg); }
+.mini-tag.st-1 { color: var(--tag-processing); background: var(--tag-processing-bg); }
+.mini-tag.st-2 { color: var(--tag-done); background: var(--tag-done-bg); }
+.mini-tag.st-3 { color: var(--color-text-hint); background: var(--mask-light); }
+.cr-type {
+  font-size: 12rem;
+  color: var(--color-text-secondary);
+}
+.cr-title {
+  margin-bottom: 6rem;
+}
+.cr-content {
+  font-size: 14rem;
+  line-height: 20rem;
+  color: var(--color-text-primary);
+  word-break: break-word;
+}
+.cr-time {
+  margin-top: 8rem;
+  font-size: 12rem;
+  color: var(--color-text-hint);
+}
+.cr-result {
+  margin-top: 10rem;
+  padding: 10rem;
+  font-size: 13rem;
+  line-height: 19rem;
+  color: var(--color-text-primary);
+  background: var(--bg-page);
+  border-radius: var(--radius-md);
+}
+.cr-result-label {
+  margin-bottom: 4rem;
+  font-size: 12rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+.cr-comp {
+  margin-top: 6rem;
+  font-weight: 600;
+  color: var(--color-price);
+}
+.cr-rated {
+  margin-top: 10rem;
+  font-size: 13rem;
+  color: var(--color-text-secondary);
+}
+.cr-stars {
+  color: var(--color-primary);
+  letter-spacing: 1rem;
+}
+.cr-fb {
+  display: block;
+  margin-top: 4rem;
+  color: var(--color-text-secondary);
+}
+.cr-rate-btn {
+  width: 100%;
+  height: 38rem;
+  margin-top: 10rem;
+  font-size: 14rem;
+  color: var(--color-primary-text);
+  background: var(--color-primary-light);
+  border: none;
+  border-radius: 19rem;
+}
+.cr-rate-btn:active { opacity: .85; }
+
+/* ---------- 满意度评价弹层 ---------- */
+.rate-sheet {
+  padding: 0 16rem 20rem;
+}
+.rate-stars {
+  display: flex;
+  justify-content: center;
+  gap: 14rem;
+  padding: 16rem 0 8rem;
+  font-size: 38rem;
+}
+.rate-stars i {
+  color: var(--color-primary);
+}
+.rate-hint {
+  margin-bottom: 12rem;
+  font-size: 14rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}

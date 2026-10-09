@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商品平台映射 - 瑞吉外卖管理端</title>
+  <!-- 修改点：补入 main.css 统一样式入口（原缺失导致全局样式与响应式断点失效） -->
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260926" />
+</head>
+<body>
+<!-- ====== 商品平台映射管理页 ====== -->
+<!-- 功能：管理菜品与外卖平台的映射关系，支持上/下架同步、营业状态同步，按平台/状态筛选 -->
+<a href="#main-content" class="skip-link">跳转到主内容</a>
+<div class="dashboard-container" id="dish-mapping-app">
+  <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+    <h1 class="sr-only" id="page-title">商品平台映射管理</h1>
+    <!-- 统一布局：统计卡片置顶（支持点击筛选：总数/已上架/已下架按状态过滤） -->
+    <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
+
+    <!-- 搜索 + 工具栏 -->
+    <table-bar
+      :search-items="searchItems"
+      :show-refresh="true"
+      @search="onMappingSearch"
+      @reset="onMappingReset"
+      @refresh="fetchData(false)"
+    >
+      <!-- 默认插槽：页级操作「营业状态同步」，与筛选无关，独立成组 -->
+      <div class="biz-sync">
+        <span class="biz-sync__label">营业状态同步：</span>
+        <el-select v-model="businessPlatform" placeholder="选择平台" size="small" style="width:130px;">
+          <el-option label="美团" value="MEITUAN"></el-option>
+          <el-option label="饿了么" value="ELEME"></el-option>
+          <el-option label="抖音" value="DOUYIN"></el-option>
+          <el-option label="自营" value="SELF"></el-option>
+          <el-option label="其他" value="OTHER"></el-option>
+        </el-select>
+        <el-button size="small" type="success" :loading="bizLoading" @click="syncBusiness(true)">设为营业</el-button>
+        <el-button size="small" :loading="bizLoading" @click="syncBusiness(false)">设为休息</el-button>
+      </div>
+    </table-bar>
+
+    <!-- 映射表格（空态走 crud-table 内置 empty-hint） -->
+    <crud-table
+      :data="tableData"
+      :columns="columns"
+      :page="page"
+      :page-size="pageSize"
+      :total="counts"
+      :loading="loading"
+      :show-actions="true"
+      :actions-width="120"
+      :actions-fixed="true"
+      empty-hint="暂无菜品平台映射，请先在菜品编辑中建立平台映射"
+      @page-change="handlePageChange"
+      @size-change="handleSizeChange"
+    >
+        <template #col-platformType="{ row }">
+          <el-tag size="small">{{ platformTypeText(row.platformType) }}</el-tag>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
+            {{ row.status === 1 ? '上架' : '下架' }}
+          </el-tag>
+        </template>
+        <template #col-price="{ row }">
+          <span class="ds-money">{{ formatPrice(row.price) }}</span>
+        </template>
+        <template #actions="{ row }">
+          <el-button v-if="row.status !== 1" type="text" size="small" class="btn-success" @click="syncDish(row, 'on_shelf')">上架</el-button>
+          <el-button v-if="row.status === 1" type="text" size="small" class="btn-warning" @click="syncDish(row, 'off_shelf')">下架</el-button>
+        </template>
+      </crud-table>
+  </main>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js?v=20260915"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js?v=20260930"></script>
+<script src="../../js/components.js?v=20261002"></script>
+<script src="../../api/platform.js?v=20260926"></script>
+<script>
+  new Vue({
+    el: '#dish-mapping-app',
+    mixins: [window.ReggieListMixin],
+    data() {
+      return {
+        // 修改点：补声明 tableData —— ReggieListMixin 只提供 page/pageSize/counts/loading，
+        // 不含 tableData；此前模板与 statsCards 计算属性直接访问 this.tableData.filter(...)，
+        // 首次渲染时为 undefined 触发 TypeError，导致整页渲染失败（白屏）
+        tableData: [],
+        // 修改点：当前激活的统计卡片 key（'' 全部 / '1' 已上架 / '0' 已下架），点击卡片按状态筛选
+        activeFilter: '',
+        // 修改点：菜品平台映射统计（总数/已上架/已下架/覆盖平台数），由 /admin/platform/mapping/stats 加载
+        stats: {},
+        filters: { platformType: '', dishId: '' },
+        // table-bar 筛选项：平台下拉（改选即查）+ 菜品ID（回车/点放大镜查询）
+        searchItems: [
+          { type: 'select', field: 'platformType', placeholder: '全部平台', width: 140,
+            options: [
+              { label: '美团', value: 'MEITUAN' },
+              { label: '饿了么', value: 'ELEME' },
+              { label: '抖音', value: 'DOUYIN' },
+              { label: '自营', value: 'SELF' },
+              { label: '其他', value: 'OTHER' }
+            ] },
+          { type: 'input', field: 'dishId', label: '菜品ID', placeholder: '本系统菜品ID', width: 160 }
+        ],
+        columns: [
+          { prop: 'platformType', label: '平台', width: 100, align: 'center', slot: true },
+          { prop: 'dishId', label: '菜品ID', width: 100, align: 'center' },
+          { prop: 'platformDishId', label: '平台菜品ID', minWidth: 160, align: 'center' },
+          { prop: 'platformShopId', label: '平台门店ID', minWidth: 140, align: 'center' },
+          { prop: 'price', label: '平台价', width: 110, align: 'center', type: 'money', slot: true },
+          { prop: 'status', label: '状态', width: 80, align: 'center', slot: true }
+        ],
+        businessPlatform: 'MEITUAN',
+        bizLoading: false
+      }
+    },
+    created() {
+      this.fetchData()
+    },
+    computed: {
+      // 修改点：4 张可点击统计卡片（总数/已上架/已下架/覆盖平台），点击按状态/维度筛选数据
+      statsCards() {
+        var s = this.stats || {}
+        return [
+          { key: '', icon: 'ri-shopping-cart-2-line', label: '映射总数', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
+          { key: '1', icon: 'ri-checkbox-circle-line', label: '已上架', value: s.onlineCount || 0, color: 'success', clickable: true, active: this.activeFilter === '1' },
+          { key: '0', icon: 'ri-close-circle-line', label: '已下架', value: s.offlineCount || 0, color: 'info', clickable: true, active: this.activeFilter === '0' },
+          { key: 'platforms', icon: 'ri-building-line', label: '覆盖平台', value: s.platformCount || 0, color: 'warning' }
+        ]
+      }
+    },
+    methods: {
+      /* ── 数据加载 ── */
+      async fetchData(reloadStats) {
+        if (reloadStats === undefined) { reloadStats = true }
+        this.loading = true
+        // 状态筛选：统计卡片 activeFilter（'' 全部 / '1' 已上架 / '0' 已下架）
+        var status = this.activeFilter === '' ? undefined : Number(this.activeFilter)
+        var params = { page: this.page, pageSize: this.pageSize }
+        if (this.filters.platformType) params.platformType = this.filters.platformType
+        if (this.filters.dishId) params.dishId = this.filters.dishId
+        if (status !== undefined) { params.status = status }
+        try {
+          var requests = [window.platformApi.mappingPage(params)]
+          if (reloadStats) { requests.push(this.loadMappingStats()) }
+          var results = await Promise.all(requests)
+          var res = results[0]
+          if (String(res.code) === '1' && res.data) {
+            this.tableData = res.data.records || []
+            this.counts = Number(res.data.total) || 0
+          } else {
+            ReggieUI.error((res && res.msg) || '加载映射失败')
+          }
+          if (reloadStats) {
+            var statsRes = results[1]
+            if (statsRes && statsRes.code === 1 && statsRes.data) {
+              this.stats = statsRes.data
+            }
+          }
+        } catch (err) {
+          if (err.message !== 'NOTLOGIN') {
+            ReggieUI.error('加载映射失败，请刷新重试')
+          }
+        } finally {
+          this.loading = false
+        }
+      },
+      // 修改点：加载菜品平台映射统计（总数/已上架/已下架/覆盖平台数），供统计卡片展示
+      async loadMappingStats() {
+        try {
+          var res = await window.platformApi.mappingStats()
+          if (res && String(res.code) === '1' && res.data) {
+            return { code: 1, data: res.data }
+          }
+        } catch (err) {
+          if (err.message !== 'NOTLOGIN') {
+            console.warn('加载映射统计失败:', err)
+          }
+        }
+        return { code: 0 }
+      },
+      /* ── 筛选与分页 ── */
+      onCardClick(payload) {
+        this.activeFilter = payload.activeKey
+        this.page = 1
+        this.fetchData(false)
+      },
+      // table-bar 查询：组件内部 searchValues 不双向绑定，桥接回 filters
+      onMappingSearch(params) {
+        this.filters.platformType = params.platformType || ''
+        this.filters.dishId = params.dishId || ''
+        this.page = 1
+        this.fetchData(false)
+      },
+      // table-bar 重置：清空筛选回总览，并重算统计
+      onMappingReset() {
+        this.filters = { platformType: '', dishId: '' }
+        this.page = 1
+        this.fetchData(true)
+      },
+      handlePageChange(p) {
+        // 修改点：crud-table emit 的是 {page, pageSize} 对象，需提取 page 数字
+        this.page = p.page
+        this.fetchData(false)
+      },
+      handleSizeChange(s) {
+        this.pageSize = s
+        this.page = 1
+        this.fetchData(false)
+      },
+      platformTypeText(type) {
+        const map = { MEITUAN: '美团', ELEME: '饿了么', DOUYIN: '抖音', SELF: '自营', OTHER: '其他' }
+        return map[type] || type
+      },
+      // 平台价：null 显 '-'；其余半角 ¥ + 千分位两位小数（formatMoney 内部做 Number 转换，字符串价格也不会崩）
+      formatPrice(price) {
+        return price != null ? '¥' + window.RgFormat.formatMoney(price) : '-'
+      },
+      /* ── 菜品与营业状态同步 ── */
+      syncDish(row, action) {
+        const self = this
+        const tip = action === 'on_shelf' ? '确认将该菜品上架到 ' + this.platformTypeText(row.platformType) + '？' : '确认将该菜品下架？'
+        ReggieUI.confirm(tip, '商品同步', { type: 'warning' }).then(async () => {
+          try {
+            const res = await window.platformApi.syncDish(row.platformType, row.dishId, action)
+            if (res && String(res.code) === '1') {
+              ReggieUI.success(action === 'on_shelf' ? '已上架并回传平台' : '已下架并回传平台')
+              row.status = action === 'on_shelf' ? 1 : 0
+            } else {
+              ReggieUI.error((res && res.msg) || '同步失败')
+            }
+          } catch (err) {
+            ReggieUI.error('同步失败，请检查网络或平台配置')
+          }
+        }).catch((err) => { console.warn('[菜品映射] 菜品同步操作取消或失败:', err) })
+      },
+      // 修改点：同步营业状态到平台
+      syncBusiness(open) {
+        if (!this.businessPlatform) {
+          ReggieUI.warning('请先选择平台')
+          return
+        }
+        var self = this
+        var actionText = open ? '营业' : '休息'
+        // 一键全平台同步营业状态，误点「休息」会导致全平台停业，必须二次确认
+        ReggieUI.confirm(
+          '确认将所选平台设为「' + actionText + '」并立即同步？' + (open ? '' : '设为休息后，该平台门店将暂停接单。'),
+          '营业状态同步',
+          { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+        ).then(function() {
+          self.bizLoading = true
+          window.platformApi.syncBusiness(self.businessPlatform, open).then(function(res) {
+            if (res && String(res.code) === '1') {
+              ReggieUI.success(open ? '已设为营业并同步平台' : '已设为休息并同步平台')
+            } else {
+              ReggieUI.error((res && res.msg) || '同步失败')
+            }
+          }).catch(function(err) {
+            if (err && err.message === 'NOTLOGIN') return
+            ReggieUI.error('营业状态同步失败：' + (err && err.message ? err.message : err))
+          }).finally(function() { self.bizLoading = false })
+        }).catch(function() { /* 用户点取消，静默 */ })
+      }
+    }
+  })
+</script>
+<style>
+  /* 营业状态同步组：table-bar 默认插槽内，与左侧搜索区竖线分隔 */
+  .biz-sync {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-left: 12px;
+    border-left: 1px solid var(--border-default);
+  }
+  .biz-sync__label { font-size: var(--font-size-base); color: var(--el-text-secondary); }
+  .ds-money { font-variant-numeric: tabular-nums; color: var(--el-text-primary); }
+</style>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+</body>
+</html>

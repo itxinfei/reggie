@@ -1,0 +1,1071 @@
+/* 修改点：统一头部品牌色渐变 */
+
+/* ---- 加单页专属令牌（收敛硬编码 hex） ---- */
+:root {
+  --add-order-coupon-active-end: #fff8e0;  /* 优惠券激活渐变结束色（浅金） */
+  --color-flash-tag: #ff4d4f;              /* 秒杀标记红（区别于 --color-danger #e94e3c） */
+  --color-gift-tag-text: #b35900;          /* 赠品标记文字棕 */
+  /* 2026-10-02：到店自提提示框配色收敛为令牌 */
+  --selfpickup-tip-bg: #f6fff9;       /* 自提提示框底（浅绿） */
+  --selfpickup-tip-border: #c8f0d4;   /* 自提提示框描边 */
+}
+
+/* 头部已由 cend-shell 的 .cend-navbar 统一接管（2026-09-22），不再定义金色 .divHead */
+
+/* 满高 flex 列中的滚动区；外边距 10rem，底部给悬浮结算栏留位（栏高56+bottom12） */
+#add_order .divContent {
+  margin: 12rem 12rem 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* 贴底通栏高 56 + 安全区，再留 12 呼吸位，避免最后一项被栏遮挡 */
+  padding-bottom: calc(68rem + env(safe-area-inset-bottom, 0rem));
+}
+
+#add_order .divContent .divAddress {
+  /* 修改点(2026-09-21)：固定 height 改 min-height，长地址/多行内容不再被裁切 */
+  min-height: 120rem;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  position: relative;
+  padding: 14rem var(--spacing-md) 12rem var(--spacing-lg);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  transition: box-shadow var(--transition-fast);
+}
+
+#add_order .divContent .divAddress:active {
+  box-shadow: var(--shadow-card-hover);
+}
+
+#add_order .divContent .divAddress .address {
+  min-height: 25rem;
+  font-size: 18rem;
+  font-family: var(--font-family-body);
+  font-weight: 500;
+  text-align: left;
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  margin-bottom: 4rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  max-width: 100%;
+}
+
+#add_order .divContent .divAddress .name {
+  height: 17rem;
+  opacity: 1;
+  font-size: 12rem;
+  font-family: "PingFangSC", "PingFangSC-Regular";
+  font-weight: 400;
+  text-align: left;
+  /* 修改点(2026-09-17)：与大地址同色同级无主次 → 降为二级色，突出地址本身 */
+  color: var(--color-text-secondary);
+  line-height: 17rem;
+}
+
+#add_order .divContent .divAddress .name span:first-child {
+  /* 修改点(2026-09-17)：姓名与电话间距 2→8rem，阅读节奏更清晰 */
+  margin-right: 8rem;
+}
+
+#add_order .divContent .divAddress i {
+  position: absolute;
+  right: 14rem;
+  /* 修改点(2026-09-17)：top:32rem 硬编码，地址行数变化时箭头偏移 → 垂直居中 */
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-hint);
+  font-size: 18rem;
+}
+
+#add_order .divContent .divAddress .divSplit {
+  width: 100%;
+  height: 1px;
+  opacity: 1;
+  border: 0;
+  background-color: var(--bg-input);
+  margin-top: 14rem;
+}
+
+#add_order .divContent .divAddress .divFinishTime {
+  height: 47rem;
+  opacity: 1;
+  font-size: 12rem;
+  font-family: "PingFangSC", "PingFangSC-Regular";
+  font-weight: 400;
+  text-align: left;
+  color: var(--color-text-primary);
+  line-height: 47rem;
+  margin-left: 2rem;
+}
+
+#add_order .divContent .order {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  margin-top: 10rem;
+  margin-bottom: 10rem;
+  padding: 3rem 10rem 7rem 16rem;
+  box-shadow: 0 1rem 4rem var(--border-hair);
+}
+
+#add_order .divContent .order .title {
+  height: 56rem;
+  line-height: 56rem;
+  opacity: 1;
+  font-size: 16rem;
+  font-family: "PingFangSC", "PingFangSC-Semibold";
+  font-weight: 600;
+  text-align: left;
+  color: var(--color-text-primary);
+  letter-spacing: 0;
+}
+
+#add_order .divContent .order .divSplit {
+  height: 1px;
+  opacity: 1;
+  background-color: var(--bg-hover);
+  border: 0;
+}
+
+#add_order .divContent .order .itemList .item {
+  display: flex;
+}
+
+/* 修改点：el-image替换为原生img */
+#add_order .divContent .order .itemList .item .dish-image {
+  /* 修改点(2026-09-21)：删除异常 padding:20（content-box 下会把 64 高图压成仅 24 高） */
+  width: 64rem;
+  height: 64rem;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  display: block;
+  flex-shrink: 0;
+}
+
+#add_order .divContent .order .itemList .item:first-child .desc {
+  border: 0;
+}
+
+#add_order .divContent .order .itemList .item .desc {
+  /* 修改点(2026-09-21)：padding 20→12、分割线 2px→1px */
+  padding-top: 12rem;
+  padding-bottom: 12rem;
+  border-top: 1px solid var(--bg-hover);
+  width: calc(100% - 64rem);
+}
+
+#add_order .divContent .order .itemList .item .desc .name {
+  height: 22rem;
+  opacity: 1;
+  font-size: 16rem;
+  font-family: "PingFangSC", "PingFangSC-Semibold";
+  font-weight: 600;
+  text-align: left;
+  color: var(--color-text-primary);
+  line-height: 22rem;
+  letter-spacing: 0;
+  margin-left: 10rem;
+  margin-bottom: 16rem;
+}
+
+#add_order .divContent .order .itemList .item .desc .numPrice {
+  height: 22rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+#add_order .divContent .order .itemList .item .desc .numPrice span {
+  /* 修改点(2026-09-17)：数量缩进 12→10rem，与菜名左缘同基准线对齐 */
+  margin-left: 10rem;
+  height: 20rem;
+  opacity: 1;
+  font-size: 14rem;
+  font-family: "PingFangSC", "PingFangSC-Regular";
+  font-weight: 400;
+  text-align: left;
+  color: var(--color-text-secondary);
+  line-height: 20rem;
+  letter-spacing: 0;
+  display: inline-block;
+}
+
+/* 修改点(2026-09-17)：数量数字用 DIN 等宽字体 */
+#add_order .divContent .order .itemList .item .desc .numPrice .num {
+  font-family: DIN, DIN-Medium;
+}
+
+#add_order .divContent .order .itemList .item .desc .numPrice .price {
+  font-size: 20rem;
+  font-family: DIN, DIN-Medium;
+  font-weight: 500;
+  text-align: left;
+  color: var(--color-price);
+}
+
+#add_order
+  .divContent
+  .order
+  .itemList
+  .item
+  .desc
+  .numPrice
+  .price
+  .spanMoney {
+  color: var(--color-price);
+  font-size: 12rem;
+}
+
+#add_order .divContent .note {
+  height: 164rem;
+  opacity: 1;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  /* 修改点(2026-09-17)：区块间距统一 12rem 节奏（原 11rem 与其他区块不一致） */
+  margin-top: 12rem;
+  padding: 3rem 10rem 10rem 16rem;
+  box-shadow: 0 1rem 4rem var(--border-hair);
+}
+
+#add_order .divContent .note .title {
+  height: 56rem;
+  opacity: 1;
+  font-size: 16rem;
+  font-family: "PingFangSC", "PingFangSC-Semibold";
+  font-weight: 600;
+  text-align: left;
+  color: var(--color-text-primary);
+  line-height: 56rem;
+  letter-spacing: 0px;
+  /* 修改点(2026-09-17)：2rem → 1px，与其他分割线粗细一致（2rem 在高分屏过粗） */
+  border-bottom: 1px solid var(--border-light);
+}
+
+#add_order .divContent .note .van-cell {
+  height: 103rem;
+}
+
+/* 底部结算栏：由悬浮圆角胶囊改为贴底通栏（去左右边距与圆角，固定贴底 + 安全区） */
+#add_order .divCart {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  /* 修改点(2026-09-27 审查P2桌面居中族)：桌面宽屏下 fixed 相对视口定位，
+     会逃逸 index.css 的 750px 居中列；max-width+auto 边距收敛回列内（移动无影响） */
+  max-width: 750px;
+  margin: 0 auto;
+  z-index: var(--z-modal, 3000);
+  height: 56rem;
+  background: var(--bg-cart-bar);
+  box-shadow: var(--shadow-sheet);
+  padding-left: 10rem;
+  display: flex;
+  align-items: center;
+}
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  #add_order .divCart {
+    height: calc(56rem + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* 购物车入口：位图改 RemixIcon 圆底；空车深灰圆，有货品牌金圆并略突出栏顶 */
+#add_order .divCart .cart-entry {
+  position: relative;
+  width: 46rem;
+  height: 46rem;
+  margin-top: -10rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-cart-icon-idle);
+  color: var(--color-text-hint);
+  cursor: pointer;
+}
+#add_order .divCart .cart-entry i { font-size: 24rem; line-height: 1; }
+#add_order .divCart .cart-entry.active {
+  background: var(--color-primary);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-cart-icon);
+}
+
+#add_order .divCart .divNum {
+  flex: 1;
+  min-width: 0;
+  margin-left: 8rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  font-family: DIN, DIN-Medium;
+  color: var(--color-text-white);
+}
+#add_order .divCart .num-symbol { font-size: 13rem; font-weight: 600; }
+#add_order .divCart .num-main { font-size: 20rem; font-weight: 600; margin-left: 1rem; }
+
+#add_order .divCart > div:last-child {
+  flex-shrink: 0;
+  width: 112rem;
+  /* 点击热区 44px（原40），56px 栏内居中 */
+  height: 44rem;
+  border-radius: var(--radius-lg);
+  font-size: 15rem;
+  font-family: var(--font-family-body);
+  font-weight: 600;
+  text-align: center;
+  line-height: 44rem;
+  margin-left: auto;
+  margin-right: 12rem;
+}
+
+#add_order .divCart .btnSubmit {
+  /* 修改点(2026-09-26)：白字 on #ccc 仅 1.6:1，"暂不可下单"是关键状态文案必须可读 */
+  color: var(--color-text-secondary);
+  background: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+#add_order .divCart .btnSubmitActive {
+  color: var(--color-text-primary);
+  background: var(--color-primary-gradient);
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.2s;
+  box-shadow: 0 2rem 8rem var(--color-primary-tint-lg);
+}
+
+#add_order .divCart .btnSubmitActive:active {
+  transform: scale(0.96);
+  box-shadow: 0 1rem 4rem var(--color-primary-tint-md);
+}
+/* 修改点：提交中禁用并弱化按钮，配合 goToPaySuccess 内的 loading 守卫防重复提交 */
+#add_order .divCart .btnSubmitActive.isLoading {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: progress;
+}
+
+/* 数量角标：嵌套在购物车圆内，定位到其右上角 */
+#add_order .divCart .cart-entry .divGoodsNum {
+  position: absolute;
+  top: -5rem;
+  right: -5rem;
+  min-width: 18rem;
+  height: 18rem;
+  padding: 0 4rem;
+  background: var(--color-danger);
+  border-radius: 9rem;
+  text-align: center;
+  font-size: 12rem;
+  font-family: var(--font-family-body);
+  font-weight: 500;
+  color: var(--color-text-white);
+  line-height: 18rem;
+}
+
+#add_order .divCart .cart-entry .moreGoods {
+  min-width: 24rem;
+  height: 24rem;
+  line-height: 24rem;
+}
+
+/* 修改点：支付方式选择 */
+#add_order .divContent .pay-method {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  margin-top: 10rem;
+  padding: 3rem 10rem 10rem 16rem;
+  box-shadow: 0 1rem 4rem var(--border-hair);
+}
+
+#add_order .divContent .pay-method .title {
+  height: 44rem;
+  line-height: 44rem;
+  font-size: 16rem;
+  font-family: "PingFangSC", "PingFangSC-Semibold";
+  font-weight: 600;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--bg-hover);
+  margin-bottom: 8rem;
+}
+
+#add_order .divContent .pay-method .pay-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6rem;
+}
+
+#add_order .divContent .pay-method .pay-option {
+  display: flex;
+  align-items: center;
+  height: 48rem;
+  border-radius: var(--radius-md);
+  padding: 0 12rem;
+  cursor: pointer;
+  /* card-in-card 收敛：面板内默认无框，仅选中态浅金面反馈 */
+  border: 1px solid transparent;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+#add_order .divContent .pay-method .pay-option.active {
+  border-color: transparent;
+  background: var(--color-primary-tint);
+}
+
+#add_order .divContent .pay-method .pay-icon {
+  width: 28rem;
+  height: 28rem;
+  border-radius: var(--radius-md);
+  font-size: 18rem;
+  text-align: center;
+  line-height: 28rem;
+  margin-right: 10rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 微信：浅绿底 + 品牌绿图标（美团式色块，纯色无背景偏单薄） */
+#add_order .pay-wechat-icon {
+  background: rgba(7, 193, 96, 0.12);
+  color: var(--color-success-text);
+}
+
+/* 支付宝：浅蓝底 + 品牌蓝图标 */
+#add_order .pay-alipay-icon {
+  background: rgba(22, 119, 255, 0.10);
+  color: var(--platform-alipay);
+}
+
+/* 货到付款：中性灰底 */
+#add_order .pay-cod-icon {
+  background: var(--bg-page);
+  color: var(--color-text-secondary);
+}
+
+#add_order .divContent .pay-method .pay-text {
+  flex: 1;
+  font-size: 15rem;
+  color: var(--color-text-primary);
+}
+
+#add_order .divContent .pay-method .pay-check {
+  /* 修改点(2026-09-26)：#ffc200 亮金 on 白 1.6:1，选中态勾选换金底深棕令牌 */
+  color: var(--color-primary-text);
+  font-size: 18rem;
+  font-weight: bold;
+}
+
+/* ---- 餐具选择（对齐美团环保提示） ---- */
+#add_order .utensils-section {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  margin-top: 10rem;
+  padding: 14rem 14rem 10rem;
+}
+
+#add_order .utensils-section .title {
+  font-size: 16rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 10rem;
+}
+
+#add_order .utensils-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rem;
+}
+
+#add_order .utensils-btn {
+  padding: 6rem 14rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+#add_order .utensils-btn.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-tint);
+  color: var(--color-primary-text);
+  font-weight: 500;
+}
+
+#add_order .utensils-btn:active {
+  transform: scale(0.96);
+}
+
+#add_order .utensils-tip {
+  margin-top: 8rem;
+  font-size: var(--font-size-xs);
+  color: var(--color-success-text);
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+}
+
+/* ---- 价格明细（独立区块） ---- */
+#add_order .price-breakdown {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  margin-top: 10rem;
+  padding: 14rem;
+}
+
+#add_order .price-breakdown .title {
+  font-size: 16rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 10rem;
+}
+
+#add_order .price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6rem 0;
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+}
+
+#add_order .price-row.discount {
+  color: var(--color-danger);
+}
+
+/* 修改点(2026-09-17)：实付合计行 —— 分隔线隔开中间行，金额 DIN 大号红价 */
+#add_order .price-row.total {
+  border-top: 1px solid var(--border-light);
+  margin-top: 4rem;
+  padding: 10rem 0 4rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+#add_order .price-row.total span:last-child {
+  font-family: DIN, DIN-Medium;
+  font-size: 20rem;
+  font-weight: 600;
+  color: var(--color-price);
+}
+
+/* 修改点：优惠券选择 */
+/* 优惠券入口行（点击底部弹层选择），与其它白卡行同高 */
+#add_order .divContent .coupon-section {
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  margin-top: 10rem;
+  margin-bottom: 10rem;
+  padding: 0 12rem;
+  height: 48rem;
+  box-shadow: 0 1rem 4rem var(--border-hair);
+  cursor: pointer;
+}
+#add_order .divContent .coupon-section .coupon-entry-label {
+  font-size: 15rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+#add_order .divContent .coupon-section .coupon-entry-state {
+  flex: 1;
+  margin-left: 10rem;
+  text-align: right;
+  font-size: 13rem;
+  color: var(--color-text-hint);
+}
+#add_order .divContent .coupon-section .coupon-entry-state.active {
+  color: var(--color-price);
+}
+#add_order .divContent .coupon-section .coupon-entry-arrow {
+  margin-left: 2rem;
+  font-size: 18rem;
+  color: var(--color-text-hint);
+}
+
+/* ===== 优惠券选择弹层 ===== */
+#add_order .coupon-popup { padding-bottom: calc(8rem + env(safe-area-inset-bottom, 0rem)); }
+#add_order .coupon-popup .coupon-popup-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14rem 16rem;
+  border-bottom: var(--hairline);
+}
+#add_order .coupon-popup .coupon-popup-title {
+  font-size: 16rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+#add_order .coupon-popup .coupon-popup-close {
+  font-size: 20rem;
+  color: var(--color-text-hint);
+  cursor: pointer;
+}
+#add_order .coupon-popup .coupon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10rem;
+  padding: 12rem 16rem 4rem;
+}
+
+/* 票券卡：默认浅边框，选中加金边；点击有轻微按压 */
+#add_order .coupon-popup .coupon-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 80rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+#add_order .coupon-popup .coupon-card:active { border-color: var(--color-primary); }
+#add_order .coupon-popup .coupon-card.active {
+  border-color: var(--color-primary);
+  box-shadow: 0 2rem 10rem var(--color-primary-tint-lg);
+}
+
+/* 左：金额区，浅金底 + 右缘金虚线，虚线两端用白圆咬出撕票缺口 */
+#add_order .coupon-popup .coupon-left {
+  position: relative;
+  width: 96rem;
+  height: 100%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-right: 12rem;
+  background: var(--color-primary-tint);
+  border-right: 1px dashed var(--color-primary-tint-lg);
+}
+#add_order .coupon-popup .coupon-left::before,
+#add_order .coupon-popup .coupon-left::after {
+  content: '';
+  position: absolute;
+  right: -5rem;
+  width: 10rem;
+  height: 10rem;
+  border-radius: 50%;
+  background: var(--bg-card);
+}
+#add_order .coupon-popup .coupon-left::before { top: -5rem; }
+#add_order .coupon-popup .coupon-left::after { bottom: -5rem; }
+
+#add_order .coupon-popup .coupon-amount {
+  display: block;
+  font-size: 22rem;
+  font-family: DIN, DIN-Medium;
+  font-weight: 600;
+  color: var(--color-price);
+  line-height: 1.2;
+}
+#add_order .coupon-popup .coupon-condition { font-size: 11rem; color: var(--color-text-hint); }
+#add_order .coupon-popup .coupon-right { flex: 1; min-width: 0; padding-left: 12rem; }
+#add_order .coupon-popup .coupon-name {
+  font-size: 15rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 4rem;
+}
+#add_order .coupon-popup .coupon-desc { font-size: 12rem; color: var(--color-text-hint); }
+#add_order .coupon-popup .coupon-check {
+  margin-right: 12rem;
+  color: var(--color-primary);
+  font-size: 20rem;
+  font-weight: bold;
+}
+
+#add_order .coupon-popup .coupon-no-use {
+  text-align: center;
+  padding: 12rem 0 4rem;
+  font-size: 13rem;
+  color: var(--color-text-hint);
+  cursor: pointer;
+}
+#add_order .coupon-popup .coupon-no-use:active { color: var(--color-text-secondary); }
+
+/* 空态 + 加载中 */
+#add_order .coupon-popup .coupon-empty {
+  text-align: center;
+  padding: 20rem 0 8rem;
+  font-size: 13rem;
+  color: var(--color-text-hint);
+}
+#add_order .coupon-popup .coupon-empty a {
+  /* 2026-09-30 审查：白底 13px 金色链接仅 1.6:1，改深棕金档（图标类 .tm-check/.coupon-check 保留品牌金） */
+  color: var(--color-primary-text-strong);
+  text-decoration: underline;
+  margin-left: 4rem;
+}
+#add_order .coupon-popup .coupon-loading {
+  text-align: center;
+  padding: 12rem 0;
+  font-size: 12rem;
+  color: var(--color-text-hint);
+}
+
+/* 明细超 3 件折叠行 */
+#add_order .divContent .order .items-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 10rem 0;
+  font-size: 13rem;
+  color: var(--color-text-hint);
+  cursor: pointer;
+}
+#add_order .divContent .order .items-toggle i { font-size: 16rem; }
+
+/* ===== 已选商品清单弹层 ===== */
+#add_order .items-popup { padding-bottom: calc(8rem + env(safe-area-inset-bottom, 0rem)); }
+#add_order .items-popup .items-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14rem 16rem;
+  border-bottom: var(--hairline);
+}
+#add_order .items-popup .items-popup-title { font-size: 16rem; font-weight: 600; color: var(--color-text-primary); }
+#add_order .items-popup .items-popup-close { font-size: 20rem; color: var(--color-text-hint); cursor: pointer; }
+#add_order .items-popup .items-popup-list { padding: 4rem 16rem; max-height: 56vh; overflow-y: auto; }
+#add_order .items-popup .items-popup-item {
+  display: flex;
+  align-items: center;
+  gap: 10rem;
+  padding: 10rem 0;
+  border-bottom: var(--hairline);
+}
+#add_order .items-popup .items-popup-item:last-child { border-bottom: none; }
+#add_order .items-popup .pi-thumb { width: 44rem; height: 44rem; border-radius: var(--radius-md); object-fit: cover; flex-shrink: 0; background: var(--bg-hover); }
+#add_order .items-popup .pi-info { flex: 1; min-width: 0; }
+#add_order .items-popup .pi-name { font-size: 14rem; color: var(--color-text-primary); }
+#add_order .items-popup .pi-meta { font-size: 12rem; color: var(--color-text-hint); margin-top: 2rem; }
+#add_order .items-popup .pi-num { font-size: 13rem; color: var(--color-text-hint); flex-shrink: 0; }
+#add_order .items-popup .pi-amount { font-size: 14rem; font-weight: 600; color: var(--color-price); font-family: DIN, DIN-Medium; flex-shrink: 0; }
+
+/* 修改点：送达时间选择器弹窗样式 */
+#add_order .time-picker-popup {
+  background: var(--bg-card);
+  border-radius: 16rem 16rem 0 0;
+}
+
+#add_order .time-picker-title {
+  height: 50rem;
+  line-height: 50rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16rem;
+  font-size: 17rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--bg-hover);
+  margin-bottom: 6rem;
+}
+
+#add_order .time-picker-title .time-picker-close {
+  font-size: 20rem;
+  color: var(--color-text-hint);
+  cursor: pointer;
+  font-weight: 400;
+  /* 修改点：扩展点击热区至 ≥44rem（纵向 0 → 12rem） */
+  padding: 12rem 4rem;
+  line-height: 1;
+}
+
+#add_order .time-picker-title .time-picker-close:active {
+  color: var(--color-text-primary);
+}
+
+#add_order .time-picker-list {
+  padding: 0 16rem;
+  overflow-y: auto;
+}
+
+#add_order .time-picker-item {
+  display: flex;
+  align-items: center;
+  height: 52rem;
+  border-radius: var(--radius-md);
+  padding: 0 14rem;
+  cursor: pointer;
+  border: 1px solid var(--bg-hover);
+  margin-bottom: 8rem;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+#add_order .time-picker-item.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+#add_order .time-picker-item .tm-label {
+  font-size: 15rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+#add_order .time-picker-item .tm-time {
+  font-size: 12rem;
+  color: var(--color-text-hint);
+  margin-right: 8rem;
+}
+
+#add_order .time-picker-item .tm-check {
+  color: var(--color-primary);
+  font-size: 18rem;
+  font-weight: bold;
+}
+
+/* 修改点：地址区送达时间可点击样式 */
+#add_order .divAddress .divFinishTime {
+  cursor: pointer;
+}
+
+/* 修改点(2026-09-24)：内联样式收敛 —— 送达时间行右侧箭头（原 font-size/vertical-align 内联） */
+#add_order .divFinishTime .finish-time-arrow {
+  font-size: 12rem;
+  vertical-align: middle;
+}
+
+/* 修改点：优惠标签样式 */
+#add_order .divCart .divNum .divDiscount {
+  flex: 0 0 100%;             /* 换到金额下方独立一行 */
+  font-size: 10rem;
+  color: var(--color-text-white);
+  opacity: 0.7;
+  line-height: 16rem;
+  margin-top: 1rem;
+}
+
+/* 修改点：配送方式选择 */
+#add_order .divContent .delivery-mode {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  margin-top: 10rem;
+  padding: 0;
+  box-shadow: 0 1rem 4rem var(--border-hair);
+  overflow: hidden;
+}
+#add_order .delivery-mode .mode-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-light);
+}
+#add_order .delivery-mode .mode-tab {
+  flex: 1;
+  text-align: center;
+  height: 48rem;
+  line-height: 48rem;
+  font-size: 14rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color 0.2s, background-color 0.2s;
+  position: relative;
+}
+#add_order .delivery-mode .mode-tab.active {
+  color: var(--color-primary-text);
+  font-weight: 600;
+  /* 修改点(2026-09-17)：补浅金面反馈，选中态从「仅下划线」升级为「面+线」 */
+  background: var(--color-primary-tint);
+}
+#add_order .delivery-mode .mode-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40rem;
+  height: 3rem;
+  background: var(--color-primary);
+  border-radius: var(--radius-md);
+}
+#add_order .delivery-mode .mode-tab i {
+  margin-right: 4rem;
+  font-size: 16rem;
+}
+
+/* 顶部履约方式切换（配送上门 / 到店自提）。
+   原实现注释称"复用 mode-tabs 样式"，但 .mode-tabs 规则被限定在 .delivery-mode 下，
+   顶部这组选择器不匹配 = 零样式；tab 又继承了祖先 1px 字号（未定义变量塌缩），
+   整体塌成 1px 高并被下方 .divAddress 盖住，真人根本点不到「到店自提」。在此补齐。 */
+#add_order .fulfillment-tabs {
+  display: flex;
+  gap: 10rem;
+  margin-bottom: 12rem;
+}
+#add_order .fulfillment-tabs .mode-tab {
+  flex: 1;
+  text-align: center;
+  height: 44rem;
+  line-height: 44rem;
+  font-size: 14rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+#add_order .fulfillment-tabs .mode-tab i {
+  margin-right: 4rem;
+  font-size: 16rem;
+}
+#add_order .fulfillment-tabs .mode-tab.active {
+  color: var(--color-primary-text);
+  font-weight: 600;
+  border-color: var(--color-primary);
+  background: var(--color-primary-tint);
+}
+#add_order .divContent .delivery-mode .divFinishTime {
+  height: 50rem;
+  line-height: 50rem;
+  padding: 0 16rem;
+  font-size: 14rem;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#add_order .divContent .delivery-mode .divFinishTime:active {
+  background: var(--bg-input);
+}
+
+/* 预约配送弹窗 */
+#add_order .schedule-picker-popup {
+  background: var(--bg-card);
+  border-radius: 16rem 16rem 0 0;
+}
+#add_order .schedule-picker-body {
+  padding: 10rem 16rem 20rem;
+}
+#add_order .schedule-date-row {
+  margin-bottom: 12rem;
+}
+#add_order .schedule-label {
+  display: block;
+  font-size: 14rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 8rem;
+}
+#add_order .schedule-time-row {
+  margin-bottom: 16rem;
+}
+#add_order .schedule-time-list {
+  display: flex;
+  gap: 8rem;
+  flex-wrap: wrap;
+}
+#add_order .schedule-time-item {
+  flex: 1;
+  min-width: 30%;
+  text-align: center;
+  padding: 10rem 6rem;
+  border: 1px solid var(--bg-hover);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+  position: relative;
+}
+#add_order .schedule-time-item.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+#add_order .schedule-time-item .slot-label {
+  font-size: 14rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 20rem;
+}
+#add_order .schedule-time-item .slot-time {
+  font-size: 11rem;
+  color: var(--color-text-hint);
+  line-height: 16rem;
+  margin-top: 2rem;
+}
+#add_order .schedule-time-item .tm-check {
+  position: absolute;
+  top: 4rem;
+  right: 6rem;
+  color: var(--color-primary);
+  font-size: 14rem;
+  font-weight: bold;
+}
+#add_order .schedule-confirm-btn {
+  margin-top: 10rem;
+  height: 44rem;
+  background: var(--color-primary-gradient);
+  border: none;
+  color: var(--color-text-primary);
+  font-weight: 600;
+  font-size: 16rem;
+}
+
+/* ===== 秒杀标记 / 赠品明细（数据来自同源结算预览） ===== */
+#add_order .divContent .order .itemList .item .desc .name .flash-tag {
+  display: inline-block;
+  margin-left: 8rem;
+  padding: 0 6rem;
+  font-size: 11rem;
+  font-weight: 500;
+  line-height: 16rem;
+  color: var(--color-text-white);
+  background: var(--color-flash-tag);
+  border-radius: 4rem;
+  vertical-align: middle;
+}
+#add_order .divContent .order .itemList .gift-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8rem;
+  padding-left: 10rem;
+  font-size: 14rem;
+}
+#add_order .divContent .order .itemList .gift-item .gift-name {
+  color: var(--color-text-secondary);
+}
+#add_order .divContent .order .itemList .gift-item .gift-tag {
+  display: inline-block;
+  margin-left: 8rem;
+  padding: 0 6rem;
+  font-size: 11rem;
+  line-height: 16rem;
+  color: var(--color-gift-tag-text);
+  background: var(--color-primary);
+  border-radius: 4rem;
+}
+#add_order .divContent .order .itemList .gift-item .gift-num {
+  font-family: DIN, DIN-Medium;
+  color: var(--color-text-secondary);
+}
+
+/* 下单阻断提示（超配送范围/未达起送价/无地址）：警告底色，替换无法兑现的送达时间承诺 */
+#add_order .divAddress .divFinishTime.finish-time--blocked {
+  cursor: default;
+  color: var(--color-warning-text);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+}
+#add_order .divFinishTime.finish-time--blocked i {
+  font-size: 15rem;
+  color: var(--color-warning);
+}

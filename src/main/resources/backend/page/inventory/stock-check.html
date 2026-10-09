@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>库存盘点 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <style>
+    /* ── 展开行摘要条 ── */
+    .expand-summary {
+      display: flex; flex-wrap: wrap; gap: 20px;
+      padding: 12px 16px; margin-bottom: 12px;
+      background: var(--bg-surface, #fff);
+      border: 1px solid var(--border-default, #e5e7eb);
+      border-radius: var(--radius-md, 8px);
+    }
+    .expand-summary__item {
+      display: flex; align-items: center; gap: 6px;
+      font-size: var(--font-size-sm, 13px);
+    }
+    .expand-summary__item i { font-size: var(--font-size-base); color: var(--text-muted, #9ca3af); }
+    .expand-summary__label { color: var(--text-muted, #9ca3af); }
+    .expand-summary__value { color: var(--text-primary, #1f2937); font-weight: 500; }
+
+    /* ── 子表格 ── */
+    .sub-table { margin: 8px 0; width: 100%; }
+    .sub-table .el-table__body-wrapper { background: var(--el-bg-ghost); }
+    .material-name-cell { display: flex; align-items: center; font-weight: 500; color: var(--text-primary); }
+    .qty-book { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+    .qty-actual { color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    /* ── 差异胶囊 ── */
+    .diff-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 10px; border-radius: 12px;
+      font-size: var(--font-size-sm, 13px); font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .diff-badge i { font-size: var(--font-size-xs); }
+    .diff-badge--loss { color: var(--color-danger); background: var(--color-danger-light); }
+    .diff-badge--profit { color: var(--color-success); background: var(--color-success-light); }
+    .diff-badge--even { color: var(--text-muted); background: var(--color-info-light); }
+
+    /* ── 盈亏标签 ── */
+    .diff-status-tag {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: var(--font-size-xs, 12px); font-weight: 500;
+    }
+    .diff-status-tag--loss { color: var(--color-danger); background: var(--color-danger-light); }
+    .diff-status-tag--profit { color: var(--color-success); background: var(--color-success-light); }
+    .diff-status-tag--even { color: var(--text-muted); background: var(--color-info-light); }
+    .sub-table .has-diff td { background: var(--color-danger-light) !important; }
+
+    .empty-expand { text-align: center; padding: 32px 24px; color: var(--text-muted); font-size: var(--font-size-sm); }
+    .text-danger { color: var(--color-danger) !important; }
+    .text-success { color: var(--color-success) !important; }
+
+    /* ── 盘点项选择弹窗 ── */
+    .item-picker { display: flex; gap: 16px; min-height: 320px; }
+    .item-picker__left { flex: 1; border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; display: flex; flex-direction: column; }
+    .item-picker__left .el-input { border-radius: 0; }
+    .item-picker__list { flex: 1; overflow-y: auto; padding: 4px 0; }
+    .item-picker__item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; transition: background 0.15s; }
+    .item-picker__item:hover { background: var(--el-bg-ghost); }
+    .item-picker__item.selected { background: var(--color-brand-50); }
+    .item-picker__item .stock-info { margin-left: auto; color: var(--text-muted); font-size: var(--font-size-xs); }
+    .item-picker__right { flex: 1; border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 12px; overflow-y: auto; }
+    .item-picker__right-title { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+    .picked-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-default); }
+    .picked-item:last-child { border-bottom: none; }
+    .picked-item .el-input { width: 100px; }
+    .picked-item .remove-btn { color: var(--color-danger); cursor: pointer; font-size: var(--font-size-lg); }
+    .picked-item .remove-btn:hover { opacity: 0.7; }
+
+    /* ── 录入实盘弹窗 ── */
+    .record-list { display: flex; flex-direction: column; gap: 8px; max-height: 55vh; overflow-y: auto; padding-right: 4px; }
+    .record-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--el-bg-ghost); border-radius: var(--radius-md); border: 1px solid var(--el-border-light); }
+    .record-row .mat-name { width: 160px; flex-shrink: 0; font-weight: 500; color: var(--text-primary); }
+    .record-row .book-qty { width: 100px; flex-shrink: 0; color: var(--text-muted); font-size: var(--font-size-sm); text-align: right; }
+    .record-row .el-input { width: 130px; }
+    .record-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-default); }
+    .record-footer .summary { font-size: var(--font-size-sm); color: var(--text-secondary); }
+    .record-footer .summary b { color: var(--text-primary); }
+  </style>
+</head>
+<body>
+  <!-- ====== 库存盘点管理页 ====== -->
+  <!-- 功能：分步盘点流程（创建盘点单→选择食材→录入实盘→完成盘点），支持展开行查看明细差异 -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="dashboard-container" id="stock-check-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">库存盘点</h1>
+
+      <!-- 统计卡片 -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
+
+      <!-- 搜索栏 -->
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="tableActions"
+        :show-refresh="true"
+        @refresh="handleQuery()"
+        @search="handleQuery"
+        @reset="reset"
+        @action="onTableAction">
+        <template slot="search-extra">
+          <el-date-picker v-model="input.dateRange" type="daterange" range-separator="至"
+            start-placeholder="开始日期" end-placeholder="结束日期" value-format="yyyy-MM-dd"
+            class="el-date-editor--md" @change="handleQuery" size="small"></el-date-picker>
+        </template>
+      </table-bar>
+
+      <!-- 数据表格 -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :page-sizes="[10,20,30,40]"
+        :total="counts"
+        :expand="true"
+        row-key="id"
+        :show-actions="true" :viewable="true"
+        :actions-width="180"
+        :batch-delete="doBatchDelete"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+        @expand-change="loadDetails"
+        @batch-deleted="onBatchDeleted">
+        <!-- 展开行：仅已完成状态显示明细 -->
+        <template #expand="{ row }">
+          <template v-if="row.status === 'DONE' && row.details && row.details.length">
+            <div class="expand-summary">
+              <div class="expand-summary__item">
+                <i class="ri-user-line"></i>
+                <span class="expand-summary__label">操作员</span>
+                <span class="expand-summary__value">{{ row.operator || '-' }}</span>
+              </div>
+              <div class="expand-summary__item">
+                <i class="ri-time-line"></i>
+                <span class="expand-summary__label">盘点时间</span>
+                <span class="expand-summary__value">{{ row.createdTime || '-' }}</span>
+              </div>
+              <div class="expand-summary__item">
+                <i class="ri-file-list-3-line"></i>
+                <span class="expand-summary__label">盘点项数</span>
+                <span class="expand-summary__value">{{ row.itemCount || 0 }} 项</span>
+              </div>
+              <div class="expand-summary__item">
+                <i class="ri-error-warning-line"></i>
+                <span class="expand-summary__label">差异项</span>
+                <span class="expand-summary__value" :class="getDiffCount(row) > 0 ? 'text-danger' : 'text-success'">{{ getDiffCount(row) }} 项</span>
+              </div>
+              <div class="expand-summary__item" v-if="row.remark">
+                <i class="ri-sticky-note-line"></i>
+                <span class="expand-summary__label">备注</span>
+                <span class="expand-summary__value">{{ row.remark }}</span>
+              </div>
+            </div>
+            <!-- 凭证图片：逗号串转缩略图，点击放大 -->
+            <div v-if="imageList(row.voucherImages).length" style="margin:10px 0;">
+              <span class="expand-summary__label" style="margin-right:8px;">凭证图片：</span>
+              <el-image
+                v-for="(url, i) in imageList(row.voucherImages)"
+                :key="i"
+                :src="url"
+                :alt="(row.name ? row.name + ' 的' : '') + '盘点凭证'"
+                :preview-src-list="imageList(row.voucherImages)"
+                style="width:64px;height:64px;object-fit:cover;margin-right:8px;border:1px solid var(--border-default);border-radius:var(--radius-sm);cursor:pointer;vertical-align:middle;">
+              </el-image>
+            </div>
+            <el-table :data="row.details" stripe class="tableBox sub-table"
+              :row-class-name="detailRowClass" aria-label="盘点明细">
+              <el-table-column label="食材名称" min-width="160">
+                <template slot-scope="scope">
+                  <div class="material-name-cell">
+                    <i class="ri-leaf-line" style="color:var(--color-success);margin-right:6px;font-size:14px;"></i>
+                    <span>{{ scope.row.materialName || '食材#'+scope.row.materialId }}</span>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column label="账面数量" width="130" align="right" :header-align="'center'">
+                <template slot-scope="scope"><span class="qty-book">{{ scope.row.bookQty != null ? scope.row.bookQty : '-' }}</span></template>
+              </el-table-column>
+              <el-table-column label="实际数量" width="130" align="right" :header-align="'center'">
+                <template slot-scope="scope"><span class="qty-actual">{{ scope.row.actualQty != null ? scope.row.actualQty : '-' }}</span></template>
+              </el-table-column>
+              <el-table-column label="差异" width="150" align="center" :header-align="'center'">
+                <template slot-scope="scope">
+                  <span class="diff-badge" :class="getDiffClass(scope.row)">
+                    <i :class="getDiffIcon(scope.row)"></i>{{ formatDiff(scope.row) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="盈亏状态" width="120" align="center" :header-align="'center'">
+                <template slot-scope="scope">
+                  <span class="diff-status-tag" :class="getDiffStatusClass(scope.row)">{{ getDiffStatusLabel(scope.row) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
+            </el-table>
+          </template>
+          <div v-else-if="row.status === 'DONE'" class="empty-expand">
+            <i class="ri-inbox-line" style="font-size:24px;display:block;margin-bottom:8px;"></i>暂无明细数据
+          </div>
+          <div v-else class="empty-expand">
+            <i class="ri-edit-line" style="font-size:24px;display:block;margin-bottom:8px;"></i>请先完成盘点以查看明细
+          </div>
+        </template>
+        <!-- 状态列 -->
+        <template #col-status="{ row }">
+          <el-tag :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
+        </template>
+        <!-- 盈亏金额列 -->
+        <template #col-profitLoss="{ row }">
+          <span v-if="row.status === 'DONE'" :style="profitLossStyle(row.profitLoss)">¥{{ formatMoney(row.profitLoss) }}</span>
+          <span v-else style="color:var(--text-muted);">-</span>
+        </template>
+        <!-- 操作列 -->
+        <template #actions="{ row }">
+          <!-- 草稿：编辑盘点项 / 删除 -->
+          <template v-if="row.status === 'DRAFT'">
+            <el-button type="text" size="small" class="btn-view" @click="openItemsDialog(row)">
+              <i class="ri-list-check-2" style="margin-right:4px;"></i>编辑盘点项
+            </el-button>
+            <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row)">删除</el-button>
+          </template>
+          <!-- 进行中：录入实盘 / 完成盘点 / 删除 -->
+          <template v-else-if="row.status === 'IN_PROGRESS'">
+            <el-button type="text" size="small" class="btn-view" @click="openRecordDialog(row)">
+              <i class="ri-edit-line" style="margin-right:4px;"></i>录入实盘
+            </el-button>
+            <el-button type="text" size="small" class="btn-success" @click="confirmComplete(row)">
+              <i class="ri-checkbox-circle-line" style="margin-right:4px;"></i>完成盘点
+            </el-button>
+            <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row)">删除</el-button>
+          </template>
+          <!-- 已完成：冲正（回退到进行中，允许重新录入修正） -->
+          <template v-else-if="row.status === 'DONE'">
+            <el-button type="text" size="small" class="btn-warning" @click="rollbackHandle(row)" :aria-label="'冲正盘点单 ' + (row.checkNo || '')">
+              <i class="ri-refresh-line" style="margin-right:4px;"></i>冲正
+            </el-button>
+          </template>
+          <span v-else style="color:var(--text-muted);font-size:var(--font-size-xs);">--</span>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- ═══════ 弹窗1：新增盘点单 ═══════ -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      title="新增盘点单" :visible.sync="createDialogVisible" size="md"
+      :submit-loading="createSubmitting" :close-on-click-modal="false"
+      @submit="submitCreate" @close="createDialogVisible = false">
+      <el-form ref="createForm" :model="createForm" :rules="createRules" label-width="100px" size="small">
+        <el-form-item label="操作人：" prop="operator">
+          <el-autocomplete v-model="createForm.operator" value-key="value"
+            :fetch-suggestions="queryOperatorSuggestions"
+            placeholder="输入或选择操作人姓名">
+          </el-autocomplete>
+        </el-form-item>
+        <el-form-item label="备注：">
+          <el-input v-model="createForm.remark" type="textarea" :rows="2" placeholder="盘点备注（可选）" ></el-input>
+        </el-form-item>
+        <el-form-item label="凭证图片：">
+          <rg-image-uploader v-model="createForm.voucherImages" biz-type="stockcheck" :max="5"></rg-image-uploader>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- ═══════ 弹窗2：编辑盘点项（选择食材） ═══════ -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      title="编辑盘点项" :visible.sync="itemsDialogVisible" size="xl"
+      :submit-loading="itemsSubmitting" :close-on-click-modal="false"
+      @submit="submitItems" @close="itemsDialogVisible = false">
+      <div class="item-picker">
+        <!-- 左侧：食材库 -->
+        <div class="item-picker__left">
+          <el-input v-model="itemSearch" placeholder="搜索食材名称..." size="small" prefix-icon="ri-search-line" clearable style="border-bottom:1px solid var(--border-default);"></el-input>
+          <div class="item-picker__list">
+            <div v-for="mat in filteredMaterials" :key="mat.id"
+              class="item-picker__item" :class="{ selected: isPicked(mat.id) }"
+              @click="togglePick(mat)">
+              <el-checkbox :value="isPicked(mat.id)" @click.native.stop.prevent="togglePick(mat)"></el-checkbox>
+              <span>{{ mat.name }}</span>
+              <span class="stock-info">库存：{{ mat.stockQty || 0 }} {{ mat.unit || '' }}</span>
+            </div>
+            <div v-if="filteredMaterials.length === 0" style="text-align:center;padding:40px;color:var(--text-muted);">暂无食材</div>
+          </div>
+        </div>
+        <!-- 右侧：已选食材 -->
+        <div class="item-picker__right">
+          <div class="item-picker__right-title">已选食材（{{ pickedItems.length }} 项）</div>
+          <div v-if="pickedItems.length === 0" style="text-align:center;padding:40px;color:var(--text-muted);font-size:var(--font-size-sm);">
+            点击左侧食材添加到盘点列表
+          </div>
+          <div v-for="item in pickedItems" :key="item.materialId" class="picked-item">
+            <span style="flex:1;font-weight:500;">{{ item.name }}</span>
+            <span style="color:var(--text-muted);font-size:var(--font-size-xs);">账面：{{ item.bookQty }} {{ item.unit || '' }}</span>
+            <i class="ri-close-circle-line remove-btn" role="button" tabindex="0" title="移除" aria-label="移除该食材" @click="removePick(item.materialId)" @keydown.enter="removePick(item.materialId)"></i>
+          </div>
+        </div>
+      </div>
+    </crud-dialog>
+
+    <!-- ═══════ 弹窗3：录入实盘数量 ═══════ -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      title="录入实盘数量" :visible.sync="recordDialogVisible" size="lg"
+      :submit-loading="recordSubmitting" :close-on-click-modal="false"
+      @submit="submitRecord" @close="recordDialogVisible = false">
+      <div v-if="recordItems.length === 0" style="text-align:center;padding:40px;color:var(--text-muted);">
+        暂无盘点项，请先编辑盘点项
+      </div>
+      <div v-else>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+          <el-button size="small" @click="fillAllMatch">全部一致（实际=账面）</el-button>
+        </div>
+        <div class="record-list">
+          <div v-for="item in recordItems" :key="item.materialId" class="record-row">
+            <span class="mat-name">{{ item.materialName || '食材#'+item.materialId }}</span>
+            <span class="book-qty">账面：{{ item.bookQty }}</span>
+            <el-input-number v-model="item.actualStock" placeholder="实际库存"
+              :min="0" :controls="false" size="small" ></el-input-number>
+          </div>
+        </div>
+        <div class="record-footer">
+          <span class="summary">已录入 <b>{{ recordedCount }}</b> / {{ recordItems.length }} 项</span>
+          <span class="summary">预估差异：<b :style="estimateDiffStyle">{{ estimateDiffText }}</b></span>
+        </div>
+      </div>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/inventory.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../js/inventory-helper.js?v=20260922"></script>
+  <script>
+    new Vue({
+      el: '#stock-check-app',
+      data: function() {
+        return {
+          loading: false,
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          tableData: [],
+          stats: { total: 0, draft: 0, inProgress: 0, done: 0, diffCount: 0 },
+          activeFilter: '',
+          input: { status: '', dateRange: '' },
+
+          columns: [
+            { prop: 'checkNo', label: '盘点单号', width: 150 },
+            { prop: 'operator', label: '操作员', width: 90, align: 'center' },
+            { prop: 'status', label: '状态', width: 90, align: 'center', slot: true },
+            { prop: 'itemCount', label: '盘点项数', width: 90, align: 'right', type: 'number' },
+            { prop: 'profitLoss', label: '盈亏金额', width: 115, align: 'right', slot: true, type: 'money' },
+            { prop: 'createdTime', label: '创建时间', width: 155, align: 'center' }
+          ],
+          tableSearchItems: [
+            { key: 'status', label: '状态', type: 'select', placeholder: '全部状态', options: [
+              { label: '草稿', value: 'DRAFT' },
+              { label: '进行中', value: 'IN_PROGRESS' },
+              { label: '已完成', value: 'DONE' }
+            ]}
+          ],
+          tableActions: [
+            { key: 'add', text: '+ 新增盘点', type: 'primary' }
+          ],
+
+          /* ── 新增盘点单弹窗 ── */
+          createDialogVisible: false,
+          createSubmitting: false,
+          createForm: { operator: '', remark: '', voucherImages: '' },
+          createRules: { operator: [{ required: true, whitespace: true, message: '请输入操作人', trigger: 'blur' }] },
+
+          /* ── 编辑盘点项弹窗 ── */
+          itemsDialogVisible: false,
+          itemsSubmitting: false,
+          itemsCheckId: null,
+          allMaterials: [],
+          pickedItems: [],
+          itemSearch: '',
+
+          /* ── 录入实盘弹窗 ── */
+          recordDialogVisible: false,
+          recordSubmitting: false,
+          recordCheckId: null,
+          recordItems: []
+        }
+      },
+      computed: {
+        statsCards: function() {
+          var s = this.stats;
+          var f = this.activeFilter;
+          return [
+            { key: '', icon: 'ri-file-list-3-line', label: '盘点总数', value: s.total || 0, color: 'primary', active: f === '', clickable: true },
+            { key: 'DRAFT', icon: 'ri-draft-line', label: '草稿', value: s.draft || 0, color: 'info', active: f === 'DRAFT', clickable: true },
+            { key: 'IN_PROGRESS', icon: 'ri-time-line', label: '进行中', value: s.inProgress || 0, color: 'warning', active: f === 'IN_PROGRESS', clickable: true },
+            { key: 'DONE', icon: 'ri-checkbox-circle-line', label: '已完成', value: s.done || 0, color: 'success', active: f === 'DONE', clickable: true }
+            // 原第 5 张「差异项」已移除（全站统计卡 ≤4 张）；差异明细由下方差异分组区呈现
+          ]
+        },
+        filteredMaterials: function() {
+          var q = (this.itemSearch || '').toLowerCase();
+          if (!q) return this.allMaterials;
+          return this.allMaterials.filter(function(m) { return (m.name || '').toLowerCase().indexOf(q) >= 0; });
+        },
+        recordedCount: function() {
+          return this.recordItems.filter(function(item) { return item.actualStock != null && item.actualStock !== ''; }).length;
+        },
+        // 单位不同（如 kg/瓶）的差异数量不能直接相加，按单位分别汇总
+        estimateDiffText: function() {
+          var g = this.diffGroups();
+          var units = g.units;
+          if (units.length === 0) return '无差异';
+          if (units.length > 1) return '混合单位，不合计';
+          var u = units[0];
+          if (!u) return '—'; // 单位尚未取到，先不给单一合计
+          var t = g.map[u];
+          if (t === 0) return '无差异';
+          return (t > 0 ? '+' : '') + t.toFixed(2) + ' ' + u;
+        },
+        estimateDiffStyle: function() {
+          var g = this.diffGroups();
+          var units = g.units;
+          if (units.length === 1 && units[0]) {
+            var t = g.map[units[0]];
+            if (t < 0) return 'color:var(--color-danger)';
+            if (t > 0) return 'color:var(--color-success)';
+          }
+          return 'color:var(--text-muted)';
+        }
+      },
+      created: function() {
+        this.init(true);
+      },
+      methods: {
+        /* ── 数据加载 ── */
+        init: function(reloadStats) {
+          var self = this;
+          var params = { page: this.page, pageSize: this.pageSize };
+          if (this.activeFilter && this.activeFilter !== 'diff') params.status = this.activeFilter;
+          if (this.input.status) params.status = this.input.status;
+          if (this.input.dateRange) {
+            params.startDate = this.input.dateRange[0];
+            params.endDate = this.input.dateRange[1];
+          }
+          this.loading = true;
+          stockCheckPage(params).then(function(res) {
+            if (String(res.code) === '1' && res.data) {
+              self.tableData = res.data.records || [];
+              self.counts = Number(res.data.total) || 0;
+            }
+          }).catch(function(err) { ReggieUI.error('加载失败：' + err); })
+            .finally(function() { self.loading = false; });
+          if (reloadStats) this.loadStats();
+        },
+        loadStats: function() {
+          var self = this;
+          stockCheckStats().then(function(res) {
+            if (String(res.code) === '1' && res.data) {
+              self.stats = res.data;
+            }
+          }).catch(function() {});
+        },
+        loadDetails: function(row) {
+          if (row.status !== 'DONE' || row.details) return;
+          var self = this;
+          stockCheckDetails(row.id).then(function(res) {
+            if (String(res.code) === '1' && res.data) {
+              self.$set(row, 'details', res.data);
+            } else {
+              self.$set(row, 'details', []);
+            }
+          }).catch(function() { self.$set(row, 'details', []); });
+        },
+
+        /* ── 筛选/分页 ── */
+        onCardClick: function(payload) { this.activeFilter = payload.activeKey; this.page = 1; this.init(false); },
+        onTableAction: function(payload) { if (payload.key === 'add') this.openCreateDialog(); },
+        handleQuery: function() { this.page = 1; this.init(false); },
+        reset: function() { this.input.status = ''; this.input.dateRange = ''; this.activeFilter = ''; this.page = 1; this.init(false); },
+        onPageChange: function(p) { this.page = p.page; this.init(false); },
+        onSizeChange: function(s) { this.pageSize = s; this.page = 1; this.init(false); },
+
+        /* ── 状态显示 ── */
+        statusLabel: function(s) {
+          var map = { DRAFT: '草稿', IN_PROGRESS: '进行中', DONE: '已完成' };
+          return map[s] || s;
+        },
+        statusTagType: function(s) {
+          var map = { DRAFT: 'info', IN_PROGRESS: 'warning', DONE: 'success' };
+          return map[s] || 'info';
+        },
+        profitLossStyle: function(v) {
+          if (v == null || v === 0) return 'color:var(--text-muted)';
+          return v < 0 ? 'color:var(--color-danger);font-weight:600' : 'color:var(--color-success);font-weight:600';
+        },
+
+        /* ── 展开行辅助 ── */
+        getDiffValue: function(row) { var v = row.diffQty; if (v == null) v = row.diff; return Number(v) || 0; },
+        getDiffCount: function(row) {
+          if (!row.details) return 0;
+          var self = this;
+          return row.details.filter(function(d) { return self.getDiffValue(d) !== 0; }).length;
+        },
+        formatDiff: function(row) { var v = this.getDiffValue(row); return v > 0 ? '+' + v : String(v); },
+        getDiffClass: function(row) { var v = this.getDiffValue(row); return v < 0 ? 'diff-badge--loss' : v > 0 ? 'diff-badge--profit' : 'diff-badge--even'; },
+        getDiffIcon: function(row) { var v = this.getDiffValue(row); return v < 0 ? 'ri-arrow-down-s-fill' : v > 0 ? 'ri-arrow-up-s-fill' : 'ri-subtract-line'; },
+        getDiffStatusLabel: function(row) { var v = this.getDiffValue(row); return v < 0 ? '盘亏' : v > 0 ? '盘盈' : '一致'; },
+        getDiffStatusClass: function(row) { var v = this.getDiffValue(row); return v < 0 ? 'diff-status-tag--loss' : v > 0 ? 'diff-status-tag--profit' : 'diff-status-tag--even'; },
+        // 凭证图片逗号串 → 可访问下载 URL 列表
+        imageList: function(images) {
+          if (!images) return []
+          return images.split(',').filter(function(x) { return !!x }).map(function(x) { return imgPath(x) })
+        },
+        detailRowClass: function(obj) { return this.getDiffValue(obj.row) !== 0 ? 'has-diff' : ''; },
+
+        /* ── 新增盘点单 ── */
+        openCreateDialog: function() {
+          this.createForm = { operator: '', remark: '', voucherImages: '' };
+          this.createDialogVisible = true;
+        },
+        queryOperatorSuggestions: function(queryString, cb) {
+          window.RgInventoryHelper.queryEmployees(queryString).then(function (list) { cb(list) })
+        },
+        submitCreate: function() {
+          var self = this;
+          this.$refs.createForm.validate(function(valid) {
+            if (!valid) return;
+            self.createSubmitting = true;
+            addStockCheck(self.createForm).then(function(res) {
+              if (String(res.code) === '1') {
+                ReggieUI.success('盘点单创建成功，请添加盘点项');
+                self.createDialogVisible = false;
+                self.init(true);
+              } else {
+                ReggieUI.error(res.msg || '创建失败');
+              }
+            }).catch(function(err) { ReggieUI.error('创建失败：' + err); })
+              .finally(function() { self.createSubmitting = false; });
+          });
+        },
+
+        /* ── 编辑盘点项 ── */
+        openItemsDialog: function(row) {
+          this.itemsCheckId = row.id;
+          this.itemSearch = '';
+          this.pickedItems = [];
+          this.itemsDialogVisible = true;
+          this.loadMaterialsAndDetails(row);
+        },
+        loadMaterialsAndDetails: function(row) {
+          var self = this;
+          materialList().then(function(res) {
+            if (res.code === 1 && res.data) self.allMaterials = res.data;
+          });
+          // 如果已有明细，回填已选
+          if (row.details && row.details.length) {
+            self.pickedItems = row.details.map(function(d) {
+              return { materialId: d.materialId, name: d.materialName || '食材#'+d.materialId, bookQty: d.bookQty || 0, unit: '' };
+            });
+          } else if (row.id) {
+            stockCheckDetails(row.id).then(function(res) {
+              if (String(res.code) === '1' && res.data && res.data.length) {
+                self.pickedItems = res.data.map(function(d) {
+                  return { materialId: d.materialId, name: d.materialName || '食材#'+d.materialId, bookQty: d.bookQty || 0, unit: '' };
+                });
+              }
+            });
+          }
+        },
+        isPicked: function(id) { return this.pickedItems.some(function(p) { return p.materialId === id; }); },
+        togglePick: function(mat) {
+          var idx = -1;
+          for (var i = 0; i < this.pickedItems.length; i++) {
+            if (this.pickedItems[i].materialId === mat.id) { idx = i; break; }
+          }
+          if (idx >= 0) {
+            this.pickedItems.splice(idx, 1);
+          } else {
+            this.pickedItems.push({ materialId: mat.id, name: mat.name, bookQty: mat.stockQty || 0, unit: mat.unit || '' });
+          }
+        },
+        removePick: function(id) {
+          this.pickedItems = this.pickedItems.filter(function(p) { return p.materialId !== id; });
+        },
+        submitItems: function() {
+          if (this.pickedItems.length === 0) {
+            ReggieUI.warning('请至少选择一项食材');
+            return;
+          }
+          var self = this;
+          this.itemsSubmitting = true;
+          var items = this.pickedItems.map(function(p) { return { materialId: p.materialId }; });
+          setStockCheckItems(self.itemsCheckId, items).then(function(res) {
+            if (String(res.code) === '1') {
+              ReggieUI.success('盘点项设置成功');
+              self.itemsDialogVisible = false;
+              self.init(true);
+            } else {
+              ReggieUI.error(res.msg || '设置失败');
+            }
+          }).catch(function(err) { ReggieUI.error('设置失败：' + err); })
+            .finally(function() { self.itemsSubmitting = false; });
+        },
+
+        /* ── 录入实盘 ── */
+        openRecordDialog: function(row) {
+          this.recordCheckId = row.id;
+          this.recordItems = [];
+          this.recordDialogVisible = true;
+          var self = this;
+          if (row.details && row.details.length) {
+            self.recordItems = row.details.map(function(d) {
+              return { materialId: d.materialId, materialName: d.materialName || '食材#'+d.materialId, bookQty: d.bookQty || 0, unit: '', actualStock: (d.actualQty != null && d.actualQty !== '') ? d.actualQty : '' };
+            });
+            self.fillRecordUnits();
+          } else {
+            stockCheckDetails(row.id).then(function(res) {
+              if (String(res.code) === '1' && res.data) {
+                self.recordItems = res.data.map(function(d) {
+                  return { materialId: d.materialId, materialName: d.materialName || '食材#'+d.materialId, bookQty: d.bookQty || 0, unit: '', actualStock: (d.actualQty != null && d.actualQty !== '') ? d.actualQty : '' };
+                });
+                self.fillRecordUnits();
+              }
+            }).catch(function() {});
+          }
+        },
+        // 明细接口不返回单位，补拉物料单位，供差异按单位汇总（避免 kg/瓶 跨单位相加）
+        fillRecordUnits: function() {
+          var self = this;
+          materialList().then(function(res) {
+            if (res.code === 1 && res.data) {
+              var unitMap = {};
+              res.data.forEach(function(m) { unitMap[m.id] = m.unit || ''; });
+              self.recordItems.forEach(function(it) {
+                if (!it.unit) self.$set(it, 'unit', unitMap[it.materialId] || '');
+              });
+            }
+          });
+        },
+        // 按单位汇总差异，返回 { map:{unit:合计}, units:[出现过的单位] }
+        diffGroups: function() {
+          var map = {};
+          var units = [];
+          this.recordItems.forEach(function(item) {
+            if (item.actualStock != null && item.actualStock !== '' && item.bookQty != null) {
+              var u = item.unit || '';
+              if (!Object.prototype.hasOwnProperty.call(map, u)) { map[u] = 0; units.push(u); }
+              map[u] += (Number(item.actualStock) - Number(item.bookQty));
+            }
+          });
+          return { map: map, units: units };
+        },
+        fillAllMatch: function() {
+          this.recordItems.forEach(function(item) { item.actualStock = item.bookQty; });
+        },
+        submitRecord: function() {
+          var self = this;
+          var items = this.recordItems.filter(function(item) {
+            return item.actualStock != null && item.actualStock !== '';
+          }).map(function(item) {
+            return { materialId: item.materialId, actualStock: Number(item.actualStock) };
+          });
+          if (items.length === 0) {
+            ReggieUI.warning('请至少填写一项实际库存');
+            return;
+          }
+          // 兜底：负数会造成错误盘亏和负库存（el-input-number 失焦才纠正，防未失焦直接提交）
+          var hasNegative = items.some(function(it) { return Number(it.actualStock) < 0; });
+          if (hasNegative) {
+            ReggieUI.warning('实际库存不能为负数');
+            return;
+          }
+          this.recordSubmitting = true;
+          recordStockCheckQty(this.recordCheckId, items).then(function(res) {
+            if (String(res.code) === '1') {
+              ReggieUI.success('实盘数量录入成功');
+              self.recordDialogVisible = false;
+              self.init(true);
+            } else {
+              ReggieUI.error(res.msg || '录入失败');
+            }
+          }).catch(function(err) { ReggieUI.error('录入失败：' + err); })
+            .finally(function() { self.recordSubmitting = false; });
+        },
+
+        /* ── 完成盘点 ── */
+        confirmComplete: function(row) {
+          var self = this;
+          // 先加载明细确认
+          var doComplete = function(details) {
+            // 实盘为 0 表示售罄清零，是有效值，不能因 falsy 被排除，否则该项库存不会被调整、盈亏也出错
+            var items = details.filter(function(d) { return d.actualQty != null && d.actualQty !== ''; })
+              .map(function(d) { return { materialId: d.materialId, actualStock: d.actualQty }; });
+            if (items.length === 0) {
+              ReggieUI.warning('请先录入实盘数量再完成盘点');
+              return;
+            }
+            ReggieUI.confirm('确认完成盘点？完成后将自动调整库存并生成盈亏记录。', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            }).then(function() {
+              completeStockCheck(row.id, { items: items }).then(function(res) {
+                if (String(res.code) === '1') {
+                  ReggieUI.success('盘点完成，库存已调整');
+                  self.init(true);
+                } else {
+                  ReggieUI.error(res.msg || '完成失败');
+                }
+              }).catch(function(err) { ReggieUI.error('完成失败：' + err); });
+            }).catch(function(e) { if (e === 'cancel' || e === 'close') return; ReggieUI.error('完成失败：' + e); });
+          };
+          if (row.details && row.details.length) {
+            doComplete(row.details);
+          } else {
+            stockCheckDetails(row.id).then(function(res) {
+              if (String(res.code) === '1' && res.data) doComplete(res.data);
+              else ReggieUI.error('加载明细失败');
+            }).catch(function(err) { ReggieUI.error('加载明细失败：' + err); });
+          }
+        },
+
+        /* ── 删除 ── */
+        deleteHandle: function(row) {
+          var self = this;
+          ReggieUI.confirm('确认删除盘点单 ' + row.checkNo + '？', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(function() {
+            deleteStockCheck(row.id).then(function(res) {
+              if (String(res.code) === '1') {
+                ReggieUI.success('删除成功');
+                self.init(true);
+              } else {
+                ReggieUI.error(res.msg || '删除失败');
+              }
+            }).catch(function(err) { ReggieUI.error('删除失败：' + err); });
+          }).catch(function(e) { if (e === 'cancel' || e === 'close') return; ReggieUI.error('删除失败：' + e); });
+        },
+        // 批量删除：顺序循环单删（后端仅 DELETE /api/inventory/stock-check/{id}）
+        doBatchDelete: function(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '盘点单', request: deleteStockCheck })
+        },
+        onBatchDeleted: function() {
+          this.init(true)
+        },
+        /* 修改点：盘点冲正 — 已完成的盘点单回退到进行中，允许重新录入修正 */
+        rollbackHandle: function(row) {
+          var self = this;
+          ReggieUI.confirm('确认冲正盘点单 ' + row.checkNo + '？冲正后可重新录入实盘数量。', '盘点冲正', {
+            confirmButtonText: '确认冲正',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(function() {
+            rollbackStockCheck(row.id).then(function(res) {
+              if (String(res.code) === '1') {
+                ReggieUI.success('已回退到进行中，请重新录入实盘数量');
+                self.init(true);
+              } else {
+                ReggieUI.error(res.msg || '冲正失败');
+              }
+            }).catch(function(err) { ReggieUI.error('冲正失败：' + err); });
+          }).catch(function() {});
+        }
+      }
+    });
+  </script>
+</body>
+</html>

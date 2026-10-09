@@ -1,0 +1,287 @@
+package com.reggie.module.shopping.controller;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
+import com.reggie.common.R;
+import com.reggie.enums.DishStatus;
+import com.reggie.module.dish.model.Dish;
+import com.reggie.module.setmeal.model.Setmeal;
+import com.reggie.module.shopping.model.ShoppingCart;
+import com.reggie.module.dish.service.DishService;
+import com.reggie.module.setmeal.service.SetmealService;
+import com.reggie.module.shopping.service.ShoppingCartService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+/**
+ * 购物车管理
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
+@Slf4j
+@RestController
+@RequestMapping("/shopping-cart")
+@Tag(name = "购物车管理", description = "购物车CRUD接口")
+public class ShoppingCartController {
+
+    @Autowired
+    private ShoppingCartService shoppingCartService;
+
+    @Autowired
+    private DishService dishService;
+
+    @Autowired
+    private SetmealService setmealService;
+
+    /**
+     * 添加购物车
+     * @param shoppingCart
+     * @return
+     */
+    @PostMapping("/add")
+    @Operation(summary = "添加到购物车", description = "添加商品到购物车")
+    @Parameter(name = "shoppingCart", description = "购物车信息", required = true)
+    public R<ShoppingCart> add(@RequestBody ShoppingCart shoppingCart){
+        log.info("购物车数据：userId={}, dishId={}, dishName={}, number={}",
+            shoppingCart.getUserId(),
+            shoppingCart.getDishId() != null ? shoppingCart.getDishId() : shoppingCart.getSetmealId(),
+            shoppingCart.getName(),
+            shoppingCart.getNumber());
+
+        //设置用户id，指定当前是哪个用户的购物车数据
+        Long currentId = BaseContext.getCurrentId();
+        shoppingCart.setUserId(currentId);
+
+        Long dishId = shoppingCart.getDishId();
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+
+        // 从服务端获取菜品/套餐真实价格（防止客户端篡改）；幽灵菜品拦截（等价抽取）
+        applyServerSideDishInfo(shoppingCart, dishId, currentTenantId);
+
+        LambdaQueryWrapper<ShoppingCart> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ShoppingCart::getUserId, currentId);
+        if (dishId != null) {
+            //添加到购物车的是菜品
+            queryWrapper.eq(ShoppingCart::getDishId, dishId);
+        } else {
+            //添加到购物车的是套餐
+            queryWrapper.eq(ShoppingCart::getSetmealId, shoppingCart.getSetmealId());
+        }
+        // 口味（规格）相同的才合并数量；不同口味的同一菜品是不同购物车项。
+        // 修复(2026-09-30)：无口味入参时显式匹配 null/''，与 sub 侧对称——否则无口味加购会把
+        // 数量错误合并进该菜品已存在的带口味行（多行时 getOne 直接 500）。
+        if (shoppingCart.getDishFlavor() != null && !shoppingCart.getDishFlavor().isEmpty()) {
+            queryWrapper.eq(ShoppingCart::getDishFlavor, shoppingCart.getDishFlavor());
+        } else {
+            queryWrapper.and(w -> w.isNull(ShoppingCart::getDishFlavor).or().eq(ShoppingCart::getDishFlavor, ""));
+        }
+
+        // 查询当前菜品或者套餐是否在购物车中。
+        // 2026-09-30 自愈：shopping_cart 无唯一索引（MySQL 唯一索引对 NULL 不去重，setmeal_id 可空），
+        // 历史并发首加可能产生重复行；getOne 命中多行会让后续减购直接 500。改用 list：
+        // 多行时合并数量到首行并删除其余，边用边清；并发窗口内仍可能重复，但下次 add 会自动合并。
+        List<ShoppingCart> existingList = shoppingCartService.list(queryWrapper);
+        ShoppingCart cartServiceOne;
+
+        if (!existingList.isEmpty()) {
+            ShoppingCart first = existingList.get(0);
+            for (int i = 1; i < existingList.size(); i++) {
+                ShoppingCart dup = existingList.get(i);
+                if (dup.getNumber() != null && dup.getNumber() > 0) {
+                    shoppingCartService.addQuantityAtomically(first.getId(), dup.getNumber());
+                }
+                shoppingCartService.removeById(dup.getId());
+            }
+            // 原子加 1 后重新查询最新数据（避免本地对象与 DB 不一致）
+            shoppingCartService.addQuantityAtomically(first.getId(), 1);
+            cartServiceOne = shoppingCartService.getById(first.getId());
+        } else {
+            //如果不存在，则添加到购物车，数量默认就是一
+            shoppingCart.setNumber(1);
+            shoppingCart.setCreateTime(LocalDateTime.now());
+            try {
+                shoppingCartService.save(shoppingCart);
+                // 插入成功：返回新购物车项（此前遗漏赋值导致 R.success(null)，前端拿不到 data）
+                cartServiceOne = shoppingCart;
+            } catch (DuplicateKeyException e) {
+                // 并发唯一索引冲突兜底：改为原子累加数量，避免重复购物车项（等价抽取）
+                cartServiceOne = mergeExistingOnDuplicateKey(shoppingCart, currentId, dishId);
+            }
+        }
+
+        return R.success(cartServiceOne);
+    }
+
+    /**
+     * 从服务端校验并回填菜品/套餐信息（幽灵菜品拦截，防止客户端篡改金额）（等价抽取）。
+     *
+     * @param shoppingCart 购物车项
+     * @param dishId 菜品ID（可能为空）
+     * @param currentTenantId 当前租户ID
+     */
+    private void applyServerSideDishInfo(ShoppingCart shoppingCart, Long dishId, Long currentTenantId) {
+        if (dishId != null) {
+            Dish dish = dishService.getById(dishId);
+            if (dish == null) {
+                throw new CustomException("菜品不存在，无法加入购物车");
+            }
+            if (currentTenantId != null && !currentTenantId.equals(dish.getTenantId())) {
+                throw new CustomException("无权使用其他门店的菜品");
+            }
+            if (dish.getStatus() == null || dish.getStatus() != DishStatus.ENABLED.getValue()) {
+                throw new CustomException("菜品「" + dish.getName() + "」已停售，无法加入购物车");
+            }
+            shoppingCart.setName(dish.getName());
+            shoppingCart.setImage(dish.getImage());
+            shoppingCart.setAmount(dish.getPrice());
+            return;
+        }
+        if (shoppingCart.getSetmealId() != null) {
+            Setmeal setmeal = setmealService.getById(shoppingCart.getSetmealId());
+            if (setmeal == null) {
+                throw new CustomException("套餐不存在，无法加入购物车");
+            }
+            if (currentTenantId != null && !currentTenantId.equals(setmeal.getTenantId())) {
+                throw new CustomException("无权使用其他门店的套餐");
+            }
+            if (setmeal.getStatus() == null || setmeal.getStatus() != DishStatus.ENABLED.getValue()) {
+                throw new CustomException("套餐「" + setmeal.getName() + "」已停用，无法加入购物车");
+            }
+            shoppingCart.setName(setmeal.getName());
+            shoppingCart.setImage(setmeal.getImage());
+            shoppingCart.setAmount(setmeal.getPrice());
+            return;
+        }
+        throw new CustomException("缺少菜品或套餐ID，无法加入购物车");
+    }
+
+    /**
+     * 唯一索引冲突时的兜底：查出已存在项并原子累加数量（等价抽取）。
+     *
+     * @param shoppingCart 待插入项
+     * @param currentId 当前用户ID
+     * @param dishId 菜品ID（可能为空）
+     * @return 合并后的购物车项
+     */
+    private ShoppingCart mergeExistingOnDuplicateKey(ShoppingCart shoppingCart, Long currentId, Long dishId) {
+        LambdaQueryWrapper<ShoppingCart> dupQuery = new LambdaQueryWrapper<>();
+        dupQuery.eq(ShoppingCart::getUserId, currentId);
+        if (dishId != null) {
+            dupQuery.eq(ShoppingCart::getDishId, dishId);
+        } else {
+            dupQuery.eq(ShoppingCart::getSetmealId, shoppingCart.getSetmealId());
+        }
+        if (shoppingCart.getDishFlavor() != null && !shoppingCart.getDishFlavor().isEmpty()) {
+            dupQuery.eq(ShoppingCart::getDishFlavor, shoppingCart.getDishFlavor());
+        }
+        ShoppingCart existed = shoppingCartService.getOne(dupQuery);
+        if (existed == null) {
+            // 极罕见：索引冲突但查不到（记录被并发删除），返回原始项
+            return shoppingCart;
+        }
+        shoppingCartService.addQuantityAtomically(existed.getId(), 1);
+        return shoppingCartService.getById(existed.getId());
+    }
+
+    /**
+     * 查看购物车
+     * @return
+     */
+    @GetMapping("/list")
+    @Operation(summary = "查询购物车", description = "查看当前用户的购物车列表")
+    public R<List<ShoppingCart>> list(){
+        log.info("查看购物车...");
+
+        LambdaQueryWrapper<ShoppingCart> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ShoppingCart::getUserId,BaseContext.getCurrentId());
+        queryWrapper.orderByAsc(ShoppingCart::getCreateTime);
+
+        List<ShoppingCart> list = shoppingCartService.list(queryWrapper);
+
+        return R.success(list);
+    }
+
+    /**
+     * 减商品（使用原子操作防止并发竞态）
+     * @param shoppingCart
+     * @return
+     */
+    @PostMapping("/sub")
+    @Operation(summary = "减少购物车商品", description = "减少购物车中商品的数量")
+    @Parameter(name = "shoppingCart", description = "购物车信息", required = true)
+    public R<ShoppingCart> sub(@RequestBody ShoppingCart shoppingCart) {
+        // 先查找到购物车项
+        LambdaQueryWrapper<ShoppingCart> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ShoppingCart::getUserId, BaseContext.getCurrentId());
+        if (shoppingCart.getDishId() != null) {
+            wrapper.eq(ShoppingCart::getDishId, shoppingCart.getDishId());
+            // 多口味菜同一 dishId 在购物车按口味存多条：必须带 dishFlavor 精确匹配。
+            // 修复(2026-09-30)：无口味入参时显式匹配 null/''——原实现不加口味条件，
+            // 该菜品存在多条口味行时 getOne 命中多行抛 TooManyResultsException（减购 500，减不掉）。
+            if (shoppingCart.getDishFlavor() != null) {
+                wrapper.eq(ShoppingCart::getDishFlavor, shoppingCart.getDishFlavor());
+            } else {
+                wrapper.and(w -> w.isNull(ShoppingCart::getDishFlavor).or().eq(ShoppingCart::getDishFlavor, ""));
+            }
+        } else if (shoppingCart.getSetmealId() != null) {
+            wrapper.eq(ShoppingCart::getSetmealId, shoppingCart.getSetmealId());
+        } else {
+            return R.error("缺少菜品或套餐ID");
+        }
+
+        // list + 取首行：即使历史脏数据出现同口径多行也不会 500
+        List<ShoppingCart> matches = shoppingCartService.list(wrapper);
+        ShoppingCart cartItem = matches.isEmpty() ? null : matches.get(0);
+        if (cartItem == null) {
+            return R.error("购物车商品不存在");
+        }
+
+        // 使用原子操作减一，防止并发竞态
+        int affected = shoppingCartService.subQuantityAtomically(cartItem.getId());
+        if (affected > 0) {
+            // 重新查询最新数量
+            cartItem = shoppingCartService.getById(cartItem.getId());
+            return R.success(cartItem);
+        } else {
+            // 数量已为1，删除后返回null
+            shoppingCartService.removeById(cartItem.getId());
+            return R.success(null);
+        }
+    }
+
+    /**
+     * 清空购物车
+     * @return
+     */
+    @DeleteMapping("/clean")
+    @Operation(summary = "清空购物车", description = "清空当前用户的购物车")
+    public R<String> clean(){
+        //SQL:delete from shopping_cart where user_id = ?
+
+        LambdaQueryWrapper<ShoppingCart> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ShoppingCart::getUserId,BaseContext.getCurrentId());
+
+        shoppingCartService.remove(queryWrapper);
+
+        return R.success("清空购物车成功");
+    }
+}
+
+
+
+

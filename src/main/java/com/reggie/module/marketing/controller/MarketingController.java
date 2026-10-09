@@ -1,0 +1,728 @@
+package com.reggie.module.marketing.controller;
+
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
+import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.common.utils.PageUtils;
+import com.reggie.module.marketing.dto.BatchDeleteCampaignsDTO;
+import com.reggie.module.marketing.dto.BatchPushCampaignDTO;
+import com.reggie.module.marketing.model.FullReductionRule;
+import com.reggie.module.marketing.model.DiscountRule;
+import com.reggie.module.marketing.model.CampaignUsageRecord;
+import com.reggie.module.marketing.model.MarketingCampaign;
+import com.reggie.module.marketing.service.MarketingService;
+import com.reggie.module.marketing.service.MarketingCampaignService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import javax.validation.Valid;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * Marketing Activity Controller
+ * <p>
+ * 营销活动统一控制器：聚合「活动规则配置」（满减/折扣）、
+ * 「营销计算/核销统计」与「营销活动投放」（CRUD/推送/自动发券）三大子域。
+ * 三者共用 {@code /marketing} 前缀但方法路径互不重叠。
+ * </p>
+ *
+ * @author reggie
+ * @since 2026-08-11
+ */
+@Slf4j
+@RestController
+@RequestMapping("/marketing")
+@Tag(name = "营销活动管理")
+@RequireEmployee
+public class MarketingController {
+
+    @Autowired
+    private MarketingService marketingService;
+
+    @Autowired
+    private MarketingCampaignService marketingCampaignService;
+
+    // ==================== Full Reduction Rule Management ====================
+
+    /**
+     * 获取 full reduction rules。
+     * @param campaignId 参数 campaignId
+     * @return 返回结果
+     */
+    @GetMapping("/full-reduction/list")
+    @Operation(summary = "查询满减规则列表")
+    public R<List<FullReductionRule>> getFullReductionRules(
+            @Parameter(description = "活动ID（可选）") @RequestParam(required = false) Long campaignId) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        List<FullReductionRule> rules = marketingService.getFullReductionRules(campaignId, tenantId);
+        return R.success(rules);
+    }
+
+    /**
+     * 保存 full reduction rule。
+     * @param rule 参数 rule
+     * @return 返回结果
+     */
+    @PostMapping("/full-reduction")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "新增满减规则")
+    public R<String> saveFullReductionRule(@Parameter(description = "满减规则信息", required =
+            true) @Valid @RequestBody FullReductionRule rule) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        rule.setTenantId(tenantId);
+        boolean success = marketingService.saveOrUpdateFullReductionRule(rule);
+        return success ? R.success("Saved successfully") : R.error("Save failed");
+    }
+
+    /**
+     * 更新 full reduction rule。
+     * @param rule 参数 rule
+     * @return 返回结果
+     */
+    @PutMapping("/full-reduction")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "修改满减规则")
+    public R<String> updateFullReductionRule(@Parameter(description = "满减规则信息（含ID）", required =
+            true) @Valid @RequestBody FullReductionRule rule) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        rule.setTenantId(tenantId);
+        boolean success = marketingService.saveOrUpdateFullReductionRule(rule);
+        return success ? R.success("Updated successfully") : R.error("Update failed");
+    }
+
+    /**
+     * 删除 full reduction rule。
+     * @param id 参数 id
+     * @return 返回结果
+     */
+    @DeleteMapping("/full-reduction/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "删除满减规则")
+    public R<String> deleteFullReductionRule(@Parameter(description = "满减规则ID", required =
+            true) @PathVariable Long id) {
+        boolean success = marketingService.deleteFullReductionRule(id);
+        return success ? R.success("Deleted successfully") : R.error("Delete failed");
+    }
+
+    /**
+     * 批量处理 save full reduction rules。
+     * @param rules 参数 rules
+     * @return 返回结果
+     */
+    @PostMapping("/full-reduction/batch")
+    @RateLimit(maxRequestsPerSecond = 3)
+    @Operation(summary = "批量新增满减规则")
+    public R<String> batchSaveFullReductionRules(@Parameter(description = "满减规则列表", required =
+            true) @Valid @RequestBody List<FullReductionRule> rules) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        for (FullReductionRule rule : rules) {
+            rule.setTenantId(tenantId);
+        }
+        boolean success = marketingService.batchSaveFullReductionRules(rules);
+        return success ? R.success("Batch save successful") : R.error("Batch save failed");
+    }
+
+    // ==================== Discount Rule Management ====================
+
+    /**
+     * 获取 discount rules。
+     * @param campaignId 参数 campaignId
+     * @return 返回结果
+     */
+    @GetMapping("/discount/list")
+    @Operation(summary = "查询折扣规则列表")
+    public R<List<DiscountRule>> getDiscountRules(
+            @Parameter(description = "活动ID（可选）") @RequestParam(required = false) Long campaignId) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        List<DiscountRule> rules = marketingService.getDiscountRules(campaignId, tenantId);
+        return R.success(rules);
+    }
+
+    /**
+     * 保存 discount rule。
+     * @param rule 参数 rule
+     * @return 返回结果
+     */
+    @PostMapping("/discount")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "新增折扣规则")
+    public R<String> saveDiscountRule(@Parameter(description = "折扣规则信息", required =
+            true) @Valid @RequestBody DiscountRule rule) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        rule.setTenantId(tenantId);
+        boolean success = marketingService.saveOrUpdateDiscountRule(rule);
+        return success ? R.success("Saved successfully") : R.error("Save failed");
+    }
+
+    /**
+     * 更新 discount rule。
+     * @param rule 参数 rule
+     * @return 返回结果
+     */
+    @PutMapping("/discount")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "修改折扣规则")
+    public R<String> updateDiscountRule(@Parameter(description = "折扣规则信息（含ID）", required =
+            true) @Valid @RequestBody DiscountRule rule) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        rule.setTenantId(tenantId);
+        boolean success = marketingService.saveOrUpdateDiscountRule(rule);
+        return success ? R.success("Updated successfully") : R.error("Update failed");
+    }
+
+    /**
+     * 删除 discount rule。
+     * @param id 参数 id
+     * @return 返回结果
+     */
+    @DeleteMapping("/discount/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "删除折扣规则")
+    public R<String> deleteDiscountRule(@Parameter(description = "折扣规则ID") @PathVariable Long id) {
+        boolean success = marketingService.deleteDiscountRule(id);
+        return success ? R.success("Deleted successfully") : R.error("Delete failed");
+    }
+
+    /**
+     * 批量处理 save discount rules。
+     * @param rules 参数 rules
+     * @return 返回结果
+     */
+    @PostMapping("/discount/batch")
+    @RateLimit(maxRequestsPerSecond = 3)
+    @Operation(summary = "批量新增折扣规则")
+    public R<String> batchSaveDiscountRules(@Parameter(description = "折扣规则列表", required =
+            true) @Valid @RequestBody List<DiscountRule> rules) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        for (DiscountRule rule : rules) {
+            rule.setTenantId(tenantId);
+        }
+        boolean success = marketingService.batchSaveDiscountRules(rules);
+        return success ? R.success("Batch save successful") : R.error("Batch save failed");
+    }
+
+    // ==================== Marketing Calculation ====================
+
+    /**
+     * 计算 full reduction。
+     * @param campaignId 参数 campaignId
+     * @param orderAmount 参数 orderAmount
+     * @return 返回结果
+     */
+    @PostMapping("/calculate/full-reduction")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "计算满减优惠金额")
+    public R<BigDecimal> calculateFullReduction(
+            @Parameter(description = "活动ID", required = true) @RequestParam Long campaignId,
+            @Parameter(description = "订单金额", required = true) @RequestParam BigDecimal orderAmount) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Long userId = BaseContext.getCurrentId();
+        BigDecimal discount = marketingService.calculateFullReduction(campaignId, orderAmount, userId, tenantId);
+        return R.success(discount);
+    }
+
+    /**
+     * 计算 discount。
+     * @param campaignId 参数 campaignId
+     * @param orderAmount 参数 orderAmount
+     * @param dishIds 参数 dishIds
+     * @return 返回结果
+     */
+    @PostMapping("/calculate/discount")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "计算折扣优惠金额")
+    public R<BigDecimal> calculateDiscount(
+            @Parameter(description = "活动ID", required = true) @RequestParam Long campaignId,
+            @Parameter(description = "订单金额", required = true) @RequestParam BigDecimal orderAmount,
+            @Parameter(description = "菜品ID列表", required = true) @RequestBody List<Long> dishIds) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Long userId = BaseContext.getCurrentId();
+        BigDecimal discount = marketingService.calculateDiscount(campaignId, orderAmount, dishIds, userId, tenantId);
+        return R.success(discount);
+    }
+
+    /**
+     * 计算 best discount。
+     * @param orderAmount 参数 orderAmount
+     * @param dishIds 参数 dishIds
+     * @return 返回结果
+     */
+    @PostMapping("/calculate/best")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "计算最优优惠")
+    public R<Map<String, Object>> calculateBestDiscount(
+            @Parameter(description = "订单金额", required = true) @RequestParam BigDecimal orderAmount,
+            @Parameter(description = "菜品ID列表", required = true) @RequestBody List<Long> dishIds) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Long userId = BaseContext.getCurrentId();
+        Map<String, Object> result = marketingService.calculateBestDiscount(orderAmount, dishIds, userId, tenantId);
+        return R.success(result);
+    }
+
+    // ==================== Usage Records ====================
+
+    /**
+     * 获取 usage records。
+     * @param campaignId 参数 campaignId
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
+    @GetMapping("/usage/list")
+    @Operation(summary = "查询活动使用记录")
+    public R<List<CampaignUsageRecord>> getUsageRecords(
+            @Parameter(description = "活动ID（可选）") @RequestParam(required = false) Long campaignId,
+            @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        List<CampaignUsageRecord> records = marketingService.getUsageRecords(campaignId, startDate, endDate, tenantId);
+        return R.success(records);
+    }
+
+    /**
+     * 获取 user usage count。
+     * @param campaignId 参数 campaignId
+     * @param ruleId 参数 ruleId
+     * @return 返回结果
+     */
+    @GetMapping("/usage/count")
+    @Operation(summary = "查询用户使用次数")
+    public R<Integer> getUserUsageCount(
+            @Parameter(description = "活动ID", required = true) @RequestParam Long campaignId,
+            @Parameter(description = "规则ID", required = true) @RequestParam Long ruleId) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Long userId = BaseContext.getCurrentId();
+        int count = marketingService.getUserUsageCount(campaignId, ruleId, userId, tenantId);
+        return R.success(count);
+    }
+
+    // ==================== Statistics ====================
+
+    /**
+     * 获取 marketing statistics。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
+    @GetMapping("/statistics")
+    @Operation(summary = "营销统计")
+    public R<Map<String, Object>> getMarketingStatistics(
+            @Parameter(description = "开始日期（可选，默认近30天）") @RequestParam(required = false) @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期（可选，默认当前）") @RequestParam(required = false) @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+        // 修改点：未传日期时默认近30天，降低前端调用门槛
+        if (endDate == null) {
+            endDate = LocalDateTime.now();
+        }
+        if (startDate == null) {
+            startDate = endDate.minusDays(30);
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Map<String, Object> statistics = marketingService.getMarketingStatistics(startDate, endDate, tenantId);
+        return R.success(statistics);
+    }
+
+    /**
+     * 获取 full reduction effect。
+     * @param campaignId 参数 campaignId
+     * @return 返回结果
+     */
+    @GetMapping("/effect/full-reduction/{campaignId}")
+    @Operation(summary = "满减活动效果")
+    public R<Map<String, Object>> getFullReductionEffect(@Parameter(description = "活动ID", required =
+            true) @PathVariable Long campaignId) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Map<String, Object> effect = marketingService.getFullReductionEffect(campaignId, tenantId);
+        return R.success(effect);
+    }
+
+    /**
+     * 获取 discount effect。
+     * @param campaignId 参数 campaignId
+     * @return 返回结果
+     */
+    @GetMapping("/effect/discount/{campaignId}")
+    @Operation(summary = "折扣活动效果")
+    public R<Map<String, Object>> getDiscountEffect(@Parameter(description = "活动ID", required =
+            true) @PathVariable Long campaignId) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Map<String, Object> effect = marketingService.getDiscountEffect(campaignId, tenantId);
+        return R.success(effect);
+    }
+
+    /**
+     * 获取 marketing trend。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
+    @GetMapping("/trend")
+    @Operation(summary = "营销趋势")
+    public R<Map<String, Object>> getMarketingTrend(
+            @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Map<String, Object> trend = marketingService.getMarketingTrend(startDate, endDate, tenantId);
+        return R.success(trend);
+    }
+
+    /**
+     * 获取 top activities。
+     * @param limit 参数 limit
+     * @return 返回结果
+     */
+    @GetMapping("/top")
+    @Operation(summary = "热门活动排行")
+    public R<List<Map<String, Object>>> getTopActivities(
+            @Parameter(description = "返回条数（默认10）") @RequestParam(defaultValue = "10") int limit) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        List<Map<String, Object>> topActivities = marketingService.getTopActivities(limit, tenantId);
+        return R.success(topActivities);
+    }
+
+    // ==================== Campaign CRUD & Delivery（营销活动投放） ====================
+
+    /**
+     * 分页查询 campaigns。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param name 参数 name
+     * @param status 参数 status
+     * @param campaignType 参数 campaignType
+     * @return 返回结果
+     */
+    @GetMapping("/campaigns/page")
+    @Operation(summary = "分页查询营销活动", description = "分页查询营销活动列表，支持按名称、状态、活动类型筛选")
+    public R<Page<MarketingCampaign>> pageCampaigns(
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
+            @Parameter(description = "活动名称（可选）") @RequestParam(required = false) String name,
+            @Parameter(description = "状态（可选）") @RequestParam(required = false) Integer status,
+            @Parameter(description = "活动类型（可选）") @RequestParam(required = false) Integer campaignType) {
+        Page<MarketingCampaign> result = marketingCampaignService.pageCampaigns(page, PageUtils.cap(pageSize), name,
+                status, campaignType);
+        return R.success(result);
+    }
+
+    /**
+     * 创建 campaign。
+     * @param campaign 参数 campaign
+     * @return 返回结果
+     */
+    @PostMapping("/campaigns")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "创建营销活动", description = "创建新的营销活动，初始状态为草稿")
+    public R<MarketingCampaign> createCampaign(
+            @Parameter(description = "营销活动信息", required = true) @Valid @RequestBody MarketingCampaign campaign) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        campaign.setTenantId(tenantId);
+        campaign.setStatus(MarketingCampaign.STATUS_DRAFT);
+        campaign.setCurrentParticipants(0);
+        marketingCampaignService.save(campaign);
+        log.info("[营销管理] 创建活动: {}", campaign.getName());
+        return R.success(campaign);
+    }
+
+    /**
+     * 更新 campaign。
+     * @param campaign 参数 campaign
+     * @return 返回结果
+     */
+    @PutMapping("/campaigns")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "更新营销活动", description = "更新营销活动信息")
+    public R<MarketingCampaign> updateCampaign(
+            @Parameter(description = "营销活动信息", required = true) @Valid @RequestBody MarketingCampaign campaign) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        MarketingCampaign exist = marketingCampaignService.getById(campaign.getId());
+        if (exist == null) {
+            throw new CustomException("营销活动不存在");
+        }
+        if (!tenantId.equals(exist.getTenantId())) {
+            throw new CustomException("营销活动不属于当前租户");
+        }
+        exist.setName(campaign.getName());
+        exist.setDescription(campaign.getDescription());
+        exist.setCampaignType(campaign.getCampaignType());
+        exist.setTargetType(campaign.getTargetType());
+        exist.setTargetValue(campaign.getTargetValue());
+        exist.setRuleJson(campaign.getRuleJson());
+        exist.setStatus(campaign.getStatus());
+        exist.setPriority(campaign.getPriority());
+        exist.setStartTime(campaign.getStartTime());
+        exist.setEndTime(campaign.getEndTime());
+        exist.setMaxParticipants(campaign.getMaxParticipants());
+        exist.setCouponTemplateId(campaign.getCouponTemplateId());
+        marketingCampaignService.updateById(exist);
+        log.info("[营销管理] 更新活动: id={}", campaign.getId());
+        return R.success(exist);
+    }
+
+    /**
+     * 批量处理 delete campaigns。
+     * @param dto 参数 dto
+     * @return 返回结果
+     */
+    @PostMapping("/campaigns/batch-delete")
+    @RateLimit(maxRequestsPerSecond = 3)
+    @Operation(summary = "批量删除营销活动", description = "批量删除指定的营销活动")
+    public R<String> batchDeleteCampaigns(
+            @Parameter(description = "活动ID列表", required = true) @Valid @RequestBody BatchDeleteCampaignsDTO dto) {
+        List<Long> ids = dto.getIds();
+        if (ids == null || ids.isEmpty()) {
+            return R.error("请选择要删除的活动");
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        int deleted = 0;
+        for (Long id : ids) {
+            MarketingCampaign campaign = marketingCampaignService.getById(id);
+            if (campaign == null) {
+                continue;
+            }
+            if (!tenantId.equals(campaign.getTenantId())) {
+                throw new CustomException("营销活动中存在不属于当前租户的记录");
+            }
+            marketingCampaignService.removeById(id);
+            deleted++;
+        }
+        log.info("[营销管理] 批量删除活动: count={}", deleted);
+        return R.success("成功删除 " + deleted + " 个活动");
+    }
+
+    /**
+     * 删除 campaign。
+     * @param id 参数 id
+     * @return 返回结果
+     */
+    @DeleteMapping("/campaigns/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "删除营销活动", description = "删除指定的营销活动")
+    public R<String> deleteCampaign(
+            @Parameter(description = "活动ID", required = true) @PathVariable Long id) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        MarketingCampaign campaign = marketingCampaignService.getById(id);
+        if (campaign == null) {
+            throw new CustomException("营销活动不存在");
+        }
+        if (!tenantId.equals(campaign.getTenantId())) {
+            throw new CustomException("营销活动不属于当前租户");
+        }
+        marketingCampaignService.removeById(id);
+        log.info("[营销管理] 删除活动: id={}", id);
+        return R.success("删除成功");
+    }
+
+    /**
+     * 获取 campaign。
+     * @param id 参数 id
+     * @return 返回结果
+     */
+    @GetMapping("/campaigns/{id}")
+    @Operation(summary = "查询营销活动", description = "根据ID查询单个营销活动详情")
+    public R<MarketingCampaign> getCampaign(
+            @Parameter(description = "活动ID", required = true) @PathVariable Long id) {
+        MarketingCampaign campaign = marketingCampaignService.getById(id);
+        return R.success(campaign);
+    }
+
+    /**
+     * 处理 publish campaign。
+     * @param id 参数 id
+     * @return 返回结果
+     */
+    @PutMapping("/campaigns/{id}/publish")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "发布营销活动", description = "将草稿状态的活动发布为进行中状态")
+    public R<String> publishCampaign(
+            @Parameter(description = "活动ID", required = true) @PathVariable Long id) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        MarketingCampaign campaign = marketingCampaignService.getById(id);
+        if (campaign == null) {
+            return R.error("活动不存在");
+        }
+        if (!tenantId.equals(campaign.getTenantId())) {
+            throw new CustomException("营销活动不属于当前租户");
+        }
+        campaign.setStatus(MarketingCampaign.STATUS_ACTIVE);
+        marketingCampaignService.updateById(campaign);
+        log.info("[营销管理] 发布活动: {}", campaign.getName());
+        return R.success("活动已发布");
+    }
+
+    /**
+     * 处理 pause campaign。
+     * @param id 参数 id
+     * @return 返回结果
+     */
+    @PutMapping("/campaigns/{id}/pause")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "暂停营销活动", description = "暂停（结束）指定的营销活动")
+    public R<String> pauseCampaign(
+            @Parameter(description = "活动ID", required = true) @PathVariable Long id) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        MarketingCampaign campaign = marketingCampaignService.getById(id);
+        if (campaign == null) {
+            return R.error("活动不存在");
+        }
+        if (!tenantId.equals(campaign.getTenantId())) {
+            throw new CustomException("营销活动不属于当前租户");
+        }
+        campaign.setStatus(MarketingCampaign.STATUS_PAUSED);
+        marketingCampaignService.updateById(campaign);
+        return R.success("活动已暂停");
+    }
+
+    /**
+     * 推送 message。
+     * @param campaignId 参数 campaignId
+     * @param userId 参数 userId
+     * @param pushType 参数 pushType
+     * @return 返回结果
+     */
+    @PostMapping("/push/{campaignId}/{userId}")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "推送营销消息", description = "向指定用户推送营销活动消息")
+    public R<String> pushMessage(
+            @Parameter(description = "活动ID", required = true) @PathVariable Long campaignId,
+            @Parameter(description = "用户ID", required = true) @PathVariable Long userId,
+            @Parameter(description = "推送类型") @RequestParam(defaultValue = "1") Integer pushType) {
+        boolean success = marketingCampaignService.pushMarketingMessage(campaignId, userId, pushType);
+        return success ? R.success("推送成功") : R.error("推送失败");
+    }
+
+    /**
+     * 处理 auto dispatch coupons。
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
+    @PostMapping("/auto-dispatch-coupons")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "自动发放优惠券", description = "根据用户画像自动为当前用户发放匹配的优惠券")
+    public R<String> autoDispatchCoupons(
+            @Parameter(description = "用户ID", required = true) @RequestParam Long userId) {
+        int count = marketingCampaignService.autoDispatchCoupons(userId);
+        return R.success("已发放" + count + "张优惠券");
+    }
+
+    /**
+     * 推送 preview。
+     * @param campaignId 参数 campaignId
+     * @param limit 参数 limit
+     * @return 返回结果
+     */
+    @GetMapping("/push-preview/{campaignId}")
+    @Operation(summary = "推送预览", description = "查看匹配该活动的真实用户列表预览")
+    public R<Map<String, Object>> pushPreview(
+            @Parameter(description = "活动ID", required = true) @PathVariable Long campaignId,
+            @Parameter(description = "预览数量") @RequestParam(defaultValue = "10") int limit) {
+        Map<String, Object> result = marketingCampaignService.getPushPreview(campaignId, limit);
+        return R.success(result);
+    }
+
+    /**
+     * 批量处理 push。
+     * @param campaignId 参数 campaignId
+     * @param dto 参数 dto
+     * @return 返回结果
+     */
+    @PostMapping("/batch-push/{campaignId}")
+    @RateLimit(maxRequestsPerSecond = 3)
+    @Operation(summary = "批量推送营销消息", description = "根据活动目标人群自动匹配用户并批量推送营销消息")
+    public R<String> batchPush(
+            @Parameter(description = "活动ID", required = true) @PathVariable Long campaignId,
+            @Parameter(description = "推送参数（pushType）") @Valid @RequestBody BatchPushCampaignDTO dto) {
+        Integer pushType = dto.getPushType();
+        int count = marketingCampaignService.batchPushMessages(campaignId, pushType);
+        return R.success("已向" + count + "位用户推送营销消息");
+    }
+
+    /**
+     * 处理 campaign options。
+     * @return 返回结果
+     */
+    @GetMapping("/campaigns/options")
+    @Operation(summary = "筛选选项", description = "获取所有营销活动名称，供搜索条件下拉框使用")
+    public R<Map<String, List<String>>> campaignOptions() {
+        List<MarketingCampaign> list = marketingCampaignService.list();
+        Set<String> nameSet = new HashSet<>();
+        for (MarketingCampaign c : list) {
+            if (c.getName() != null && !c.getName().isEmpty()) { nameSet.add(c.getName()); }
+        }
+        Map<String, List<String>> result = new HashMap<>();
+        result.put("names", new ArrayList<>(nameSet));
+        return R.success(result);
+    }
+
+    /**
+     * 处理 campaign stats。
+     * @return 返回结果
+     */
+    @GetMapping("/campaigns/stats")
+    @Operation(summary = "营销活动统计", description = "获取营销活动全局统计数据")
+    public R<Map<String, Object>> campaignStats() {
+        Map<String, Object> stats = marketingCampaignService.getCampaignStats();
+        return R.success(stats);
+    }
+
+    /**
+     * 推送 count。
+     * @param id 参数 id
+     * @return 返回结果
+     */
+    @GetMapping("/campaigns/{id}/push-count")
+    @Operation(summary = "活动推送次数", description = "获取指定营销活动的推送次数统计")
+    public R<Integer> pushCount(
+            @Parameter(description = "活动ID", required = true) @PathVariable Long id) {
+        int count = marketingCampaignService.getPushCountByCampaignId(id);
+        return R.success(count);
+    }
+}
+

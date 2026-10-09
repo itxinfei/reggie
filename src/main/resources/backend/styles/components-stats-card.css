@@ -1,0 +1,257 @@
+/* ========== 统计卡片统一组件 ==========
+ * 适用于 iframe 架构下无构建工具的场景
+ * 使用方式：<link rel="stylesheet" href="../../styles/components-stats-card.css" />
+ * 经典变体：默认（图标绝对定位右上角，数值渐变文字）
+ * 桌台变体：加 .stat-card--flex 类（图标圆角容器 + flex 布局，数值纯色）
+ */
+
+/* ========== 容器 ========== */
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* 3 列布局（员工管理等只有 3 张卡片的页面） */
+.stats-cards--col-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* 1/2 列布局（卡片数较少时避免被 4 列网格挤压、数值与图标重叠） */
+.stats-cards--col-1 {
+  grid-template-columns: 1fr;
+}
+.stats-cards--col-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* flex 行布局（图标在左，文字在右，用于通知管理等页面） */
+.stats-cards--flex {
+  display: flex;
+  gap: 16px;
+}
+
+/* ========== 卡片基础（经典变体） ========== */
+.stat-card {
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition-all);
+  box-shadow: var(--shadow-sm);
+  /* 修改点：原误用背景令牌 --el-bg-page(#f0f2f5) 当边框（偏蓝灰），统一为中性边框令牌 */
+  border: 1px solid var(--border-subtle);
+}
+
+.stat-card:hover {
+  /* 抬升档全站统一：-2px + shadow-md（与 .ds-card--hover、私有 .stats-card 同一档位） */
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* 顶部主题色条（纯色，符合"禁止渐变"规范） */
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--stat-color, var(--color-brand-500));
+}
+
+/* 图标（经典变体：绝对定位右上角） */
+.stat-card .stat-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 42px;
+}
+
+/* 标签和数值 */
+.stat-card .stat-label,
+.stat-card .label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.stat-card .stat-value,
+.stat-card .value {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--stat-color, var(--color-brand-500));
+  font-variant-numeric: tabular-nums;
+}
+
+/* 数值后的单位小标（原 stat-cards 模板内联样式收口，字号/字重走令牌） */
+.stat-card .stat-unit {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  margin-left: 2px;
+}
+
+/* 错误态"点击重试"提示（原 stat-cards 模板内联样式收口） */
+.stat-card .stat-retry-hint {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+}
+
+/* 辅助信息行 */
+.stat-card .sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 经典变体：标签/数值/辅助信息与右上角图标保持间距，避免图标遮挡文字 */
+.stat-card:not(.stat-card--flex) .stat-label,
+.stat-card:not(.stat-card--flex) .stat-value,
+.stat-card:not(.stat-card--flex) .sub {
+  padding-right: 60px;
+}
+
+/* ========== 颜色主题（纯色令牌，符合"禁止渐变"规范） ==========
+ * 对比度修复（2026-08-31）：大字号数值禁用浅语义色（#ffc200 1.62 / #67c23a 2.24 /
+ * #e6a23c 2.19 / #f56c6c 2.90 均不达 WCAG AA 3:1 大文本线），统一使用 --color-*-dark 深色令牌：
+ *   primary→brand-800(#a67600 4.03) / success→success-dark(#529b2e 3.45) /
+ *   warning→warning-dark(#b88219 3.36) / danger→danger-dark(#c45656 4.36) / info→info-dark(#73767a 4.40) */
+.stat-card.primary  { --stat-color: var(--color-brand-800); }
+.stat-card.success  { --stat-color: var(--color-success-dark); }
+.stat-card.warning  { --stat-color: var(--color-warning-dark); }
+.stat-card.danger   { --stat-color: var(--color-danger-dark); }
+.stat-card.info     { --stat-color: var(--color-info-dark); }
+
+/* 别名（兼容使用 blue/green/orange/purple 命名的页面） */
+.stat-card.blue     { --stat-color: var(--color-brand-800); }
+.stat-card.green    { --stat-color: var(--color-success-dark); }
+.stat-card.orange   { --stat-color: var(--color-warning-dark); }
+.stat-card.purple   { --stat-color: var(--purple-legacy2); }
+
+/* 趋势图标（推荐概览等页面右上角浮标） */
+.stat-card .trend-icon {
+  position: absolute;
+  right: 20px;
+  top: 22px;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+.stat-card .trend-icon.blue   { background: rgba(255, 194, 0, 0.1); color: var(--color-brand-800); }
+.stat-card .trend-icon.green  { background: rgba(103, 194, 58, 0.1); color: var(--color-success-dark); }
+.stat-card .trend-icon.orange { background: rgba(230, 162, 60, 0.1); color: var(--color-warning-dark); }
+.stat-card .trend-icon.purple { background: rgba(156, 39, 176, 0.1); color: var(--purple-legacy2); }
+
+/* ========== 可点击卡片（筛选用） ========== */
+.stat-card.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.stat-card.clickable.active {
+  /* 激活筛选态：淡金底 + 柔和金边，比单根 #ffc200 实色边框更柔和且更易辨识；
+     键盘焦点环由 design-system.css 的全局 :focus-visible 提供（卡片 tabindex=0）。 */
+  background: var(--color-brand-50);
+  border-color: var(--color-brand-300);
+}
+
+/* ========== 桌台变体（flex 布局） ========== */
+.stat-card--flex {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* 图标圆角容器 */
+.stat-card--flex .stat-icon {
+  position: static;
+  transform: none;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+/* 颜色背景（桌台变体用纯色背景而非渐变文字，图标色同步深色令牌） */
+.stat-card--flex.primary .stat-icon { background: rgba(255, 194, 0, 0.1); color: var(--color-brand-800); }
+.stat-card--flex.success .stat-icon { background: rgba(103, 194, 58, 0.1); color: var(--color-success-dark); }
+.stat-card--flex.warning .stat-icon { background: rgba(230, 162, 60, 0.1); color: var(--color-warning-dark); }
+.stat-card--flex.danger  .stat-icon { background: rgba(245, 108, 108, 0.1); color: var(--color-danger-dark); }
+.stat-card--flex.info    .stat-icon { background: rgba(144, 147, 153, 0.1); color: var(--color-info-dark); }
+
+/* 桌台变体：数值用纯色 */
+.stat-card--flex .stat-value {
+  font-size: 28px;
+  background: none;
+  -webkit-background-clip: unset;
+  -webkit-text-fill-color: unset;
+  background-clip: unset;
+}
+.stat-card--flex.primary .stat-value { color: var(--color-brand-800); }
+.stat-card--flex.success .stat-value { color: var(--color-success-dark); }
+.stat-card--flex.warning .stat-value { color: var(--color-warning-dark); }
+.stat-card--flex.danger  .stat-value { color: var(--color-danger-dark); }
+.stat-card--flex.info    .stat-value { color: var(--color-info-dark); }
+
+/* 桌台变体信息区 */
+.stat-card--flex .stat-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 1400px) {
+  .stats-cards,
+  .stats-cards--col-2,
+  .stats-cards--col-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-cards,
+  .stats-cards--col-2,
+  .stats-cards--col-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========== 加载遮罩（纯 CSS，不依赖 Element 指令） ========== */
+.stats-cards {
+  position: relative;
+}
+.stats-cards__loading {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-lg);
+}
+.stats-cards__loading i {
+  font-size: 28px;
+  color: var(--color-brand-500);
+  animation: stats-cards-spin 1s linear infinite;
+}
+@keyframes stats-cards-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

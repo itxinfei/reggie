@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>菜品排行 - 瑞吉外卖管理端</title>
+
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/chart-panel.css?v=20260926" />
+  <script src="../../plugins/echarts/echarts.min.js"></script>
+  <style>
+    html, body { height: 100%; margin: 0; padding: 0;
+      background: var(--bg-page);
+      font-family: var(--font-family-base); }
+    /* 防抖动（2026-09-20）：滚动统一由 body 承担；若 html 也产生滚动条，append-to-body 的
+       下拉浮层超出视口底部时会撑高 html、闪现第二滚动条挤占宽度，表格随之左右横跳 */
+    html { overflow: hidden; }
+    body { overflow-x: hidden; overflow-y: auto; }
+    .dish-ranking-page { min-height: 100%; display: flex; flex-direction: column; }
+    .dish-ranking-page .container { flex: 1; background: transparent; padding: var(--space-2) var(--space-3);
+      min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+    /* 工具栏统一走 table-bar 组件 + page.css 的 .container .tableBar 纯 flex 栏规则，
+       不再私有卡片化覆盖；toolbar-label/spacer 旧类已无引用。 */
+
+    /* 修改点：search-extra 包装器，防止日期选择器+数字输入与搜索按钮重叠 */
+    .search-extra-inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    /* 修复 el-input-number 内部 .el-input 宽度 100% 溢出外层容器（100px→150px），覆盖搜索按钮 */
+    .search-extra-inline .el-input-number { overflow: hidden; }
+    .search-extra-inline .el-input-number .el-input { width: auto !important; max-width: 100%; }
+
+    /* 图表并排 */
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 1200px) {
+      .charts-row { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      .dish-ranking-page .container { padding: var(--space-2); }
+    }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
+  <div class="dish-ranking-page" id="report-dish-app" v-loading="loading">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
+      <h1 class="sr-only" id="page-title">菜品排行</h1>
+      
+      
+
+
+      <stat-cards :cards="statsCards"></stat-cards>
+
+      <table-bar
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        :show-refresh="true"
+        @refresh="loadData()"
+        @search="onBarSearch"
+        @reset="reset"
+        @action="onAction"
+      >
+        <template slot="search-extra">
+          <!-- 修改点：包装 div 防止日期选择器+数字输入与搜索按钮重叠 -->
+          <div class="search-extra-inline">
+            <el-date-picker v-model="dateRange" clearable value-format="yyyy-MM-dd"
+              type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"
+              size="small"></el-date-picker>
+            <el-input-number v-model="limit" :min="5" :max="50" :step="5"
+              size="small" controls-position="right" style="width:100px;" placeholder="数量"></el-input-number>
+          </div>
+        </template>
+      </table-bar>
+
+      <!-- 图表并排 -->
+      <div class="charts-row">
+        <chart-panel :title="rankingTitle" icon="ri-bar-chart-2-line">
+          <div id="rankingChart" style="width:100%;height:340px;"></div>
+        </chart-panel>
+        <chart-panel title="Top 3 菜品销量趋势" icon="ri-line-chart-line" v-show="tableData.length > 0">
+          <div id="trendLineChart" style="width:100%;height:340px;"></div>
+        </chart-panel>
+      </div>
+
+      <!-- 数据表格（统一 crud-table 组件，替代手写 el-table） -->
+      <crud-table
+        empty-hint="暂无相关记录"
+        :data="tableData"
+        :columns="dishColumns"
+        :loading="loading"
+        :show-pagination="false"
+        :stripe="true"
+        :border="true"
+        :selection="true"
+        aria-label="菜品销量排行"
+        @selection-change="onSelectionChange"
+      >
+        <template #col-rank="{ $index }">
+          <span :class="['rank-badge', $index === 0 ? 'r1' : $index === 1 ? 'r2' : $index === 2 ? 'r3' : 'rn']">
+            {{ $index + 1 }}
+          </span>
+        </template>
+        <template #col-ratio="{ row }">
+          <el-progress :percentage="calcPercent(row.count)" :show-text="true"
+            :stroke-width="12" :format="function(p) { return p + '%'; }"
+            :color="progressColor(row.count)">
+          </el-progress>
+        </template>
+      </crud-table>
+
+    </main>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/report.js?v=20260926"></script>
+  <script src="../../api/category.js?v=20260918"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../js/chart-panel.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#report-dish-app',
+      data: function() {
+        return {
+          loading: false, dateRange: [], limit: 10, tableData: [], categoryId: null,
+          // 勾选要导出的行（报表聚合结果，直接用行对象而非 id）
+          exportRows: [],
+          // 修改点：分类筛选下拉
+          categoryOptions: [],
+          searchConfig: [
+            { type: 'select', field: 'categoryId', placeholder: '全部分类', clearable: true, options: [] }
+          ],
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'export', text: '导出 CSV', type: 'success', icon: 'ri-download-line', disabled: true }
+          ],
+          // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
+          dishColumns: [
+            { prop: 'rank', label: '排名', width: 80, align: 'center', slot: true },
+            { prop: 'name', label: '菜品名称', width: 140 },
+            { prop: 'count', label: '销量（份）', width: 120, type: 'number' },
+            { prop: 'ratio', label: '相对榜首', width: 140, align: 'center', slot: true }
+          ],
+          stats: { totalDishes: 0, topDishes: 0, totalSales: 0, avgSales: 0 },
+          chart: null, trendChart: null, resizeHandler: null
+        }
+      },
+      computed: {
+        rankingTitle: function() {
+          return '菜品销量排行（Top ' + (this.tableData ? this.tableData.length : 0) + '）';
+        },
+        statsCards: function() {
+          const self = this;
+          // 统计仅基于当前 Top N 榜单（接口按 limit 截断），文案明确口径避免误解为全店总计
+          const topN = self.limit;
+          const topSales = self.tableData.length ? (self.tableData[0].count || 0) : 0;
+          return [
+            { key: '菜品', icon: 'ri-restaurant-2-line', label: '在榜菜品数（Top' + topN + '）', value: self.stats.totalDishes || 0, color: 'primary' },
+            { key: '榜首', icon: 'ri-trophy-line', label: '榜首销量（份）', value: topSales, color: 'success' },
+            { key: '总销量', icon: 'ri-bar-chart-2-line', label: '在榜总销量（份）', value: self.stats.totalSales || 0, color: 'warning' },
+            { key: '平均', icon: 'ri-line-chart-line', label: '在榜平均销量（份）', value: self.stats.avgSales || 0, color: 'info' }
+          ]
+        }
+      },
+      created: function() {
+        const self = this;
+        self.dateRange = self.monthRange();
+        // 修改点：加载分类列表供筛选下拉使用
+        categoryList().then(function(res) {
+          if (res && res.code === 1 && res.data) {
+            self.categoryOptions = res.data;
+            // table-bar 的 select 选项需要 [{label, value}] 格式，用 $set 触发响应式更新
+            self.$set(self.searchConfig[0], 'options',
+              res.data.map(function(c) { return { label: c.name, value: c.id } })
+            );
+          }
+        }).catch(function() {});
+      },
+      mounted: function() {
+        const self = this;
+        self.$nextTick(function() {
+          const rEl = document.getElementById('rankingChart');
+          const tEl = document.getElementById('trendLineChart');
+          if (rEl) self.chart = echarts.init(rEl);
+          if (tEl) self.trendChart = echarts.init(tEl);
+          self.resizeHandler = function() {
+            if (self.chart && !self.chart.isDisposed()) self.chart.resize();
+            if (self.trendChart && !self.trendChart.isDisposed()) self.trendChart.resize();
+          };
+          window.addEventListener('resize', self.resizeHandler);
+          setTimeout(function() {
+            if (self.chart) self.chart.resize();
+            if (self.trendChart) self.trendChart.resize();
+          }, 400);
+          self.loadData();
+        });
+      },
+      beforeDestroy: function() {
+        if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler);
+        if (this.chart) { try { this.chart.dispose(); } catch(e) {} }
+        if (this.trendChart) { try { this.trendChart.dispose(); } catch(e) {} }
+      },
+      methods: {
+        // 默认查询区间：本月第一天 ~ 本月最后一天
+        monthRange: function() {
+          const now = new Date();
+          const fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+          return [fmt(new Date(now.getFullYear(), now.getMonth(), 1)),
+                  fmt(new Date(now.getFullYear(), now.getMonth() + 1, 0))];
+        },
+        // table-bar 搜索桥接：组件内部 searchValues 不与页面 data 双向绑定，
+        // 必须在此把分类参数同步回 this.categoryId，否则筛选永远不生效
+        onBarSearch: function(params) {
+          this.categoryId = params && params.categoryId ? params.categoryId : null;
+          this.loadData();
+        },
+        onAction: function(payload) {
+          if (payload.key === 'export') {
+            this.handleExport();
+          }
+        },
+        // 勾选变化：存勾选行并联动导出按钮（未勾选禁用）
+        onSelectionChange: function(payload) {
+          this.exportRows = (payload && payload.rows) ? payload.rows : [];
+          this.actionConfig[0].disabled = this.exportRows.length === 0;
+        },
+        loadData: function() {
+          const self = this;
+          self.loading = true;
+          const params = { limit: self.limit };
+          if (self.dateRange && self.dateRange.length >= 2) {
+            params.startDate = self.dateRange[0]; params.endDate = self.dateRange[1];
+          }
+          // 修改点：传递分类筛选参数
+          if (self.categoryId) { params.categoryId = self.categoryId; }
+
+          // 榜单与统计共用同一次请求结果（旧实现用相同参数请求两次）
+          reportDishRanking(params)
+            .then(function(res) {
+              if (String(res.code) === '1') {
+                const rows = res.data || [];
+                self.tableData = rows;
+                self.stats = self.computeStats(rows);
+                self.renderChart();
+                self.loadTopTrend();
+              } else { ReggieUI.error(res.msg || '加载失败'); }
+            }).catch(function(err) { ReggieUI.error('请求失败：' + err); })
+            .finally(function() { self.loading = false; });
+        },
+        // 统计口径：当前 Top N 榜单内汇总（接口本身按 limit 截断，非全店数据）
+        computeStats: function(rows) {
+          const data = rows || [];
+          var totalSales = data.reduce(function(s, i) { return s + (i.count || 0); }, 0);
+          const avgSales = data.length > 0 ? Math.round(totalSales / data.length) : 0;
+          return { totalDishes: data.length, topDishes: data.length, totalSales: totalSales, avgSales: avgSales };
+        },
+        loadTopTrend: function() {
+          const self = this;
+          if (!self.trendChart) return;
+          if (!self.tableData || self.tableData.length === 0) { self.showTrendEmpty(); return; }
+          var top3Names = self.tableData.slice(0, 3).map(function(d) { return d.name; });
+          if (top3Names.length === 0) { self.showTrendEmpty(); return; }
+          reportDishTrend({
+            names: top3Names.join(','),
+            startDate: self.dateRange && self.dateRange.length >= 2 ? self.dateRange[0] : '',
+            endDate: self.dateRange && self.dateRange.length >= 2 ? self.dateRange[1] : ''
+          }).then(function(res) {
+            if (res.code === 1 && res.data) self.renderTrendChart(res.data);
+            else self.showTrendEmpty();
+          }).catch(function(err) {
+            // 趋势为附属图，失败不弹错误条，图区给占位避免永久留白
+            console.warn('[菜品排行] 加载趋势数据失败:', err);
+            self.showTrendEmpty();
+          });
+        },
+        showTrendEmpty: function() {
+          if (!this.trendChart) return;
+          this.trendChart.setOption({
+            title: { text: '暂无趋势数据', left: 'center', top: 'center',
+              textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+          }, true);
+        },
+        renderTrendChart: function(data) {
+          if (!this.trendChart) return;
+          if (!data || !data.dates || !data.dates.length) {
+            this.trendChart.setOption({
+              title: { text: '暂无趋势数据', left: 'center', top: 'center',
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+            }, true);
+            // 修改点：v-show 从隐藏切到可见后 echarts 宽高为 0，需 resize 才能正确渲染
+            var emptyChart = this.trendChart;
+            setTimeout(function() { if (emptyChart && !emptyChart.isDisposed()) emptyChart.resize(); }, 200);
+            return;
+          }
+          var hexToRgba = function(hex, alpha) {
+            let h = hex.replace('#','');
+            if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+            const r = parseInt(h.substring(0,2), 16);
+            const g = parseInt(h.substring(2,4), 16);
+            const b = parseInt(h.substring(4,6), 16);
+            return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+          };
+          const colors = [RgPalette.brand, RgPalette.success, RgPalette.warning];
+          const dates = data.dates || [];
+          var series = (data.series || []).map(function(s, i) {
+            const col = colors[i] || RgPalette.textSecondary;
+            return {
+              name: s.name, type: 'line', data: s.data || [], smooth: true,
+              symbol: 'circle', symbolSize: 7,
+              lineStyle: { color: col, width: 3 },
+              itemStyle: { color: col, borderColor: RgPalette.white, borderWidth: 2 },
+              areaStyle: { color: hexToRgba(col, 0.15) }
+            };
+          });
+          this.trendChart.setOption({
+            tooltip: { trigger: 'axis', backgroundColor: RgPalette.white,
+              borderColor: RgPalette.borderLighter2, borderWidth: 1, textStyle: { color: RgPalette.textPrimary, fontSize: 13 } },
+            legend: { data: (data.series || []).map(function(s) { return s.name; }),
+              bottom: 8, textStyle: { fontSize: 12, color: RgPalette.textRegular } },
+            grid: { left: 55, right: 30, top: 25, bottom: 52 },
+            xAxis: { type: 'category', data: dates, boundaryGap: false,
+              axisLine: { lineStyle: { color: RgPalette.borderLighter2 } }, axisTick: { show: false },
+              axisLabel: { color: RgPalette.textSecondary, fontSize: 12 } },
+            yAxis: { type: 'value', name: '销量(份)',
+              nameTextStyle: { color: RgPalette.textSecondary, fontSize: 12 },
+              splitLine: { lineStyle: { color: RgPalette.bgLight, type: 'dashed' } } },
+            series: series
+          }, true);
+          const chart = this.trendChart;
+          setTimeout(function() { if (chart && !chart.isDisposed()) chart.resize(); }, 200);
+        },
+        calcPercent: function(count) {
+          if (!this.tableData.length) return 0;
+          const max = this.tableData[0].count || 1;
+          return Math.round(count / max * 100);
+        },
+        progressColor: function(count) {
+          const max = this.tableData.length ? (this.tableData[0].count || 1) : 1;
+          const ratio = count / max;
+          if (ratio > 0.8) return RgPalette.seriesRed;
+          if (ratio > 0.5) return RgPalette.linkBlue;
+          return RgPalette.seriesGreen;
+        },
+        renderChart: function() {
+          if (!this.chart) return;
+          if (!this.tableData || this.tableData.length === 0) {
+            this.chart.setOption({
+              title: { text: '暂无排行数据', left: 'center', top: 'center',
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+            }, true); return;
+          }
+          var names = this.tableData.map(function(item) { return item.name; }).reverse();
+          var counts = this.tableData.map(function(item) { return item.count; }).reverse();
+          const maxVal = counts.length ? Math.max.apply(null, counts) : 1;
+          const barWidth = names.length <= 5 ? 26 : names.length <= 10 ? 22 : 18;
+          this.chart.setOption({
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+              backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
+              textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
+              formatter: function(p) { return '<b>' + p[0].name + '</b><br/>' + p[0].marker + ' 销量：<b>' + p[0].value + ' 份</b>'; } },
+            grid: { left: 130, right: 70, top: 16, bottom: 30 },
+            xAxis: { type: 'value', name: '销量（份）',
+              splitLine: { lineStyle: { type: 'dashed', color: RgPalette.bgLight } },
+              axisLabel: { color: RgPalette.textSecondary } },
+            yAxis: { type: 'category', data: names,
+              axisLabel: { color: RgPalette.textRegular, interval: 0, width: 110, overflow: 'truncate', fontSize: 13 } },
+            series: [{ type: 'bar', data: counts, barMaxWidth: barWidth,
+              itemStyle: {
+                borderRadius: [0, RgPalette.radiusMd, RgPalette.radiusMd, 0],
+                color: function(params) {
+                  const v = params.value, r = v / maxVal;
+                  if (r > 0.8) return RgPalette.seriesRed;
+                  if (r > 0.5) return RgPalette.linkBlue;
+                  return RgPalette.success;
+                }
+              },
+              label: { show: true, position: 'right', color: RgPalette.textRegular, fontSize: 12, fontWeight: 600,
+                formatter: function(p) { return p.value + ' 份'; } }
+            }]
+          }, true);
+          this.$nextTick(function() { if (this.chart) { this.chart.resize(); } }.bind(this));
+        },
+        reset: function() {
+          // 恢复首屏默认条件（本月区间、Top10、全部分类）后重新查询，避免重置后页面留空
+          this.dateRange = this.monthRange();
+          this.limit = 10;
+          this.categoryId = null;
+          this.loadData();
+        },
+        // 修改点：改为导出当前表格数据生成 CSV（此前误调日报接口且扩展名 .csv 内容为 xlsx）
+        handleExport: function() {
+          const self = this
+          if (!self.dateRange || self.dateRange.length < 2) {
+            ReggieUI.warning('请先选择日期范围'); return;
+          }
+          if (!self.exportRows || !self.exportRows.length) {
+            ReggieUI.warning('请先勾选要导出的记录'); return;
+          }
+          const esc = function(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"' }
+          const header = ['排名', '菜品名称', '销量（份）', '相对榜首(%)']
+          // 仅导出勾选行；排名保留该行在原榜单中的位次
+          const lines = self.exportRows.map(function(r) {
+            var rank = self.tableData.indexOf(r) + 1
+            return [rank, r.name, r.count, self.calcPercent(r.count) + '%'].map(esc).join(',')
+          })
+          const csv = '\uFEFF' + header.map(esc).join(',') + '\r\n' + lines.join('\r\n')
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+          const link = document.createElement('a')
+          link.href = URL.createObjectURL(blob)
+          link.download = '菜品排行_' + self.dateRange[0] + '_' + self.dateRange[1] + '.csv'
+          document.body.appendChild(link); link.click(); document.body.removeChild(link)
+          URL.revokeObjectURL(link.href)
+          ReggieUI.success('导出成功')
+        }
+      }
+    })
+  </script>
+</body>
+</html>

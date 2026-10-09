@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>到店预订 - 瑞吉外卖</title>
+    <link rel="icon" href="./../images/favico.ico">
+    <script src="./../js/base.js?v=20260930"></script>
+    <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <link rel="stylesheet" href="../styles/index.css?v=20260930b" />
+    <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+    <script src="./../js/icon-fallback.js?v=20260917"></script>
+    <style>
+        .reserve-wrap { padding: 10px; }
+        /* 不用 van-card 做容器：本项目 vant 构建的 card 不渲染默认插槽，用普通面板 */
+        .panel { background: var(--color-text-white); border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+        .resv-item { padding: 4px 0; }
+        .resv-head { display: flex; justify-content: space-between; align-items: center; }
+        .resv-time { font-size: 16px; font-weight: 600; color: var(--c-gray-800); }
+        .resv-meta { color: var(--c-gray-500); font-size: 13px; margin-top: 4px; }
+        .resv-remark { color: var(--c-gray-400); font-size: 12px; margin-top: 4px; }
+        .resv-cancel { text-align: right; margin-top: 6px; }
+        .list-title { font-size: 14px; color: var(--c-gray-600); margin: 4px 2px 8px; }
+        .stepper-cell { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; }
+        .stepper-cell .label { font-size: 14px; color: var(--c-gray-800); }
+    </style>
+</head>
+<body>
+    <div id="reserve-app" class="app">
+      <cend-shell title="到店预订" light :show-back="true" :show-home="true">
+        <div class="reserve-wrap">
+          <!-- 预订表单 -->
+          <div class="panel" style="padding:0;">
+            <van-field
+              v-model="form.customerName"
+              label="姓名"
+              placeholder="选填，默认登录姓名"
+              maxlength="20"
+            ></van-field>
+            <van-field
+              readonly
+              required
+              label="预订时间"
+              :value="timeText"
+              placeholder="请选择到店时间"
+              @click="showPicker = true"
+            ></van-field>
+            <div class="stepper-cell">
+              <span class="label">就餐人数</span>
+              <van-stepper v-model="form.seatCount" :min="1" :max="20" integer></van-stepper>
+            </div>
+            <van-field
+              v-model="form.remark"
+              label="备注"
+              placeholder="如忌口、宝宝椅等（选填）"
+              maxlength="200"
+            ></van-field>
+            <div style="padding: 10px 16px 14px;">
+              <van-button type="primary" block round :loading="submitting" @click="submit">提交预订</van-button>
+            </div>
+          </div>
+
+          <!-- 我的预订 -->
+          <div class="list-title">我的预订</div>
+          <div v-if="list.length === 0" class="panel">
+            <div style="text-align:center; color:var(--c-gray-400); font-size:13px;">暂无预订记录</div>
+          </div>
+          <div v-for="item in list" :key="item.id" class="panel resv-item">
+            <div class="resv-head">
+              <span class="resv-time">{{ formatTime(item.reservedTime) }}</span>
+              <van-tag :type="tagType(item.status)" plain>{{ statusText(item.status) }}</van-tag>
+            </div>
+            <div class="resv-meta">{{ item.seatCount }} 人就餐{{ item.tableName ? ' · ' + item.tableName : '' }}</div>
+            <div class="resv-remark" v-if="item.remark">备注：{{ item.remark }}</div>
+            <div class="resv-cancel" v-if="item.status === 'PENDING' || item.status === 'CONFIRMED'">
+              <van-button size="small" plain type="danger" @click="confirmCancel(item)">取消预订</van-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 时间选择 -->
+        <van-popup v-model="showPicker" position="bottom">
+          <van-datetime-picker
+            v-model="pickerDate"
+            type="datetime"
+            :min-date="minDate"
+            :max-date="maxDate"
+            title="选择预订时间"
+            @confirm="onPickerConfirm"
+            @cancel="showPicker = false"
+          ></van-datetime-picker>
+        </van-popup>
+      </cend-shell>
+    </div>
+
+    <script src="../../backend/plugins/vue/vue.js"></script>
+    <script src="./../js/vant.min.js"></script>
+    <script src="../../backend/plugins/axios/axios.min.js"></script>
+    <script src="./../js/request.js?v=20260930"></script>
+    <script src="./../js/common.js?v=20260930b"></script>
+    <script src="../api/dining.js?v=20260929"></script>
+    <script src="./../js/components-cend.js?v=20260922"></script>
+    <script>
+        function pad(n) { return n < 10 ? '0' + n : '' + n }
+        // Date → 'yyyy-MM-dd HH:mm:ss'
+        function formatDateTime(d) {
+            return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+                + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':00'
+        }
+
+        new Vue({
+            el: '#reserve-app',
+            data: function () {
+                var now = new Date()
+                return {
+                    form: {
+                        customerName: '',
+                        reservedTime: null,
+                        seatCount: 2,
+                        remark: ''
+                    },
+                    timeText: '',
+                    showPicker: false,
+                    pickerDate: now,
+                    minDate: now,
+                    maxDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+                    list: [],
+                    submitting: false
+                }
+            },
+            created: function () {
+                this.loadList()
+            },
+            methods: {
+                statusText: function (status) {
+                    var map = { PENDING: '待确认', CONFIRMED: '已确认', ARRIVED: '已到店', CANCELLED: '已取消' }
+                    return map[status] || status
+                },
+                tagType: function (status) {
+                    var map = { PENDING: 'warning', CONFIRMED: 'success', ARRIVED: 'primary', CANCELLED: 'default' }
+                    return map[status] || 'default'
+                },
+                formatTime: function (t) {
+                    // 后端 LocalDateTime 序列化通常为 'yyyy-MM-ddTHH:mm:ss'，替换 T 即可展示
+                    return t ? String(t).replace('T', ' ').slice(0, 16) : ''
+                },
+                onPickerConfirm: function (value) {
+                    this.showPicker = false
+                    this.pickerDate = value
+                    this.timeText = formatDateTime(value).slice(0, 16)
+                    this.form.reservedTime = formatDateTime(value)
+                },
+                loadList: function () {
+                    getMyReservations().then((function (res) {
+                        this.list = res.data || []
+                    }).bind(this)).catch(function () {})
+                },
+                submit: function () {
+                    if (!this.form.reservedTime) {
+                        vant.Toast.fail('请选择预订时间')
+                        return
+                    }
+                    this.submitting = true
+                    var payload = {
+                        customerName: this.form.customerName || null,
+                        reservedTime: this.form.reservedTime,
+                        seatCount: this.form.seatCount,
+                        remark: this.form.remark || null
+                    }
+                    createReservation(payload).then((function () {
+                        vant.Toast.success('预订提交成功，请等待商家确认')
+                        this.loadList()
+                    }).bind(this)).finally((function () {
+                        this.submitting = false
+                    }).bind(this))
+                },
+                confirmCancel: function (item) {
+                    vant.Dialog.confirm({
+                        title: '取消预订',
+                        message: '确定取消 ' + this.formatTime(item.reservedTime) + ' 的预订？'
+                    }).then((function () {
+                        cancelMyReservation(item.id).then((function () {
+                            vant.Toast.success('已取消预订')
+                            this.loadList()
+                        }).bind(this))
+                    }).bind(this)).catch(function () {})
+                }
+            }
+        })
+    </script>
+</body>
+</html>

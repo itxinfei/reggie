@@ -1,0 +1,779 @@
+/* ============================================================
+   瑞吉外卖管理端 - 主框架样式表
+   包含：侧边栏、顶部栏、菜单、响应式、过渡动画
+   ============================================================ */
+
+/* ----------------------------------------------------------
+   1. CSS 变量（统一引用设计令牌源 tokens.css，避免 shell 与子页令牌分叉）
+   ---------------------------------------------------------- */
+@import './tokens.css';
+
+/* ----------------------------------------------------------
+   2. 全局重置
+   ---------------------------------------------------------- */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ----------------------------------------------------------
+   3. App 布局容器
+   ---------------------------------------------------------- */
+.app-wrapper {
+  display: flex;
+  height: 100vh;
+  /* 修改点：恢复 overflow: hidden —— 侧边栏 + 顶栏需要固定不动，仅 iframe 内部页面自身滚动；外层 body 不应出现整体滚动条 */
+  overflow: hidden;
+  transition: padding-left var(--transition-smooth);
+}
+
+/* ----------------------------------------------------------
+   4. 移动端遮罩层
+   ---------------------------------------------------------- */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 999;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  pointer-events: none;
+}
+.sidebar-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ----------------------------------------------------------
+   5. 侧边栏容器
+   ---------------------------------------------------------- */
+.sidebar-container {
+  position: relative;
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  height: 100vh;
+  background: var(--sidebar-bg-start);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  transition: width var(--transition-smooth), min-width var(--transition-smooth);
+  overflow: hidden;
+}
+
+/* 隐藏 el-scrollbar 的默认 padding（不再使用该组件，但保留兼容） */
+.sidebar-container .el-scrollbar {
+  height: 100%;
+}
+.sidebar-container .el-scrollbar__wrap {
+  overflow-x: hidden;
+}
+
+/* ----------------------------------------------------------
+   6. Logo 区域
+   ---------------------------------------------------------- */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 16px 14px;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--sidebar-border);
+  transition: padding var(--transition-smooth);
+}
+
+.sidebar-logo .logo-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--transition-fast);
+}
+.sidebar-logo:hover .logo-icon {
+  transform: scale(1.05);
+}
+
+.sidebar-logo .logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity var(--transition-fast), width var(--transition-smooth);
+}
+.sidebar-logo .logo-brand {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-inverse);
+  line-height: 1.3;
+}
+.sidebar-logo .logo-sub {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--sidebar-text-quiet);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+/* ----------------------------------------------------------
+   7. 菜单滚动区
+   ---------------------------------------------------------- */
+.sidebar-menu-wrap {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+}
+
+/* 美化滚动条 */
+.sidebar-menu-wrap::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-menu-wrap::-webkit-scrollbar-thumb {
+  background: var(--sidebar-scrollbar-thumb);
+  border-radius: 2px;
+}
+.sidebar-menu-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ----------------------------------------------------------
+   8. el-menu 面板重置
+   ---------------------------------------------------------- */
+.sidebar-container .el-menu {
+  border: none !important;
+  background: transparent !important;
+  flex: 1;
+}
+
+/* ---------- 一级菜单项 ---------- */
+.sidebar-container .el-menu-item {
+  height: 40px !important;
+  line-height: 40px !important;
+  margin-bottom: var(--sidebar-item-gap);
+  padding: 0 14px !important;
+  border-radius: var(--sidebar-item-radius) !important;
+  font-size: 13.5px !important;
+  font-weight: 400;
+  color: var(--legacy-9da3b5) !important;
+  background: transparent !important;
+  position: relative;
+  overflow: hidden;
+  transition: color var(--transition-fast),
+              background-color var(--transition-fast),
+              padding var(--transition-smooth) !important;
+}
+
+/* 图标 */
+.sidebar-container .el-menu-item .side-icon,
+.sidebar-container .el-menu-item i {
+  font-size: 19px;
+  margin-right: 10px;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+  color: inherit;
+  transition: margin var(--transition-smooth), font-size var(--transition-fast);
+}
+
+/* 文字 span */
+.sidebar-container .el-menu-item span {
+  color: inherit;
+  font-weight: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+/* Hover 态 */
+.sidebar-container .el-menu-item:hover {
+  color: var(--text-inverse) !important;
+  background-color: var(--sidebar-item-hover-bg) !important;
+}
+
+/* 修改点：Element UI 自带 `.el-submenu__title:focus, .el-submenu__title:hover { outline: 0 }`
+   与 `.el-menu-item:focus { outline: 0 }`，特异性 (0,2,0) 高于全局 `:focus-visible` 的 (0,1,0)，
+   会整条压掉键盘焦点环——键盘用户 Tab 到菜单时看不到焦点在哪（WCAG 2.4.7）。
+   这里用 .sidebar-container 提升特异性到 (0,3,0) 覆盖回去，并把环画在内侧避免被侧边栏裁掉。 */
+.sidebar-container .el-menu-item:focus-visible,
+.sidebar-container .el-submenu__title:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: -2px;
+  border-radius: var(--sidebar-item-radius) !important;
+}
+.sidebar-container .el-menu-item:hover::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent-color);
+  opacity: 0.6;
+  transition: opacity var(--transition-fast);
+}
+
+/* 激活态 */
+/* P0 对比度修复（2026-09-27）：选中项金字(#ffc200)叠浅金底仅 ~1.6:1，改用文字安全金（≥4.8:1）。
+   修改点(2026-09-27)：--color-brand-text(#8f6a00) 是「浅底深色金」，为本就深色(#1b1c2d)的
+   侧边栏反而是 3.38:1。深底应反向用亮金，这里改 --color-brand-300(#ffd966)，实测 10:1。 */
+.sidebar-container .el-menu-item.is-active {
+  color: var(--color-brand-300) !important;
+  background-color: var(--sidebar-active-bg) !important;
+  font-weight: 500 !important;
+}
+/* 激活项内部的包裹 span（Element 渲染的 <span> 文本容器）会被 element-variables 单独
+   染成品牌深金 #8f6a00，在深侧边栏上只有 3.07:1。强制继承父级亮金，避免文字被削弱。 */
+.sidebar-container .el-menu-item.is-active > * {
+  color: inherit !important;
+}
+.sidebar-container .el-menu-item.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent-color);
+}
+/* P0 修复(2026-09-27)：上一条 `> * { color: inherit }` 的特异性是 (0,2,0)，而本条
+   `span` 是 (0,3,1)，优先级更高，会把文本容器重新染回品牌深金 #8f6a00 —— 在深底侧边栏
+   上只有 3.38:1，导致「加了继承但阈值没变」的假象。这里统一改为继承父级亮金。
+   注意：不要在此处写回具体颜色，否则会再次盖掉上面的 inherit 规则。 */
+.sidebar-container .el-menu-item.is-active span {
+  color: inherit !important;
+}
+
+/* ---------- 子菜单标题 ---------- */
+.sidebar-container .el-submenu__title {
+  height: 40px !important;
+  line-height: 40px !important;
+  padding: 0 14px !important;
+  margin-bottom: var(--sidebar-item-gap);
+  border-radius: var(--sidebar-item-radius) !important;
+  font-size: 13.5px !important;
+  font-weight: 400;
+  color: var(--legacy-9da3b5) !important;
+  background: transparent !important;
+  transition: color var(--transition-fast),
+              background-color var(--transition-fast);
+}
+.sidebar-container .el-submenu__title:hover {
+  color: var(--text-inverse) !important;
+  background-color: var(--sidebar-subitem-hover-bg) !important;
+}
+.sidebar-container .el-submenu__title i {
+  font-size: 19px;
+  margin-right: 10px;
+  width: 20px;
+  text-align: center;
+  color: inherit;
+}
+
+/* 子菜单展开箭头 */
+.sidebar-container .el-submenu__icon-arrow {
+  color: var(--sidebar-arrow-color) !important;
+  transition: transform var(--transition-fast);
+  right: 12px;
+  font-size: 12px;
+}
+.sidebar-container .el-submenu.is-opened > .el-submenu__title .el-submenu__icon-arrow {
+  color: var(--accent-color) !important;
+}
+
+/* ---------- 子菜单项 ---------- */
+.sidebar-container .el-menu--inline .el-menu-item {
+  padding-left: 46px !important;
+  font-size: 13px !important;
+  background: var(--sidebar-subitem-bg) !important;
+  margin: 1px 0;
+}
+.sidebar-container .el-menu--inline .el-menu-item:hover {
+  background: var(--sidebar-subitem-hover-bg) !important;
+}
+.sidebar-container .el-menu--inline .el-menu-item.is-active {
+  background-color: var(--sidebar-subitem-active-bg) !important;
+}
+
+/* ---------- 三级菜单（订单中心分组折叠，2026-09-10）----------
+   分组层：订单中心下「交易/配送/打印」用三级 el-submenu 折叠。
+   Element 每级内层 ul 自带 .el-menu--inline，间距与二级一致；
+   深度 1（二级分组的 el-menu-item 无 url 不渲染叶子）直接复用二级缩进 46px；
+   深度 2 叶子（分组下菜单项）额外缩进 20px，突出层级关系。 */
+.sidebar-container .el-menu--inline .el-submenu__title {
+  height: 36px !important;
+  line-height: 36px !important;
+  padding: 0 14px !important;
+  border-radius: 6px !important;
+  font-size: 12.5px !important;
+  font-weight: 500;
+  color: var(--sidebar-text-tertiary) !important;
+  background: transparent !important;
+  margin: 1px 0;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+.sidebar-container .el-menu--inline .el-submenu__title:hover {
+  color: var(--text-inverse) !important;
+  background: var(--sidebar-subitem-hover-bg) !important;
+}
+/* 分组层展开箭头（对齐 Element 默认箭头位置） */
+.sidebar-container .el-menu--inline .el-submenu__icon-arrow {
+  right: 8px;
+  font-size: 12px;
+}
+/* 分组内叶子：加深缩进以区分层级 */
+.sidebar-container .el-menu--inline .el-menu--inline .el-menu-item {
+  padding-left: 66px !important;
+}
+
+/* 子菜单展开/收起动画类 */
+.sidebar-container .el-menu--collapse {
+  width: auto;
+}
+
+/* ----------------------------------------------------------
+   9. 侧边栏折叠按钮
+   ---------------------------------------------------------- */
+.sidebar-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  margin-top: 8px;
+  border-radius: var(--sidebar-item-radius);
+  cursor: pointer;
+  color: var(--sidebar-text-quiet);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+  flex-shrink: 0;
+}
+.sidebar-toggle-btn:hover {
+  color: var(--sidebar-text-strong);
+  background: var(--sidebar-subitem-hover-bg);
+}
+.sidebar-toggle-btn svg {
+  transition: transform var(--transition-smooth);
+}
+
+/* ----------------------------------------------------------
+   10. 折叠态（桌面端） - CSS 覆盖层
+   ---------------------------------------------------------- */
+.sidebar-container.collapsed {
+  width: var(--sidebar-collapsed-width) !important;
+  min-width: var(--sidebar-collapsed-width) !important;
+}
+
+.sidebar-container.collapsed .sidebar-logo {
+  padding: 16px 16px 14px;
+  justify-content: center;
+}
+.sidebar-container.collapsed .logo-text {
+  opacity: 0;
+  width: 0;
+}
+.sidebar-container.collapsed .sidebar-menu-wrap {
+  padding: 6px 6px;
+}
+.sidebar-container.collapsed .el-menu-item {
+  padding: 0 !important;
+  justify-content: center;
+}
+.sidebar-container.collapsed .el-menu-item .side-icon,
+.sidebar-container.collapsed .el-menu-item i {
+  margin-right: 0;
+}
+.sidebar-container.collapsed .el-submenu__title {
+  padding: 0 !important;
+  justify-content: center;
+}
+.sidebar-container.collapsed .el-submenu__title i {
+  margin-right: 0;
+}
+.sidebar-container.collapsed .el-submenu__title span,
+.sidebar-container.collapsed .el-menu-item span {
+  opacity: 0;
+  display: none;
+}
+/* 折叠态隐藏子菜单展开箭头 */
+.sidebar-container.collapsed .el-submenu__icon-arrow {
+  display: none;
+}
+/* 折叠态禁用 active 左侧条 */
+.sidebar-container.collapsed .el-menu-item::before,
+.sidebar-container.collapsed .el-menu-item.is-active::before {
+  display: none;
+}
+/* 折叠态 active 用品牌色浅背景代替发光描边 */
+.sidebar-container.collapsed .el-menu-item.is-active {
+  border-radius: 12px !important;
+  background-color: var(--sidebar-collapsed-active-bg) !important;
+}
+
+/* 折叠态主内容区拉宽 */
+.sidebar-collapsed .main-container {
+  width: calc(100% - var(--sidebar-collapsed-width)) !important;
+}
+
+/* ----------------------------------------------------------
+   11. 主内容区
+   ---------------------------------------------------------- */
+.main-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  /* 修改点：恢复 height: 100vh + overflow: hidden —— 主内容区固定为视口高度，内部 iframe 自身负责滚动；防止外层出现横向/纵向滚动条 */
+  height: 100vh;
+  background: var(--bg-page);
+  overflow: hidden;
+  transition: width var(--transition-smooth);
+}
+
+/* ----------------------------------------------------------
+   12. 顶部导航栏
+   ---------------------------------------------------------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--topbar-height);
+  padding: 0 20px;
+  background: var(--text-inverse);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+  z-index: 100;
+  position: relative;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+/* ---------- 顶栏面包屑（唯一权威定义；原 index.html <head> 内联副本已迁入，
+   design-system.css 的页面级 .ds-breadcrumb 在此不适用） ---------- */
+.topbar .breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: none;
+  font-size: var(--font-size-base);
+  line-height: 1;
+}
+
+.topbar .crumb-item,
+.topbar .crumb-current {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--color-gray-500);
+  transition: color var(--transition-base),
+              background-color var(--transition-base),
+              box-shadow var(--transition-base);
+  cursor: default;
+  font-size: var(--font-size-base);
+  line-height: 1;
+}
+
+.topbar .crumb-current {
+  color: var(--text-primary);
+  font-weight: 600;
+  background: var(--color-gray-100);
+}
+
+.topbar .crumb-item.clickable {
+  cursor: pointer;
+}
+
+.topbar .crumb-item.clickable:hover {
+  color: var(--color-brand-700);
+  background: var(--color-brand-50);
+  box-shadow: var(--shadow-sm);
+}
+
+.topbar .crumb-sep {
+  /* 修改点：原 --color-gray-300 (#d1d5db) 对白底对比度仅 1.47，形同隐形。
+     统一到 gray-500，既可见又满足 WCAG 1.4.3（配合模板上的 aria-hidden 对读屏隐藏）。*/
+  color: var(--color-gray-500);
+  font-size: var(--font-size-xs);
+  line-height: 1;
+  user-select: none;
+  margin: 0 2px;
+}
+
+/* ---------- 汉堡按钮 ---------- */
+.hamburger-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  flex-shrink: 0;
+}
+.hamburger-btn:hover {
+  background: var(--color-gray-100);
+}
+.hamburger-btn span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-gray-700);
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
+}
+/* 桌面端默认显示汉堡按钮 */
+.hamburger-btn {
+  display: flex;
+}
+
+/* ---------- 返回按钮 ---------- */
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px 4px 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+  flex-shrink: 0;
+}
+.back-btn:hover {
+  color: var(--text-primary);
+  background: var(--color-gray-100);
+}
+
+
+
+
+/* ---------- 用户信息 ---------- */
+/* 注：旧 .breadcrumb（index.css）与 .page-title 已于 2026-07-17 删除；
+   面包屑统一使用 design-system.css 的 .ds-breadcrumb（47 个页面已接入）。 */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-brand-500);
+  color: var(--color-gray-800);
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  /* 金色发光违反「禁发光」规范，收敛为中性轻投影 */
+  box-shadow: var(--shadow-sm);
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- 退出按钮 ---------- */
+.logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast),
+              background-color var(--transition-fast),
+              border-color var(--transition-fast);
+  flex-shrink: 0;
+}
+.logout-btn:hover {
+  color: var(--legacy-ef4444);
+  background: var(--legacy-fef2f2);
+  border-color: var(--legacy-fecaca);
+}
+
+/* ----------------------------------------------------------
+   13. App Main / iframe
+   ---------------------------------------------------------- */
+.app-main {
+  flex: 1;
+  /* 修改点：恢复 overflow: hidden —— app-main 固定为顶栏之下剩余空间；iframe 内部页面由自身 body 滚动 */
+  overflow: hidden;
+  position: relative;
+}
+
+.divTmp {
+  width: 100%;
+  height: 100%;
+}
+
+.c_iframe {
+  width: 100%;
+  /* 修改点：高度由 JS 设为 window.innerHeight - 56（视口高 - 顶栏），iframe 内部页面由自身 body 滚动；不再使用 scrollHeight 撑高 */
+  height: 100%;
+  border: 0;
+  /* 修改点：iframe 自身允许滚动（让内部页面的 overflow: auto 生效），不再由父级承载 */
+  overflow: auto;
+  display: block;
+}
+
+/* ----------------------------------------------------------
+   14. 移动端样式
+   ---------------------------------------------------------- */
+@media (max-width: 767px) {
+  /* 显示遮罩 */
+  .sidebar-overlay {
+    display: block;
+  }
+
+  /* 侧边栏变为固定抽屉 */
+  .sidebar-container {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    width: var(--sidebar-width) !important;
+    min-width: var(--sidebar-width) !important;
+    transform: translateX(-100%);
+    transition: transform var(--transition-smooth);
+    z-index: 1001;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  }
+  .sidebar-container.mobile-open {
+    transform: translateX(0);
+  }
+
+  /* 覆盖折叠态样式 */
+  .sidebar-container.collapsed {
+    width: var(--sidebar-width) !important;
+    min-width: var(--sidebar-width) !important;
+    transform: translateX(-100%) !important;
+  }
+
+  /* 主内容区撑满 */
+  .main-container {
+    width: 100% !important;
+  }
+
+  /* 顶栏紧凑化 */
+  .topbar {
+    padding: 0 12px;
+  }
+
+  .user-name {
+    display: none;
+  }
+
+  .topbar-right {
+    gap: 8px;
+  }
+
+  /* 隐藏折叠切换按钮 */
+  .sidebar-toggle-btn {
+    display: none;
+  }
+
+  /* 三级分组层（订单中心子分组）在移动端抽屉中缩进与桌面端一致 */
+  .sidebar-container .el-menu--inline .el-menu--inline .el-menu-item {
+    padding-left: 66px !important;
+  }
+}
+
+/* ----------------------------------------------------------
+   15. 大屏桌面端微调
+   ---------------------------------------------------------- */
+@media (min-width: 1600px) {
+  :root {
+    --sidebar-width: 220px;
+  }
+  .sidebar-container .el-menu-item {
+    padding: 0 18px !important;
+  }
+  .sidebar-container .el-submenu__title {
+    padding: 0 18px !important;
+  }
+  .sidebar-logo {
+    padding: 18px 20px 16px;
+  }
+}
+
+/* ----------------------------------------------------------
+   16. 通用动画
+   ---------------------------------------------------------- */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Element UI Loading 遮罩样式微调 */
+.app-main .el-loading-mask {
+  background: rgba(245, 246, 250, 0.7);
+}
+
+/* ----------------------------------------------------------
+   17. 已废弃 — 图标库已从 iconfont（7个）迁移至 Remix Icon（2700+）
+   修改点：2026-07-11 全局替换 icon-xxx 为 ri-xxx-line，移除 CSS mask 兜底方案
+   ---------------------------------------------------------- */

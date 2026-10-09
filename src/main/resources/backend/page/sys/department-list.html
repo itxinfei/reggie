@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>部门管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="department-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">部门管理</h1>
+
+      <!-- 搜索 + 操作栏 -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+        :show-refresh="true"
+        @refresh="loadData()"
+      ></table-bar>
+
+      <!-- 数据表格 -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :show-actions="true"
+        :actions-width="140"
+        row-key="id"
+        :batch-delete="doBatchDelete"
+        @batch-deleted="loadData()"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-code="{ row }">
+          <el-tag v-if="row.code" size="small" type="info">{{ row.code }}</el-tag>
+          <span v-else>-</span>
+        </template>
+        <template #col-leaderName="{ row }">
+          <span>{{ row.leaderName || '-' }}</span>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="row.status == 1 ? 'success' : 'danger'" size="small">
+            {{ row.status == 1 ? '启用' : '禁用' }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="openDialog(row)">编辑</el-button>
+          <el-dropdown trigger="click" @command="(cmd) => cmd === 'delete' && deleteHandle(row.id)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- 新增/编辑弹窗 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :title="formData.title"
+      :visible.sync="formData.dialogVisible"
+      :submit-loading="submitting"
+      size="md"
+      @submit="submitForm"
+      @close="formData.dialogVisible = false"
+    >
+      <el-form ref="departmentForm" :model="formData" :rules="departmentRules" label-width="100px" size="small">
+        <el-form-item label="部门名称" prop="name">
+          <el-input v-model="formData.name" placeholder="请输入部门名称" maxlength="50"></el-input>
+        </el-form-item>
+        <el-form-item label="部门编码" prop="code">
+          <el-input v-model="formData.code" placeholder="选填，如 TECH" maxlength="32"></el-input>
+        </el-form-item>
+        <el-form-item label="负责人" prop="leaderName">
+          <el-input v-model="formData.leaderName" placeholder="选填" maxlength="50"></el-input>
+        </el-form-item>
+        <el-form-item label="排序" prop="sort">
+          <el-input-number v-model="formData.sort" :min="0" :max="9999"></el-input-number>
+          <span class="form-tip">数值越小越靠前。</span>
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-radio-group v-model="formData.status">
+            <el-radio :label="1">启用</el-radio>
+            <el-radio :label="0">禁用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="formData.remark" type="textarea" :rows="2" placeholder="选填" maxlength="200"></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../api/sys.js?v=20261006"></script>
+  <script>
+    new Vue({
+      el: '#department-app',
+      data() {
+        return {
+          loading: false,
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          tableData: [],
+          lastSearch: {},
+          submitting: false,
+          // 搜索配置：部门名称模糊搜索
+          searchConfig: [
+            { type: 'input', field: 'name', placeholder: '部门名称', width: '180px' }
+          ],
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'add', text: '+ 新增部门', type: 'primary' }
+          ],
+          // 表格列配置
+          columns: [
+            { prop: 'name', label: '部门名称', width: 140 },
+            { prop: 'code', label: '部门编码', width: 100, slot: true },
+            { prop: 'leaderName', label: '负责人', width: 100, slot: true },
+            { prop: 'remark', label: '备注', minWidth: 140 },
+            { prop: 'sort', label: '排序', width: 70 },
+            { prop: 'status', label: '状态', width: 80, slot: true }
+          ],
+          // 弹窗表单
+          formData: {
+            title: '新增部门',
+            dialogVisible: false,
+            id: null, name: '', code: '', leaderName: '', sort: 0, status: 1, remark: ''
+          },
+          // 表单校验规则（配合 el-form :rules + validate()）
+          departmentRules: {
+            name: [{ required: true, whitespace: true, message: '请输入部门名称', trigger: 'blur' }]
+          }
+        }
+      },
+      created() {
+        this.loadData()
+      },
+      methods: {
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '部门', request: sysApi.departmentDelete })
+        },
+        async loadData() {
+          this.loading = true
+          try {
+            const ls = this.lastSearch || {}
+            const params = Object.assign({}, ls, { page: this.page, pageSize: this.pageSize })
+            const res = await sysApi.departmentPage(params)
+            if (res && res.code === 1) {
+              this.tableData = res.data.records || []
+              this.counts = res.data.total || 0
+            } else {
+              ReggieUI.error((res && res.msg) || '加载部门列表失败')
+            }
+          } catch (err) {
+            if (err.message !== 'NOTLOGIN') {
+              ReggieUI.error('加载部门列表失败，请刷新重试')
+            }
+          } finally {
+            this.loading = false
+          }
+        },
+        onSearch(params) {
+          this.lastSearch = params || {}
+          this.page = 1
+          this.loadData()
+        },
+        onReset() {
+          this.lastSearch = {}
+          this.page = 1
+          this.loadData()
+        },
+        onAction(key) {
+          if (key === 'add') this.openDialog(null)
+        },
+        onPageChange(page) {
+          this.page = page
+          this.loadData()
+        },
+        onSizeChange(size) {
+          this.pageSize = size
+          this.page = 1
+          this.loadData()
+        },
+        openDialog(row) {
+          if (row) {
+            this.formData.title = '编辑部门'
+            this.formData.id = row.id
+            this.formData.name = row.name
+            this.formData.code = row.code
+            this.formData.leaderName = row.leaderName
+            this.formData.sort = row.sort || 0
+            this.formData.status = row.status
+            this.formData.remark = row.remark
+          } else {
+            this.formData.title = '新增部门'
+            this.formData.id = null
+            this.formData.name = ''
+            this.formData.code = ''
+            this.formData.leaderName = ''
+            this.formData.sort = 0
+            this.formData.status = 1
+            this.formData.remark = ''
+          }
+          this.formData.dialogVisible = true
+        },
+        async submitForm() {
+          const self = this
+          this.$refs.departmentForm.validate(async function(valid) {
+            if (!valid) return
+            self.submitting = true
+            try {
+              const payload = {
+                name: self.formData.name,
+                code: self.formData.code || null,
+                leaderName: self.formData.leaderName || null,
+                sort: self.formData.sort,
+                status: self.formData.status,
+                remark: self.formData.remark || null
+              }
+              const api = self.formData.id
+                ? sysApi.departmentUpdate(Object.assign({ id: self.formData.id }, payload))
+                : sysApi.departmentAdd(payload)
+              const res = await api
+              if (res && res.code === 1) {
+                ReggieUI.success(res.data || (self.formData.id ? '部门更新成功' : '部门创建成功'))
+                self.formData.dialogVisible = false
+                self.loadData()
+              } else {
+                ReggieUI.error((res && res.msg) || '保存失败')
+              }
+            } catch (err) {
+              // request.js 对业务失败 reject(new Error(msg))；NOTLOGIN 由拦截器处理
+              if (err.message !== 'NOTLOGIN') { ReggieUI.error(err.message || '保存失败，请重试') }
+            } finally {
+              self.submitting = false
+            }
+          })
+        },
+        deleteHandle(id) {
+          const self = this
+          ReggieUI.confirm('确定删除该部门吗？部门下仍有员工时将无法删除。', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+            .then(function() {
+              sysApi.departmentDelete(id).then(function(res) {
+                if (res && res.code === 1) {
+                  ReggieUI.success('删除成功')
+                  self.loadData()
+                }
+              })
+            }).catch(function(err) {
+              // request.js 对业务失败 reject(new Error(msg))，需明确提示；用户点取消 reject('cancel')，静默
+              if (err instanceof Error) { ReggieUI.error(err.message || '删除失败') }
+            })
+        }
+      }
+    })
+  </script>
+</body>
+</html>

@@ -1,0 +1,334 @@
+package com.reggie.module.dining.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
+import com.reggie.module.dining.mapper.ReservationMapper;
+import com.reggie.module.dining.model.Reservation;
+import com.reggie.enums.ReservationStatus;
+import com.reggie.enums.DiningTableStatus;
+import com.reggie.module.dining.service.DiningTableService;
+import com.reggie.module.dining.service.ReservationService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.Objects;
+
+/**
+ * 预订服务实现
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
+@Slf4j
+@Service
+public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reservation> implements ReservationService {
+
+    /** 堂食桌台服务 */
+    @Autowired
+    private DiningTableService diningTableService;
+
+    /**
+     * 创建 reservation。
+     * @param customerName 参数 customerName
+     * @param phone 参数 phone
+     * @param reservedTime 参数 reservedTime
+     * @param seatCount 参数 seatCount
+     * @param tableId 参数 tableId
+     * @param remark 参数 remark
+     * @return 返回结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Reservation createReservation(String customerName, String phone, LocalDateTime reservedTime,
+            Integer seatCount, Long tableId, String remark) {
+        return createReservation(customerName, phone, reservedTime, seatCount, tableId, remark, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Reservation createReservation(String customerName, String phone, LocalDateTime reservedTime,
+            Integer seatCount, Long tableId, String remark, Long userId) {
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        // 预订时间必须晚于当前（员工/顾客统一口径；1 分钟容错）
+        if (reservedTime == null || reservedTime.isBefore(LocalDateTime.now().minusMinutes(1))) {
+            throw new CustomException("预订时间需晚于当前时间");
+        }
+        // 修复(2026-09-30)：同一用户/手机号在相近时段已有有效预订时拒绝重复预订
+        // ——原冲突检测仅在指定 tableId 时生效，C 端预约不传桌台，可无限超订同一时段。
+        LambdaQueryWrapper<Reservation> dupQw = new LambdaQueryWrapper<>();
+        dupQw.eq(Reservation::getTenantId, currentTenantId)
+                .in(Reservation::getStatus,
+                        ReservationStatus.PENDING.getValue(),
+                        ReservationStatus.CONFIRMED.getValue())
+                .ge(Reservation::getReservedTime, reservedTime.minusHours(1))
+                .le(Reservation::getReservedTime, reservedTime.plusHours(1));
+        if (userId != null) {
+            dupQw.eq(Reservation::getUserId, userId);
+        } else if (phone != null && !phone.trim().isEmpty()) {
+            dupQw.eq(Reservation::getPhone, phone);
+        }
+        if (count(dupQw) > 0) {
+            throw new CustomException("您在相近时段已有预订，请勿重复预约");
+        }
+
+        // 修复 P2-3：时间冲突检测——同一桌台同一时间窗口（±1小时）已被预订则拒绝
+        if (tableId != null && reservedTime != null) {
+            LambdaQueryWrapper<Reservation> conflictQw = new LambdaQueryWrapper<>();
+            conflictQw.eq(Reservation::getTableId, tableId)
+                    .eq(Reservation::getTenantId, currentTenantId)
+                    .in(Reservation::getStatus,
+                            ReservationStatus.PENDING.getValue(),
+                            ReservationStatus.CONFIRMED.getValue())
+                    .ge(Reservation::getReservedTime, reservedTime.minusHours(1))
+                    .le(Reservation::getReservedTime, reservedTime.plusHours(1));
+            long conflictCount = count(conflictQw);
+            if (conflictCount > 0) {
+                throw new CustomException("该桌台在相近时段已被预订，请选择其他桌台或时间");
+            }
+        }
+        Reservation r = new Reservation();
+        r.setTenantId(currentTenantId);
+        r.setCustomerName(customerName);
+        r.setPhone(phone);
+        r.setUserId(userId);
+        r.setReservedTime(reservedTime);
+        r.setSeatCount(seatCount);
+        r.setTableId(tableId);
+        r.setRemark(remark);
+        r.setUpdateTime(LocalDateTime.now());
+        r.setStatus(ReservationStatus.PENDING.getValue());
+        save(r);
+        return r;
+    }
+
+    /**
+     * 确认 reservation。
+     * @param id 参数 id
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void confirmReservation(Long id) {
+        Reservation r = getById(id);
+        if (r == null) {
+            throw new CustomException("预订不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(r.getTenantId())) {
+            throw new CustomException("无权操作其他租户的预订");
+        }
+        // 仅待确认(PENDING)可确认：防止已取消预订被重新确认复活、重复确认
+        if (ReservationStatus.CONFIRMED.getValue().equals(r.getStatus())) {
+            throw new CustomException("预订已确认，请勿重复操作");
+        }
+        if (ReservationStatus.ARRIVED.getValue().equals(r.getStatus())) {
+            throw new CustomException("预订已到店，无法确认");
+        }
+        if (ReservationStatus.CANCELLED.getValue().equals(r.getStatus())) {
+            throw new CustomException("预订已取消，无法重新确认");
+        }
+        if (!ReservationStatus.PENDING.getValue().equals(r.getStatus())) {
+            throw new CustomException("当前预订状态无法确认");
+        }
+        // P0-14 修复：带期望旧值的 CAS 更新，消除 getById→updateById 整行读改写的并发丢失更新；
+        // 影响行数 0 说明状态已被并发请求迁移
+        boolean updated = lambdaUpdate()
+                .eq(Reservation::getId, id)
+                .eq(Reservation::getStatus, ReservationStatus.PENDING.getValue())
+                .set(Reservation::getStatus, ReservationStatus.CONFIRMED.getValue())
+                .set(Reservation::getUpdateTime, LocalDateTime.now())
+                .update();
+        if (!updated) {
+            throw new CustomException("预订状态已变更，请刷新后重试");
+        }
+        // 桌台预留放在 CAS 成功之后，避免确认失败时误占桌台
+        if (r.getTableId() != null) {
+            diningTableService.changeStatus(r.getTableId(), DiningTableStatus.RESERVED.getValue());
+        }
+    }
+
+    /**
+     * 取消 reservation。
+     * @param id 参数 id
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelReservation(Long id) {
+        Reservation r = getById(id);
+        if (r == null) {
+            throw new CustomException("预订不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(r.getTenantId())) {
+            throw new CustomException("无权操作其他租户的预订");
+        }
+        // 修复(2026-09-30)：取消状态守卫 —— 仅 PENDING/CONFIRMED 可取消：
+        // ARRIVED（已到店开台）被"幽灵取消"会导致桌台状态与实际占用永久不一致；CANCELLED 重复取消无意义
+        if (ReservationStatus.ARRIVED.getValue().equals(r.getStatus())) {
+            throw new CustomException("预订已到店，无法取消，请联系门店处理");
+        }
+        if (ReservationStatus.CANCELLED.getValue().equals(r.getStatus())) {
+            throw new CustomException("预订已取消，请勿重复操作");
+        }
+        // 释放桌台：仅 CONFIRMED 预订在确认时把桌台置为 RESERVED，取消须还原 FREE，
+        // 否则桌台永久卡在预留态无法接客（PENDING 未占桌台，无需释放）
+        boolean wasConfirmed = ReservationStatus.CONFIRMED.getValue().equals(r.getStatus());
+        // P0-14 修复：以读到的期望旧状态做 CAS，防止并发确认/取消与本次取消互相覆盖
+        boolean updated = lambdaUpdate()
+                .eq(Reservation::getId, id)
+                .eq(Reservation::getStatus, r.getStatus())
+                .set(Reservation::getStatus, ReservationStatus.CANCELLED.getValue())
+                .set(Reservation::getUpdateTime, LocalDateTime.now())
+                .update();
+        if (!updated) {
+            throw new CustomException("预订状态已变更，请刷新后重试");
+        }
+        // 桌台释放放在 CAS 成功之后
+        if (wasConfirmed && r.getTableId() != null) {
+            diningTableService.changeStatus(r.getTableId(), DiningTableStatus.FREE.getValue());
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelMyReservation(Long id, Long userId) {
+        if (id == null || userId == null) {
+            throw new CustomException("预订不存在");
+        }
+        Reservation r = getById(id);
+        if (r == null || !userId.equals(r.getUserId())) {
+            throw new CustomException("预订不存在");
+        }
+        // 复用统一取消逻辑：含 CONFIRMED 桌台释放
+        cancelReservation(id);
+    }
+
+    /**
+     * 处理 arrive。
+     * @param id 参数 id
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void arrive(Long id) {
+        Reservation r = getById(id);
+        if (r == null) {
+            throw new CustomException("预订不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(r.getTenantId())) {
+            throw new CustomException("无权操作其他租户的预订");
+        }
+        // 仅已确认(CONFIRMED)可办理到店：重复到店会把已占用桌台 OCCUPIED→FREE 踢走首单、
+        // 已取消预订到店会夺回已让给他人的桌台，均须在开台前拦下
+        if (ReservationStatus.ARRIVED.getValue().equals(r.getStatus())) {
+            throw new CustomException("该预订已办理到店，请勿重复操作");
+        }
+        if (ReservationStatus.CANCELLED.getValue().equals(r.getStatus())) {
+            throw new CustomException("预订已取消，无法办理到店");
+        }
+        if (!ReservationStatus.CONFIRMED.getValue().equals(r.getStatus())) {
+            throw new CustomException("预订尚未确认，请先确认后再办理到店");
+        }
+        // P0-14 修复：CAS（期望旧值 CONFIRMED）成功后才开台，杜绝双击"到店"重复建占位订单
+        boolean updated = lambdaUpdate()
+                .eq(Reservation::getId, id)
+                .eq(Reservation::getStatus, ReservationStatus.CONFIRMED.getValue())
+                .set(Reservation::getStatus, ReservationStatus.ARRIVED.getValue())
+                .set(Reservation::getUpdateTime, LocalDateTime.now())
+                .update();
+        if (!updated) {
+            throw new CustomException("预订状态已变更，请刷新后重试");
+        }
+        if (r.getTableId() != null) {
+            // 到店即开台：预订确认时桌台为 RESERVED，先在本事务内释放回 FREE，再一键开台
+            // 建 EAT_IN 占位订单并置占用，修复旧实现裸改占用却不建单、结账无单可结的问题。
+            diningTableService.changeStatus(r.getTableId(), DiningTableStatus.FREE.getValue());
+            Map<String, Object> openResult = diningTableService.openWithOrder(
+                    r.getTableId(), r.getSeatCount(), "预订到店 " + r.getCustomerName());
+            log.info("[预订到店] 已开台: reservationId={}, tableId={}, orderId={}",
+                    id, r.getTableId(), openResult.get("orderId"));
+        }
+    }
+
+    /**
+     * 更新预订信息（仅待确认/已确认状态允许修改）。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Reservation updateReservation(Long id, String customerName, String phone,
+            LocalDateTime reservedTime, Integer seatCount, Long tableId, String remark) {
+        Reservation r = getById(id);
+        if (r == null) {
+            throw new CustomException("预订不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(r.getTenantId())) {
+            throw new CustomException("无权操作其他租户的预订");
+        }
+        // 仅待确认/已确认状态允许修改
+        if (!ReservationStatus.PENDING.getValue().equals(r.getStatus())
+                && !ReservationStatus.CONFIRMED.getValue().equals(r.getStatus())) {
+            throw new CustomException("当前状态不允许修改预订信息");
+        }
+        // 桌台变更时检测冲突
+        if (tableId != null && reservedTime != null
+                && (!tableId.equals(r.getTableId()) || !reservedTime.equals(r.getReservedTime()))) {
+            LambdaQueryWrapper<Reservation> conflictQw = new LambdaQueryWrapper<>();
+            conflictQw.eq(Reservation::getTableId, tableId)
+                    .eq(Reservation::getTenantId, currentTenantId)
+                    .ne(Reservation::getId, id)
+                    .in(Reservation::getStatus,
+                            ReservationStatus.PENDING.getValue(),
+                            ReservationStatus.CONFIRMED.getValue())
+                    .ge(Reservation::getReservedTime, reservedTime.minusHours(1))
+                    .le(Reservation::getReservedTime, reservedTime.plusHours(1));
+            long conflictCount = count(conflictQw);
+            if (conflictCount > 0) {
+                throw new CustomException("该桌台在相近时段已被预订，请选择其他桌台或时间");
+            }
+        }
+        // 桌台变更时处理原桌台状态还原
+        if (r.getTableId() != null && !r.getTableId().equals(tableId)
+                && ReservationStatus.CONFIRMED.getValue().equals(r.getStatus())) {
+            diningTableService.changeStatus(r.getTableId(), DiningTableStatus.FREE.getValue());
+        }
+        r.setCustomerName(customerName);
+        r.setPhone(phone);
+        r.setReservedTime(reservedTime);
+        r.setSeatCount(seatCount);
+        r.setTableId(tableId);
+        r.setRemark(remark);
+        r.setUpdateTime(LocalDateTime.now());
+        updateById(r);
+        // 新桌台已确认状态设为已预订
+        if (tableId != null && ReservationStatus.CONFIRMED.getValue().equals(r.getStatus())) {
+            diningTableService.changeStatus(tableId, DiningTableStatus.RESERVED.getValue());
+        }
+        return r;
+    }
+
+    /**
+     * 删除预订（仅已取消状态允许删除，防止误删有效预订）。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteReservation(Long id) {
+        Reservation r = getById(id);
+        if (r == null) {
+            throw new CustomException("预订不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(r.getTenantId())) {
+            throw new CustomException("无权操作其他租户的预订");
+        }
+        // 仅已取消状态允许删除
+        if (!ReservationStatus.CANCELLED.getValue().equals(r.getStatus())) {
+            throw new CustomException("只有已取消的预订才能删除，请先取消预订");
+        }
+        removeById(id);
+    }
+}

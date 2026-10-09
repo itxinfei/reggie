@@ -1,0 +1,544 @@
+package com.reggie.module.member.controller;
+import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.common.utils.PageUtils;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
+import com.reggie.common.LogMaskUtils;
+import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.common.LogMaskUtils;
+import com.reggie.dto.DeductBalanceDTO;
+import com.reggie.dto.RechargeDTO;
+import com.reggie.module.member.model.CouponUser;
+import com.reggie.module.member.model.Member;
+import com.reggie.module.member.model.MemberLevel;
+import com.reggie.module.member.model.PointsRecord;
+import com.reggie.module.member.model.RechargeRecord;
+import com.reggie.module.member.service.CouponUserService;
+import com.reggie.module.member.service.MemberLevelService;
+import com.reggie.module.member.service.MemberService;
+import com.reggie.module.member.model.PointsRecord;
+import com.reggie.module.member.service.PointsRecordService;
+import com.reggie.module.member.service.RechargeRecordService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import java.util.Collections;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+/**
+ * 会员管理控制器
+ * 提供会员的注册、查询、充值、余额扣减等接口
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
+@Slf4j
+@RestController
+@RequestMapping("/api/member/member")
+@Tag(name = "会员管理")
+public class MemberController {
+
+    private final MemberService memberService;
+    private final RechargeRecordService rechargeRecordService;
+    private final MemberLevelService memberLevelService;
+    private final CouponUserService couponUserService;
+    private final PointsRecordService pointsRecordService;
+
+    public MemberController(MemberService memberService, RechargeRecordService rechargeRecordService,
+                            MemberLevelService memberLevelService, CouponUserService couponUserService,
+                            PointsRecordService pointsRecordService) {
+        this.memberService = memberService;
+        this.rechargeRecordService = rechargeRecordService;
+        this.memberLevelService = memberLevelService;
+        this.couponUserService = couponUserService;
+        this.pointsRecordService = pointsRecordService;
+    }
+
+    /**
+     * 分页查询会员列表
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @param name 会员姓名（可选，模糊查询）
+     * @param phone 手机号（可选，模糊查询）
+     * @return 分页结果
+     */
+    @GetMapping("/page")
+    @RequireEmployee
+    @Operation(summary = "分页查询", description = "分页查询会员列表，支持按姓名、手机号搜索，自动过滤当前租户数据")
+    @Parameter(name = "page", description = "页码", required = true, example = "1")
+    @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
+    @Parameter(name = "name", description = "会员姓名（可选，模糊查询）")
+    @Parameter(name = "phone", description = "手机号（可选，模糊查询）")
+    public R<Page<Member>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize, String name, String phone,
+                                @Parameter(description = "会员等级ID，按等级筛选（可选）") @RequestParam(required =
+                                        false) Long levelId) {
+        Page<Member> pageInfo = PageUtils.of(page, pageSize);
+        LambdaQueryWrapper<Member> qw = new LambdaQueryWrapper<>();
+        qw.like(name != null && !name.isEmpty(), Member::getName, name);
+        qw.like(phone != null && !phone.isEmpty(), Member::getPhone, phone);
+        qw.eq(levelId != null, Member::getLevelId, levelId);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            qw.eq(Member::getTenantId, tenantId);
+        }
+        qw.orderByAsc(Member::getId);
+        memberService.page(pageInfo, qw);
+        // 修改点：分页结果填充会员等级名称，供前端等级列展示
+        memberService.fillLevelName(pageInfo.getRecords());
+        // 修改点：会员手机号脱敏，与员工管理保持一致（139****0001）
+        for (Member m : pageInfo.getRecords()) {
+            m.setPhone(LogMaskUtils.maskPhone(m.getPhone()));
+        }
+        return R.success(pageInfo);
+    }
+
+    /**
+     * 会员统计看板（后端聚合，替代前端 pageSize=9999 拉全量后在浏览器计数）
+     * 返回：会员总数、本月新增数、各等级会员数明细（levelCountMap）、无等级会员数（noLevelCount）
+     * 前端据此结合等级积分门槛自行分级展示，避免传输全部会员数据。
+     */
+    @GetMapping("/stats")
+    @RequireEmployee
+    @Operation(summary = "会员统计", description = "统计会员总数、本月新增及各等级会员数量，后端聚合避免拉全量")
+    public R<Map<String, Object>> stats() {
+        // 租户隔离由 TenantLineInnerInterceptor 自动注入（memberService.count 与 countByLevel 原生 SQL 均生效）
+
+        // 1. 会员总数（租户隔离由 TenantLineInnerInterceptor 自动注入）
+        long totalMembers = memberService.count();
+
+        // 2. 本月新增
+        LocalDate now = LocalDate.now();
+        LocalDateTime monthStart = LocalDateTime.of(now.withDayOfMonth(1), LocalTime.MIN);
+        LocalDateTime monthEnd = LocalDateTime.of(now.withDayOfMonth(now.lengthOfMonth()), LocalTime.MAX);
+        long newMembersThisMonth = memberService.count(new LambdaQueryWrapper<Member>()
+                .ge(Member::getCreatedTime, monthStart)
+                .le(Member::getCreatedTime, monthEnd));
+
+        // 3. 按等级聚合（level_id 可能为 NULL，单独计入 noLevelCount）
+        // 域4 改造：原始 SQL 执行下沉到 MemberService.countByLevel()，Controller 仅做结果展开
+        Map<Long, Long> levelCountMap = new LinkedHashMap<>();
+        long noLevelCount = 0;
+        for (Map<String, Object> row : memberService.countByLevel()) {
+            Object lid = row.get("levelId");
+            long cnt = row.get("cnt") instanceof Number ? ((Number) row.get("cnt")).longValue() : 0L;
+            if (lid == null) {
+                noLevelCount = cnt;
+            } else {
+                levelCountMap.put(((Number) lid).longValue(), cnt);
+            }
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("totalMembers", totalMembers);
+        result.put("newMembersThisMonth", newMembersThisMonth);
+        result.put("levelCountMap", levelCountMap);
+        result.put("noLevelCount", noLevelCount);
+        return R.success(result);
+    }
+
+    /**
+     * 新增会员
+     * @param member 会员信息
+     * @return 会员信息
+     */
+    @PostMapping
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "新增会员", description = "根据手机号注册新会员，自动生成会员卡号")
+    public R<Member> save(@Parameter(description = "会员信息（手机号必填）", required = true) @Valid @RequestBody Member member) {
+        log.info("新增会员: {}", LogMaskUtils.maskPhone(member.getPhone()));
+        Member result = memberService.registerByPhone(member.getPhone(), member.getName());
+        return R.success(result);
+    }
+
+    /**
+     * 修改会员
+     * @param member 会员信息
+     * @return 操作结果
+     */
+    @PutMapping
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "修改会员", description = "更新会员基本信息")
+    public R<String> update(@Parameter(description = "会员信息（含ID，仅更新白名单字段）", required =
+            true) @Valid @RequestBody Member member) {
+        if (member.getId() == null) {
+            return R.error("会员ID不能为空");
+        }
+        // 修改点：先加载已存在记录并校验租户归属，防止跨租户越权改写
+        Member existing = memberService.getById(member.getId());
+        if (existing == null) {
+            return R.error("会员不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(existing.getTenantId())) {
+            return R.error("无权操作其他租户的会员");
+        }
+
+        // 修改点：白名单字段更新，禁止越权改写 balance/points/levelId/tenantId 等资金与权限字段
+        LambdaUpdateWrapper<Member> uw = new LambdaUpdateWrapper<>();
+        uw.eq(Member::getId, member.getId());
+        if (member.getName() != null) {
+            uw.set(Member::getName, member.getName());
+        }
+        if (member.getPhone() != null) {
+            uw.set(Member::getPhone, member.getPhone());
+        }
+        if (member.getStatus() != null) {
+            uw.set(Member::getStatus, member.getStatus());
+        }
+        uw.set(Member::getUpdateTime, LocalDateTime.now());
+
+        log.info("修改会员: {}", member.getId());
+        memberService.update(uw);
+        return R.success("修改会员成功");
+    }
+
+    /**
+     * 删除会员（逻辑删除）
+     * <p>Member 实体带 @TableLogic，removeById 会转换为逻辑删除（is_deleted=1），不物理删数据。</p>
+     *
+     * @param id 会员ID
+     * @return 操作结果
+     */
+    @DeleteMapping("/{id}")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "删除会员", description = "逻辑删除会员，自动校验租户归属防止越权删除")
+    @Parameter(name = "id", description = "会员ID", required = true)
+    public R<String> delete(@PathVariable Long id) {
+        Member existing = memberService.getById(id);
+        if (existing == null) {
+            return R.error("会员不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(existing.getTenantId())) {
+            return R.error("无权操作其他租户的会员");
+        }
+        memberService.removeById(id);
+        log.info("删除会员: {}", id);
+        return R.success("删除会员成功");
+    }
+
+    /**
+     * 根据ID查询会员
+     * @param id 会员ID
+     * @return 会员详情
+     */
+    @GetMapping("/{id}")
+    @RequireEmployee
+    @Operation(summary = "查询会员", description = "根据ID查询会员详情")
+    @Parameter(name = "id", description = "会员ID", required = true)
+    public R<Member> getById(@PathVariable Long id) {
+        Member member = memberService.getById(id);
+        if (member != null) {
+            // 修改点：填充会员等级名称，供详情弹窗展示
+            memberService.fillLevelName(Collections.singletonList(member));
+            return R.success(member);
+        }
+        return R.error("没有查询到对应会员");
+    }
+
+    /**
+     * 收银台：按手机号识别会员
+     * <p>门店收银时录入会员手机号，返回会员信息（含积分、余额），用于积分发放与储值抵扣。</p>
+     */
+    @GetMapping("/by-phone")
+    @RequireEmployee
+    @Operation(summary = "按手机号查询会员", description = "收银台会员识别：传入手机号返回会员信息")
+    @Parameter(name = "phone", description = "会员手机号", required = true)
+    public R<Member> getByPhone(@RequestParam String phone) {
+        if (phone == null || phone.trim().isEmpty()) {
+            return R.error("手机号不能为空");
+        }
+        Member member = memberService.lambdaQuery()
+                .eq(Member::getPhone, phone.trim())
+                .eq(Member::getTenantId, BaseContext.getCurrentTenantId())
+                .one();
+        if (member != null) {
+            memberService.fillLevelName(Collections.singletonList(member));
+            return R.success(member);
+        }
+        return R.error("未找到该手机号的会员");
+    }
+
+    /**
+     * 会员充值
+     * <p>租户安全：先校验会员归属当前租户，防止越权为其他租户会员充值。</p>
+     * @param dto 充值请求
+     * @return 操作结果
+     */
+    @PostMapping("/recharge")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "会员充值", description = "为会员账户充值，支持赠送金额")
+    public R<String> recharge(@Parameter(description = "充值请求（会员ID、充值金额、赠送金额、支付方式）", required =
+            true) @Validated @RequestBody RechargeDTO dto) {
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        Member member = memberService.getById(dto.getMemberId());
+        if (member == null) {
+            return R.error("会员不存在");
+        }
+        if (currentTenantId != null && !currentTenantId.equals(member.getTenantId())) {
+            return R.error("无权操作其他租户的会员");
+        }
+        rechargeRecordService.recharge(dto.getMemberId(), dto.getAmount(), dto.getGiftAmount(), dto.getPaymentMethod());
+        log.info("会员充值: memberId={}, amount={}", dto.getMemberId(), dto.getAmount());
+        return R.success("充值成功");
+    }
+
+    /**
+     * 门店确认 C 端充值到账
+     * <p>顾客在 C 端发起「待确认」充值单并线下付款后，门店收款确认，确认后余额入账。</p>
+     * @param rechargeNo 充值单号
+     * @return 操作结果
+     */
+    @PostMapping("/recharge/confirm")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "确认充值到账", description = "门店确认顾客C端发起的充值已收款，确认后余额入账")
+    public R<String> confirmRecharge(@RequestParam String rechargeNo) {
+        Long employeeId = BaseContext.getCurrentId();
+        rechargeRecordService.confirmRecharge(rechargeNo, employeeId);
+        log.info("门店确认充值到账: rechargeNo={}, employeeId={}", rechargeNo, employeeId);
+        return R.success("已确认到账");
+    }
+
+    /**
+     * 扣减会员余额
+     * <p>租户安全：先校验会员归属当前租户，防止越权扣减其他租户会员余额。</p>
+     * @param dto 余额扣减请求
+     * @return 操作结果
+     */
+    @PostMapping("/deduct-balance")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "扣减余额", description = "扣减会员账户余额（用于订单抵扣等）")
+    public R<String> deductBalance(@Parameter(description = "扣减请求（会员ID、扣减金额）", required =
+            true) @Validated @RequestBody DeductBalanceDTO dto) {
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        Member member = memberService.getById(dto.getMemberId());
+        if (member == null) {
+            return R.error("会员不存在");
+        }
+        if (currentTenantId != null && !currentTenantId.equals(member.getTenantId())) {
+            return R.error("无权操作其他租户的会员");
+        }
+        boolean ok = memberService.deductBalance(dto.getMemberId(), dto.getAmount());
+        if (ok) {
+            return R.success("扣减成功");
+        }
+        return R.error("余额不足或会员不存在");
+    }
+
+    /**
+     * C端：获取当前登录用户的会员信息
+     * 根据当前用户ID查询对应的会员信息，含等级详情、优惠券数量
+     */
+    @GetMapping("/my-info")
+    @Operation(summary = "C端-会员信息", description = "获取当前登录用户的会员信息：等级、积分、余额、可用优惠券数量、折扣率")
+    public R<Map<String, Object>> myInfo() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            return R.error("用户未登录");
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+
+        // 查询会员信息
+        LambdaQueryWrapper<Member> memberQw = new LambdaQueryWrapper<>();
+        memberQw.eq(Member::getUserId, userId);
+        if (tenantId != null) memberQw.eq(Member::getTenantId, tenantId);
+        Member member = memberService.getOne(memberQw);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (member == null) {
+            // 用户尚未注册为会员
+            result.put("isMember", false);
+            result.put("member", null);
+            result.put("level", null);
+            result.put("couponCount", 0);
+            return R.success(result);
+        }
+
+        result.put("isMember", true);
+        result.put("member", member);
+
+        // 查询等级信息
+        if (member.getLevelId() != null) {
+            MemberLevel level = memberLevelService.getById(member.getLevelId());
+            result.put("level", level);
+        } else {
+            result.put("level", null);
+        }
+
+        // 查询可用优惠券数量
+        LambdaQueryWrapper<CouponUser> couponQw = new LambdaQueryWrapper<>();
+        couponQw.eq(CouponUser::getMemberId, member.getId());
+        if (tenantId != null) couponQw.eq(CouponUser::getTenantId, tenantId);
+        couponQw.eq(CouponUser::getStatus, "unused");
+        int couponCount = (int) couponUserService.count(couponQw);
+        result.put("couponCount", couponCount);
+
+        return R.success(result);
+    }
+
+    /**
+     * C端：获取当前登录用户会员的积分记录
+     * <p>安全说明：通过当前登录态定位会员，禁止前端传 phone/memberId，杜绝越权查询他人流水。</p>
+     *
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @return 积分记录分页（含会员名称/手机号/余额）
+     */
+    @GetMapping("/my-points")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "C端-我的积分记录", description = "获取当前登录用户会员的积分流水，按当前登录态自动定位会员，防止越权查询")
+    public R<Map<String, Object>> myPoints(@RequestParam(defaultValue = "1") @Min(1) int page,
+                                           @RequestParam(defaultValue = "10") @Min(1) @Max(50) int pageSize) {
+        Member member = currentMemberOrError();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Page<PointsRecord> pageInfo = PageUtils.of(page, pageSize);
+        LambdaQueryWrapper<PointsRecord> qw = new LambdaQueryWrapper<>();
+        qw.eq(PointsRecord::getMemberId, member.getId());
+        if (tenantId != null) {
+            qw.eq(PointsRecord::getTenantId, tenantId);
+        }
+        qw.orderByDesc(PointsRecord::getCreatedTime);
+        pointsRecordService.page(pageInfo, qw);
+
+        // 组装增强记录（含会员名称/手机号/余额）
+        List<Map<String, Object>> records = new ArrayList<>();
+        for (PointsRecord r : pageInfo.getRecords()) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", r.getId());
+            item.put("type", r.getType());
+            item.put("points", r.getPoints());
+            item.put("bizType", r.getBizType());
+            item.put("remark", r.getRemark());
+            item.put("memberName", member.getName());
+            item.put("phone", member.getPhone());
+            item.put("balance", member.getBalance());
+            item.put("createdTime", r.getCreatedTime());
+            records.add(item);
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("records", records);
+        result.put("total", pageInfo.getTotal());
+        result.put("size", pageInfo.getSize());
+        result.put("current", pageInfo.getCurrent());
+        return R.success(result);
+    }
+
+    /**
+     * C端：获取当前登录用户会员的充值记录
+     * <p>安全说明：通过当前登录态定位会员，禁止前端传 phone/memberId，杜绝越权查询他人充值流水。</p>
+     *
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @return 充值记录分页（含会员名称/手机号）
+     */
+    @GetMapping("/my-recharges")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "C端-我的充值记录", description = "获取当前登录用户会员的充值流水，按当前登录态自动定位会员，防止越权查询")
+    public R<Map<String, Object>> myRecharges(@RequestParam(defaultValue = "1") @Min(1) int page,
+                                              @RequestParam(defaultValue = "10") @Min(1) @Max(50) int pageSize) {
+        Member member = currentMemberOrError();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Page<RechargeRecord> pageInfo = PageUtils.of(page, pageSize);
+        LambdaQueryWrapper<RechargeRecord> qw = new LambdaQueryWrapper<>();
+        qw.eq(RechargeRecord::getMemberId, member.getId());
+        if (tenantId != null) {
+            qw.eq(RechargeRecord::getTenantId, tenantId);
+        }
+        qw.orderByDesc(RechargeRecord::getCreatedTime);
+        rechargeRecordService.page(pageInfo, qw);
+
+        List<Map<String, Object>> records = new ArrayList<>();
+        for (RechargeRecord r : pageInfo.getRecords()) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", r.getId());
+            item.put("amount", r.getAmount());
+            item.put("giftAmount", r.getGiftAmount());
+            item.put("paymentMethod", r.getPaymentMethod());
+            item.put("memberName", member.getName());
+            item.put("phone", member.getPhone());
+            item.put("createdTime", r.getCreatedTime());
+            records.add(item);
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("records", records);
+        result.put("total", pageInfo.getTotal());
+        result.put("size", pageInfo.getSize());
+        result.put("current", pageInfo.getCurrent());
+        return R.success(result);
+    }
+
+    /**
+     * C端：会员等级列表
+     * <p>供 C 端会员中心展示升级进度（升级门槛、折扣率），无需员工权限。</p>
+     *
+     * @return 当前租户的全部会员等级（按升级门槛升序）
+     */
+    @GetMapping("/my-levels")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "C端-会员等级列表", description = "获取当前租户的全部会员等级，供会员中心展示升级进度")
+    public R<List<MemberLevel>> myLevels() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        LambdaQueryWrapper<MemberLevel> qw = new LambdaQueryWrapper<>();
+        if (tenantId != null) {
+            qw.eq(MemberLevel::getTenantId, tenantId);
+        }
+        qw.orderByAsc(MemberLevel::getMinPoints);
+        return R.success(memberLevelService.list(qw));
+    }
+
+    /**
+     * 根据当前登录态解析当前会员，未登录或非会员时抛出异常（统一由 GlobalExceptionHandler 转为 R.error）。
+     */
+    private Member currentMemberOrError() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            throw new CustomException("用户未登录");
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+        LambdaQueryWrapper<Member> qw = new LambdaQueryWrapper<>();
+        qw.eq(Member::getUserId, userId);
+        if (tenantId != null) {
+            qw.eq(Member::getTenantId, tenantId);
+        }
+        Member member = memberService.getOne(qw);
+        if (member == null) {
+            throw new CustomException("您还不是会员，请先开通会员");
+        }
+        return member;
+    }
+}
+

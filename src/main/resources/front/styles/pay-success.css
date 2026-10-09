@@ -1,0 +1,243 @@
+/* 2026-09-22：金色 .divHead 规则已删除，头部由 cend-shell 的 .cend-navbar 统一接管 */
+
+#pay_success .divContent {
+  height: calc(100vh - var(--navbar-height) - env(safe-area-inset-top, 0px));
+  width: 100%;
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  align-items: center;
+  /* 修改点：整块垂直居中替代硬编码 margin-top:148rem —— 小屏(≤667px)下原留白会挤压按钮溢出视口，
+     居中布局任意屏高均安全（2026-09-01 微调） */
+  justify-content: center;
+  padding: 24rem 24rem calc(24rem + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+}
+
+/* 修改点：位图 success.png → 语义绿 RemixIcon 图标 */
+#pay_success .divContent .success-icon {
+  display: block;
+  margin-top: 0;
+  margin-bottom: 19rem;
+  font-size: 90rem;
+  line-height: 86rem;
+  color: var(--color-success-text);
+}
+
+/* SVG 成功对勾：圆圈 + 对勾一次绘制（品牌金，约 500ms） */
+#pay_success .divContent .success-icon-svg {
+  width: 90rem;
+  height: 90rem;
+  overflow: visible;
+}
+#pay_success .success-icon-svg .ss-circle {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 3;
+  stroke-dasharray: 151;
+  stroke-dashoffset: 151;
+  animation: ss-draw-circle .35s ease-out forwards;
+}
+#pay_success .success-icon-svg .ss-check {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 36;
+  stroke-dashoffset: 36;
+  animation: ss-draw-check .2s ease-in .32s forwards;
+}
+@keyframes ss-draw-circle {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes ss-draw-check {
+  to { stroke-dashoffset: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #pay_success .success-icon-svg .ss-circle,
+  #pay_success .success-icon-svg .ss-check {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+/* 取消/退款结果图标：复用成功图标尺寸，仅改色 */
+#pay_success .divContent .cancel-icon,
+#pay_success .divContent .refund-icon {
+  display: block;
+  margin-top: 0;
+  margin-bottom: 19rem;
+  font-size: 90rem;
+  line-height: 86rem;
+}
+#pay_success .divContent .cancel-icon { color: var(--color-text-hint); }
+#pay_success .divContent .refund-icon { color: var(--color-warning-text); }
+
+/* 未支付图标：品牌金，提示继续付款；尺寸同取消/退款图标 */
+#pay_success .divContent .unpaid-icon {
+  display: block;
+  margin-top: 0;
+  margin-bottom: 19rem;
+  font-size: 90rem;
+  line-height: 86rem;
+  color: var(--color-primary);
+}
+
+/* 支付结果确认中 loading */
+#pay_success .divContent .ps-loading {
+  margin: 36rem 0 24rem;
+}
+
+#pay_success .divContent .divSuccess {
+  height: auto;
+  font-size: 24rem;
+  font-family: var(--font-family-title);
+  font-weight: 500;
+  text-align: center;
+  /* 语义绿：下单/取消/退款/未支付各页标题统一成功色 */
+  color: var(--color-success-text);
+  line-height: 33rem;
+  margin-top: 19rem;
+  margin-bottom: 10rem;
+}
+
+/* 修改点：订单号和实付金额展示 */
+#pay_success .divContent .divOrderNo {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+  margin-bottom: 4rem;
+}
+
+#pay_success .divContent .divAmount {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  margin-bottom: 8rem;
+}
+
+#pay_success .divContent .divAmount .price {
+  /* 修改点(2026-09-21)：支付金额 danger 红 → 价格红（语义为金额非危险） */
+  color: var(--color-price);
+  font-weight: 600;
+  font-family: var(--font-family-number);
+}
+
+/* 预计送达时间（突出显示） */
+#pay_success .divContent .divEta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6rem;
+  margin: 12rem 0;
+  font-size: var(--font-size-lg);
+  color: var(--color-primary-text);
+  font-weight: 500;
+}
+
+#pay_success .divContent .divEta i {
+  font-size: 18rem;
+}
+
+#pay_success .divContent .divEta strong {
+  font-size: 20rem;
+  font-family: var(--font-family-number);
+}
+
+/* 订单进度迷你条 */
+#pay_success .order-mini-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16rem 20rem;
+  margin: 8rem 0;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+#pay_success .mp-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rem;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-hint);
+}
+
+#pay_success .mp-step.done {
+  color: var(--color-success-text);
+}
+
+#pay_success .mp-step i {
+  font-size: 18rem;
+}
+
+#pay_success .mp-line {
+  flex: 1;
+  height: 2rem;
+  background: var(--border-light);
+  margin: 0 4rem;
+  margin-bottom: 16rem;
+}
+
+#pay_success .divContent .divDesc1 {
+  height: auto;
+  font-size: var(--font-size-md);
+  text-align: center;
+  color: var(--color-text-hint);
+  line-height: 1.5;
+  padding: 0 8rem;
+  margin-top: 8rem;
+  margin-bottom: 20rem;
+}
+
+/* 操作按钮区 */
+#pay_success .divActions {
+  display: flex;
+  align-items: center;
+  gap: 12rem;
+  margin-top: 20rem;
+}
+
+#pay_success .divContent .btnView {
+  width: 124rem;
+  height: 38rem;
+  background: var(--color-primary-gradient);
+  border-radius: var(--radius-xl);
+  font-size: 15rem;
+  font-weight: 500;
+  text-align: center;
+  color: var(--color-text-primary);
+  line-height: 38rem;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+  box-shadow: var(--shadow-cta);
+}
+
+#pay_success .divContent .btnView:active {
+  transform: scale(0.97);
+}
+
+/* 继续点餐按钮 */
+#pay_success .divContent .btnContinue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rem;
+  width: 124rem;
+  height: 38rem;
+  border: 1px solid var(--color-text-disabled);
+  border-radius: var(--radius-xl);
+  font-size: 15rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  background: var(--bg-card);
+}
+
+#pay_success .divContent .btnContinue:active {
+  background: var(--bg-hover);
+  border-color: var(--color-primary);
+}

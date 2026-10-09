@@ -1,0 +1,511 @@
+package com.reggie.module.dining.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
+import com.reggie.module.dining.mapper.QueueMapper;
+import com.reggie.module.dining.model.QueueRecord;
+import com.reggie.module.dining.vo.QueueStatsVO;
+import com.reggie.enums.QueueRecordStatus;
+import com.reggie.module.dining.service.DiningTableService;
+import com.reggie.module.dining.service.QueueService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * 排队服务实现
+ * <p>
+ * 修改点：使用 Redis SETNX 实现分布式锁，解决 takeNumber() 并发安全问题
+ * <p>
+ * P0-9 修复：类级 @Transactional 已移除——取号事务必须在 Redis 锁持有期间提交，
+ * 而类级注解下 takeNumber 的事务在方法返回（finally 释放锁之后）才提交，
+ * 并发可读到同一"最大号"生成重复排队号。现 takeNumber 内部用 TransactionTemplate
+ * 把「读最大号→生成号→插入」包成编程式事务并在锁内提交；seatCustomer 需要
+ * "CAS 改状态 + 开台建单"原子性，单独标注 @Transactional；其余方法均为单条
+ * 语句（本身原子），不再需要事务包裹。
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
+@Slf4j
+@Service
+public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> implements QueueService {
+
+    /** 日期格式化器 */
+    private static final DateTimeFormatter DATE_PATTERN = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+    /** 取号分布式锁 Key 前缀 */
+    private static final String QUEUE_LOCK_KEY_PREFIX = "queue:takeNumber:lock:";
+
+    /** 分布式锁过期时间（秒） */
+    private static final int LOCK_EXPIRE_SECONDS = 30;
+
+    /** 获取锁最大等待时间（毫秒） */
+    private static final int LOCK_WAIT_MILLIS = 3000;
+
+    /** 获取锁重试间隔（毫秒） */
+    private static final int LOCK_RETRY_INTERVAL = 100;
+
+    @Autowired(required = false)
+    private RedisTemplate<String, Object> redisTemplate;
+
+    /** 堂食桌台服务：入座时联动开台建单 */
+    @Autowired
+    private DiningTableService diningTableService;
+
+    /** 事务管理器：takeNumber 用编程式事务保证「生成+插入」在锁内提交 */
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
+    /** 编程式事务模板（锁内提交排队号，替代类级声明式事务） */
+    private TransactionTemplate transactionTemplate;
+
+    /**
+     * 初始化编程式事务模板。
+     */
+    @javax.annotation.PostConstruct
+    public void initTransactionTemplate() {
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+    }
+
+    /**
+     * 处理 take number。
+     * @param seatCount 参数 seatCount
+     * @param phone 参数 phone
+     * @return 返回结果
+     */
+    @Override
+    public QueueRecord takeNumber(Integer seatCount, String phone) {
+        return takeNumber(seatCount, phone, null);
+    }
+
+    @Override
+    public QueueRecord takeNumber(Integer seatCount, String phone, Long userId) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        // 修复(2026-09-30)：重复取号校验 — 同一用户/手机号在队中（WAITING/CALLED）时禁止再取号，
+        // 防止开新标签页/直接调 API 无限刷号占队（前端隐藏按钮拦不住绕过）。
+        LambdaQueryWrapper<QueueRecord> dupQw = new LambdaQueryWrapper<>();
+        dupQw.eq(QueueRecord::getTenantId, tenantId)
+                .in(QueueRecord::getStatus,
+                        QueueRecordStatus.WAITING.getValue(), QueueRecordStatus.CALLED.getValue());
+        if (userId != null) {
+            dupQw.eq(QueueRecord::getUserId, userId);
+        } else if (phone != null && !phone.trim().isEmpty()) {
+            dupQw.eq(QueueRecord::getPhone, phone);
+        } else {
+            throw new CustomException("请先登录或填写手机号后再取号");
+        }
+        if (count(dupQw) > 0) {
+            throw new CustomException("您已在排队中，请勿重复取号");
+        }
+
+        // 修复(2026-09-30)：锁改为全局单 key — 原 key 按 seatCount 分片，不同桌型并发取号
+        // 会各自读到同一"最大号"生成重复排队号（叫号唯一凭证失效）。
+        String lockKey = QUEUE_LOCK_KEY_PREFIX;
+        String lockValue = UUID.randomUUID().toString();
+        boolean locked = false;
+        boolean redisAvailable = true;
+        try {
+            try {
+                locked = tryAcquire(lockKey, lockValue);
+            } catch (Exception e) {
+                // P0 修复（注释与实现自洽）：Redis Template 缺失/连接异常 → 按降级意图放行，
+                // 走 DB 兜底：dining_queue 已有唯一索引 uk_queue_tenant_no(tenant_id, queue_no)
+                //（见 db/reggie.sql），并发重号会被唯一约束拦截，冲突转为"请重试"。
+                redisAvailable = false;
+                log.warn("[排队取号] Redis 不可用，降级为无锁取号（依赖 DB 唯一索引兜底）: seatCount={}, error={}",
+                        seatCount, e.getMessage(), e);
+            }
+            // Redis 正常但等待超时（锁被占用）：维持拒绝，防并发重号
+            if (redisAvailable && !locked) {
+                log.warn("[排队取号] 获取锁失败，系统繁忙: seatCount={}", seatCount);
+                throw new CustomException("系统繁忙，请稍后重试");
+            }
+            // P0-9 修复：编程式事务把「读 max→生成号→插入」包为原子临界区并在锁内提交，
+            // 保证锁释放前排队号已落库可见
+            try {
+                return transactionTemplate.execute(status -> generateQueueNumber(seatCount, phone, userId, tenantId));
+            } catch (DuplicateKeyException e) {
+                // 降级路径下并发撞唯一索引：拒绝本次取号，等待方重试即可拿到新号
+                log.warn("[排队取号] 排队号唯一约束冲突（并发降级窗口）: tenantId={}, error={}",
+                        tenantId, e.getMessage());
+                throw new CustomException("系统繁忙，请稍后重试");
+            }
+        } finally {
+            if (locked) {
+                tryReleaseLock(lockKey, lockValue);
+            }
+        }
+    }
+
+    /**
+     * 生成并保存排队号（由 takeNumber 的编程式事务在锁内调用）。
+     */
+    private QueueRecord generateQueueNumber(Integer seatCount, String phone, Long userId, Long tenantId) {
+        String datePrefix = LocalDate.now().format(DATE_PATTERN);
+        LambdaQueryWrapper<QueueRecord> qw = new LambdaQueryWrapper<>();
+        qw.likeRight(QueueRecord::getQueueNo, datePrefix);
+        // 序列按租户内递增（原实现缺租户过滤，跨租户共享序列且会把别家的号算进来）
+        qw.eq(QueueRecord::getTenantId, tenantId);
+        qw.orderByDesc(QueueRecord::getQueueNo);
+        qw.last("LIMIT 1");
+        QueueRecord last = getOne(qw);
+
+        int seq = 1;
+        if (last != null) {
+            String lastNo = last.getQueueNo();
+            try {
+                seq = Integer.parseInt(lastNo.substring(lastNo.length() - 4)) + 1;
+            } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
+                log.warn("[排队取号] 解析历史排队号失败，重置为1: lastNo={}, error={}", lastNo, e.getMessage());
+                seq = 1;
+            }
+        }
+
+        QueueRecord record = new QueueRecord();
+        record.setTenantId(BaseContext.getCurrentTenantId());
+        record.setQueueNo(datePrefix + String.format("%04d", seq));
+        record.setPhone(phone);
+        record.setUserId(userId);
+        record.setSeatCount(seatCount);
+        record.setStatus(QueueRecordStatus.WAITING.getValue());
+        save(record);
+        return record;
+    }
+
+    /**
+     * 获取分布式锁：SETNX + EXPIRE，锁值为 UUID，用于 ownership 校验。
+     *
+     * @return true=获取成功；false=等待超时未获取（锁被他人占用）
+     * @throws IllegalStateException Redis Template 缺失或连接/命令异常（调用方据此走降级分支）
+     */
+    private boolean tryAcquire(String lockKey, String lockValue) {
+        if (redisTemplate == null) {
+            throw new IllegalStateException("RedisTemplate 不可用，取号锁无法工作");
+        }
+        long startTime = System.currentTimeMillis();
+        try {
+            while (System.currentTimeMillis() - startTime < LOCK_WAIT_MILLIS) {
+                Boolean success = redisTemplate.opsForValue()
+                        .setIfAbsent(lockKey, lockValue, LOCK_EXPIRE_SECONDS, TimeUnit.SECONDS);
+                if (Boolean.TRUE.equals(success)) {
+                    return true;
+                }
+                Thread.sleep(LOCK_RETRY_INTERVAL);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("[排队取号] 获取锁被中断: {}", lockKey);
+            return false;
+        } catch (Exception e) {
+            // Redis 连接/命令异常：交给调用方按"Redis 不可用"降级处理（DB 唯一索引兜底）
+            throw new IllegalStateException("Redis 锁操作异常: " + e.getMessage(), e);
+        }
+        return false;
+    }
+
+    /**
+     * 释放分布式锁：Lua 脚本原子校验 + 删除，防止 TTL 过期瞬间 get+delete 的 TOCTOU 竞态。
+     * 与 OrderTimeoutTask 的 unlock 保持一致的 Lua 脚本模式。
+     */
+    private void tryReleaseLock(String lockKey, String lockValue) {
+        if (redisTemplate == null || lockValue == null) {
+            return;
+        }
+        try {
+            // Lua 脚本：比对锁值后才删除，防止误删他人的锁；同时消除 get+delete 之间的竞态窗口
+            String luaScript =
+                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            redisTemplate.execute(
+                    new org.springframework.data.redis.core.script.DefaultRedisScript<>(luaScript, Long.class),
+                    java.util.Collections.singletonList(lockKey),
+                    lockValue
+            );
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.warn("[排队取号] 释放锁失败: {}, error={}", lockKey, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 处理 call next。
+     * @param seatCount 参数 seatCount
+     * @return 返回结果
+     */
+    @Override
+    public QueueRecord callNext(Integer seatCount) {
+        int maxRetry = 50;
+        // 安全加固：叫号查询必须附加租户条件，防止跨租户叫号
+        Long tenantId = BaseContext.getCurrentTenantId();
+        for (int i = 0; i < maxRetry; i++) {
+            LambdaQueryWrapper<QueueRecord> qw = new LambdaQueryWrapper<>();
+            if (tenantId != null) {
+                qw.eq(QueueRecord::getTenantId, tenantId);
+            }
+            qw.eq(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue());
+            if (seatCount != null) qw.eq(QueueRecord::getSeatCount, seatCount);
+            qw.orderByAsc(QueueRecord::getCreatedTime);
+            qw.last("LIMIT 1");
+            QueueRecord record = getOne(qw);
+            if (record == null) {
+                return null;
+            }
+            // CAS 更新：仅当状态仍为 WAITING 时才更新为 CALLED
+            boolean success = lambdaUpdate()
+                    .eq(QueueRecord::getId, record.getId())
+                    .eq(QueueRecord::getTenantId, tenantId)
+                    .eq(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue())
+                    .set(QueueRecord::getStatus, QueueRecordStatus.CALLED.getValue())
+                    .update();
+            if (success) {
+                record.setStatus(QueueRecordStatus.CALLED.getValue());
+                return record;
+            }
+            // CAS 失败，其他线程已修改该记录，重试下一条
+            log.warn("[排队叫号] CAS更新失败，重试第{}次: id={}", i + 1, record.getId());
+        }
+        log.warn("[排队叫号] 达到最大重试次数{}，未能成功叫号", maxRetry);
+        return null;
+    }
+
+    /**
+     * 取消 queue。
+     * <p>P0 修复：原实现失败路径静默 return，Controller 仍无条件返回成功文案（假成功）；
+     * 现失败路径抛 CustomException，由全局异常处理器统一返回错误。</p>
+     * @param id 参数 id
+     */
+    @Override
+    public void cancelQueue(Long id) {
+        // 安全加固：先按租户校验归属，再执行 CAS 更新，防止攻击者遍历 ID 取消其他租户排队记录
+        if (id == null) {
+            throw new CustomException("排队记录不存在");
+        }
+        QueueRecord record = getById(id);
+        if (record == null) {
+            throw new CustomException("排队记录不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(record.getTenantId())) {
+            throw new CustomException("无权操作其他租户的排队记录");
+        }
+        // CAS 更新：仅当状态为 WAITING 时才允许取消，防止并发重复操作；
+        // tenantId 判空再加条件，避免 eq(tenant_id, null) 永不命中
+        boolean success = lambdaUpdate()
+                .eq(QueueRecord::getId, id)
+                .eq(currentTenantId != null, QueueRecord::getTenantId, currentTenantId)
+                .eq(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue())
+                .set(QueueRecord::getStatus, QueueRecordStatus.CANCELLED.getValue())
+                .update();
+        if (!success) {
+            throw new CustomException("当前排队状态无法取消");
+        }
+    }
+
+    @Override
+    public void cancelMyQueue(Long id, Long userId) {
+        if (id == null || userId == null) {
+            throw new CustomException("排队记录不存在");
+        }
+        QueueRecord record = getById(id);
+        if (record == null || !userId.equals(record.getUserId())) {
+            throw new CustomException("排队记录不存在");
+        }
+        // 顾客端 WAITING/CALLED 均可取消（CALLED 后放弃到店）；SEATED/CANCELLED 不可重复取消
+        boolean success = lambdaUpdate()
+                .eq(QueueRecord::getId, id)
+                .in(QueueRecord::getStatus,
+                        QueueRecordStatus.WAITING.getValue(),
+                        QueueRecordStatus.CALLED.getValue())
+                .set(QueueRecord::getStatus, QueueRecordStatus.CANCELLED.getValue())
+                .update();
+        if (!success) {
+            throw new CustomException("当前排队状态无法取消");
+        }
+    }
+
+    @Override
+    public long countWaitingAhead(Long queueId) {
+        QueueRecord record = getById(queueId);
+        if (record == null) {
+            return 0L;
+        }
+        return lambdaQuery()
+                .eq(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue())
+                .lt(QueueRecord::getCreatedTime, record.getCreatedTime())
+                .count();
+    }
+
+    /**
+     * 退回等待：CALLED → WAITING（用于误叫号纠错）
+     * <p>P0 修复：失败路径由静默 return 改为抛 CustomException，消除 Controller 假成功。</p>
+     *
+     * @param id 排队记录ID
+     */
+    @Override
+    public void recallQueue(Long id) {
+        if (id == null) {
+            throw new CustomException("排队记录不存在");
+        }
+        QueueRecord record = getById(id);
+        if (record == null) {
+            throw new CustomException("排队记录不存在");
+        }
+        // 租户归属校验
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(record.getTenantId())) {
+            throw new CustomException("无权操作其他租户的排队记录");
+        }
+        if (!QueueRecordStatus.CALLED.getValue().equals(record.getStatus())) {
+            throw new CustomException("当前状态非已叫号，无法退回等待");
+        }
+        boolean success = lambdaUpdate()
+                .eq(QueueRecord::getId, id)
+                .eq(currentTenantId != null, QueueRecord::getTenantId, currentTenantId)
+                .eq(QueueRecord::getStatus, QueueRecordStatus.CALLED.getValue())
+                .set(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue())
+                .update();
+        if (!success) {
+            throw new CustomException("退回等待失败，记录状态已变更，请刷新后重试");
+        }
+        log.info("[退回等待] 排队记录已退回等待: id={}, queueNo={}", id, record.getQueueNo());
+    }
+
+    /**
+     * 恢复排队：CANCELLED → WAITING（用于误取消纠错）
+     *
+     * @param id 排队记录ID
+     */
+    @Override
+    public void reactivateQueue(Long id) {
+        if (id == null) {
+            log.warn("[恢复排队] id为空，跳过");
+            return;
+        }
+        QueueRecord record = getById(id);
+        if (record == null) {
+            log.warn("[恢复排队] 记录不存在: id={}", id);
+            return;
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(record.getTenantId())) {
+            log.warn("[恢复排队] 无权操作其他租户的排队记录: id={}", id);
+            return;
+        }
+        if (!QueueRecordStatus.CANCELLED.getValue().equals(record.getStatus())) {
+            log.warn("[恢复排队] 当前状态非CANCELLED，无法恢复: id={}, status={}",
+                    id, record.getStatus());
+            return;
+        }
+        boolean success = lambdaUpdate()
+                .eq(QueueRecord::getId, id)
+                .eq(QueueRecord::getStatus, QueueRecordStatus.CANCELLED.getValue())
+                .set(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue())
+                .update();
+        if (success) {
+            log.info("[恢复排队] 排队记录已恢复: id={}, queueNo={}", id, record.getQueueNo());
+        } else {
+            log.warn("[恢复排队] CAS更新失败: id={}", id);
+        }
+    }
+
+    /**
+     * 安排入座：CALLED → SEATED
+     * CAS 乐观更新，仅当状态为 CALLED 时才允许入座
+     * <p>P0 修复：失败路径由静默 return 改为抛 CustomException，消除 Controller 假成功；
+     * 方法级 @Transactional 保证「CAS 改状态 + 开台建单」原子（类级注解已移除）。</p>
+     *
+     * @param queueId 排队记录ID
+     * @param tableId 桌台ID（可选，暂存但不写库，前端可展示）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void seatCustomer(Long queueId, Long tableId) {
+        if (queueId == null) {
+            throw new CustomException("排队记录不存在");
+        }
+        QueueRecord record = getById(queueId);
+        if (record == null) {
+            throw new CustomException("排队记录不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(record.getTenantId())) {
+            throw new CustomException("无权操作其他租户的排队记录");
+        }
+        if (!QueueRecordStatus.CALLED.getValue().equals(record.getStatus())) {
+            throw new CustomException("当前状态非已叫号，无法入座");
+        }
+        // CAS 更新：CALLED → SEATED（tenantId 判空再加条件，避免 eq(tenant_id, null) 永不命中）
+        boolean success = lambdaUpdate()
+                .eq(QueueRecord::getId, queueId)
+                .eq(currentTenantId != null, QueueRecord::getTenantId, currentTenantId)
+                .eq(QueueRecord::getStatus, QueueRecordStatus.CALLED.getValue())
+                .set(QueueRecord::getStatus, QueueRecordStatus.SEATED.getValue())
+                .update();
+        if (!success) {
+            throw new CustomException("入座失败，记录状态已变更，请刷新后重试");
+        }
+        // 入座即开台：选择了桌台则一键开台（建 EAT_IN 占位待付款订单 + 桌台置占用并绑定），
+        // 修复旧实现 tableId 仅打印日志不落库、桌台仍显示空闲而被二次开台的问题。
+        if (tableId != null) {
+            Map<String, Object> openResult = diningTableService.openWithOrder(
+                    tableId, record.getSeatCount(), "排队入座 " + record.getQueueNo());
+            log.info("[安排入座] 已开台: queueId={}, tableId={}, orderId={}",
+                    queueId, tableId, openResult.get("orderId"));
+        } else {
+            log.info("[安排入座] 排队记录已入座(未指定桌台): queueId={}, queueNo={}",
+                    queueId, record.getQueueNo());
+        }
+    }
+
+    /**
+     * 排队统计：按状态分类计数
+     * 使用 LambdaQueryWrapper + count() 单次查询各状态数量
+     */
+    @Override
+    public QueueStatsVO queueStats() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        QueueStatsVO stats = new QueueStatsVO();
+
+        // 总数
+        long total = lambdaQuery()
+                .eq(QueueRecord::getTenantId, tenantId)
+                .count();
+        stats.setTotalQueues(total);
+
+        // 各状态计数
+        stats.setWaitingCount(Long.valueOf(lambdaQuery()
+                .eq(QueueRecord::getTenantId, tenantId)
+                .eq(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue())
+                .count()));
+        stats.setCalledCount(Long.valueOf(lambdaQuery()
+                .eq(QueueRecord::getTenantId, tenantId)
+                .eq(QueueRecord::getStatus, QueueRecordStatus.CALLED.getValue())
+                .count()));
+        stats.setSeatedCount(Long.valueOf(lambdaQuery()
+                .eq(QueueRecord::getTenantId, tenantId)
+                .eq(QueueRecord::getStatus, QueueRecordStatus.SEATED.getValue())
+                .count()));
+        stats.setCancelledCount(Long.valueOf(lambdaQuery()
+                .eq(QueueRecord::getTenantId, tenantId)
+                .eq(QueueRecord::getStatus, QueueRecordStatus.CANCELLED.getValue())
+                .count()));
+
+        return stats;
+    }
+}
+
+
+

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>常购清单 - 瑞吉外卖</title>
+    <link rel="icon" href="./../images/favico.ico">
+    <script src="./../js/base.js?v=20260930"></script>
+    <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <link rel="stylesheet" href="../styles/index.css?v=20260930b" />
+    <link rel="stylesheet" href="../styles/skeleton.css?v=20260930" />
+    <link rel="stylesheet" href="../styles/frequent-orders.css?v=20260930" />
+    <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+    <script src="../js/icon-fallback.js?v=20260917"></script>
+</head>
+<body>
+    <div id="frequent" class="app dish-card-page">
+        <cend-shell title="常购清单" light :show-back="true" :show-home="true">
+        <!-- 骨架屏（2026-09-22：改用 skeleton.css 通用类，v-if/v-for 不变） -->
+        <div v-if="pageLoading" class="skeleton-container">
+            <!-- 快捷头部：白卡壳 + 圆形图标 + 两行文本 -->
+            <div class="skeleton-card">
+                <div class="flex items-center gap-12">
+                    <div class="skeleton-circle"></div>
+                    <div class="flex-col gap-8 flex-1">
+                        <div class="skeleton-line skeleton-w50"></div>
+                        <div class="skeleton-line skeleton-w30"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- 分类标签占位 -->
+            <div class="flex gap-8 mb-12">
+                <div class="skeleton-btn" v-for="i in 4" :key="'st'+i"></div>
+            </div>
+            <!-- 菜品卡占位 -->
+            <div class="skeleton-card" v-for="i in 3" :key="'sf'+i">
+                <div class="flex items-center gap-12">
+                    <div class="skeleton-img"></div>
+                    <div class="flex-col gap-8 flex-1">
+                        <div class="skeleton-line skeleton-w50"></div>
+                        <div class="skeleton-line skeleton-w30"></div>
+                    </div>
+                    <div class="skeleton-btn"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- van-pull-refresh 包裹内容实现下拉刷新 -->
+        <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
+        <div class="frequent-container">
+            <!-- 快捷说明 -->
+            <div class="quick-header">
+                <div class="qi-icon">
+                    <i class="ri-star-line"></i>
+                </div>
+                <div class="qi-text">
+                    <div class="qi-title">您的常购清单</div>
+                    <div class="qi-desc">快速复购您喜爱的菜品</div>
+                </div>
+            </div>
+
+            <!-- 分类标签 -->
+            <div class="category-tabs" v-if="categories.length > 1">
+                <div class="category-tab"
+                     v-for="cat in categories"
+                     :key="cat"
+                     :class="{active: activeCategory === cat}"
+                     @click="activeCategory = cat">
+                    {{ cat }}
+                </div>
+            </div>
+
+            <!-- 菜品列表 -->
+            <template v-if="filteredItems.length > 0">
+                <div class="group-title">按点餐频率排序</div>
+                <div class="dish-card" v-for="item in filteredItems" :key="item.key">
+                    <img v-if="item.image" :src="imgPath(item.image)" loading="lazy" class="dish-img" :alt="item.name || '菜品图片'" @error="imgFallback($event)"/>
+                    <div v-else class="dish-img-placeholder">
+                        <i class="ri-restaurant-line"></i>
+                    </div>
+                    <div class="dish-info">
+                        <div>
+                            <div class="dish-name">{{ item.name }}</div>
+                            <div class="dish-meta">
+                                <span class="freq-badge">点过{{ item.count }}次</span>
+                                <span v-if="formatLastTime(item.lastOrderTime)">{{ formatLastTime(item.lastOrderTime) }}</span>
+                            </div>
+                        </div>
+                        <div class="dish-price-row">
+                            <!-- 修改点：删除模板内 ¥，货币符号统一由 .dish-price::before 提供，避免双¥ -->
+                            <div class="dish-price">{{ item.price ? Number(item.price).toFixed(2) : '0.00' }}</div>
+                            <!-- 修改点：单菜加购与首页菜品行同构，描边文字钮 → 金圆加钮（饿了么式紧凑，避免「再来一单」误导为整单） -->
+                            <button class="add-circle-btn"
+                                    :class="{ 'is-loading': submitting === item.key }"
+                                    :disabled="submitting === item.key"
+                                    aria-label="加入购物车"
+                                    @click="reorder(item)">
+                                <i v-if="submitting === item.key" class="ri-loader-4-line"></i>
+                                <i v-else class="ri-add-line" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="bottom-hint">基于您的历史订单生成</div>
+            </template>
+
+            <!-- 加载失败态（区别于真空态，避免网络失败伪装成"暂无常购"） -->
+            <div class="empty-state" v-else-if="!pageLoading && loadError">
+                <i class="ri-wifi-line"></i>
+                <p class="empty-text">加载失败</p>
+                <p class="empty-sub">网络好像开小差了，请稍后重试</p>
+                <button class="empty-action" @click="initData">重新加载</button>
+            </div>
+
+            <!-- 空状态 -->
+            <div class="empty-state" v-else-if="!pageLoading && items.length === 0">
+                <i class="ri-shopping-bag-line"></i>
+                <p class="empty-text">暂无常购菜品</p>
+                <p class="empty-sub">去点餐后，这里会展示您的常购清单</p>
+            </div>
+
+            <!-- 筛选分类无结果：items 非空但当前分类为空，给独立反馈而非空白 -->
+            <div class="empty-state" v-else-if="!pageLoading">
+                <i class="ri-inbox-line"></i>
+                <p class="empty-text">该分类下暂无常购菜品</p>
+            </div>
+        </div>
+        </van-pull-refresh>
+        </cend-shell>
+    </div>
+
+    <script src="../../backend/plugins/vue/vue.js"></script>
+    <script src="./../js/vant.min.js"></script>
+    <!-- C 端跨页面复用组件（必须在 vant 之后、new Vue 之前加载） -->
+    <script src="./../js/components-cend.js?v=20260922"></script>
+    <script src="../../backend/plugins/axios/axios.min.js"></script>
+    <script src="./../js/request.js?v=20260930"></script>
+    <script src="./../js/common.js?v=20260930b"></script>
+    <script src="./../api/order.js?v=20260917"></script>
+    <script src="./../api/frequent.js?v=20260917"></script>
+    <!-- 修改点(2026-09-18)：单菜复购改用购物车 addCartApi，需引入 main.js -->
+    <script src="./../api/main.js?v=20260918"></script>
+    <script>
+        new Vue({
+            el: '#frequent',
+            data() {
+                return {
+                    pageLoading: false,
+                    loadError: false,
+                    refreshing: false,
+                    submitting: null,
+                    items: [],
+                    activeCategory: '全部',
+                    categories: ['全部']
+                };
+            },
+            computed: {
+                filteredItems() {
+                    if (this.activeCategory === '全部') return this.items;
+                    return this.items.filter(item => item.category === this.activeCategory);
+                }
+            },
+            created() {
+                this.initData();
+            },
+            methods: {
+                // 最近下单时间格式化为"M月d日"；兼容时间戳/ISO/yyyy-MM-dd HH:mm:ss
+                // （Safari 对短横线+空格串解析不稳，统一替换为斜杠），无法解析返回空串
+                formatLastTime(t){
+                    if(!t) return '';
+                    var d = new Date(t);
+                    if(isNaN(d.getTime())){
+                        d = new Date(String(t).replace(/-/g,'/').replace('T',' '));
+                    }
+                    if(isNaN(d.getTime())) return '';
+                    return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+                },
+                // 修改点(2026-09-22)：goBack 已统一由 cend-shell 接管（组件调 window.goBack 兜底），页面不再定义
+                // 修改点：下拉刷新（refreshing 由 initData.finally 复位）
+                async onRefresh() {
+                    try { await this.initData() } finally { this.refreshing = false }
+                },
+                async initData() {
+                    this.pageLoading = true;
+                    this.loadError = false;
+                    try {
+                        await this.loadOrderHistory();
+                    } catch (e) {
+                        // 标记失败态：空态区据此显示"加载失败+重试"，而非伪装成"暂无常购菜品"
+                        this.loadError = true;
+                    } finally {
+                        this.pageLoading = false;
+                    }
+                },
+                async loadOrderHistory() {
+                    const itemMap = new Map();
+                    const categorySet = new Set(['全部']);
+                    let page = 1;
+                    let hasMore = true;
+                    // 每页 100（后端上限），最多翻 3 页，避免请求无限增长拖垮页面
+                    const MAX_PAGES = 3;
+
+                    while (hasMore && page <= MAX_PAGES) {
+                        const res = await orderPagingApi({ page, pageSize: 100 });
+                        if (res.code !== 1 || !res.data || !res.data.records || res.data.records.length === 0) {
+                            hasMore = false;
+                            break;
+                        }
+                        const records = res.data.records;
+                        for (const order of records) {
+                            if (order.orderDetails) {
+                                for (const detail of order.orderDetails) {
+                                    // 按「菜品/套餐 + 规格」聚合。必须带类型前缀：
+                                    // 菜品与套餐 ID 可能同值（如都为雪花 1001），裸 id 会把两类误合并
+                                    const key = detail.setmealId != null ? ('s_' + detail.setmealId)
+                                        : (detail.dishId != null ? ('d_' + detail.dishId)
+                                        : ('x_' + detail.id));
+                                    const cat = detail.setmealId ? '套餐' : '菜品';
+                                    categorySet.add(cat);
+                                    if (itemMap.has(key)) {
+                                        const existing = itemMap.get(key);
+                                        existing.count += detail.number || 1;
+                                        if (order.orderTime && (!existing.lastOrderTime || order.orderTime > existing.lastOrderTime)) {
+                                            existing.lastOrderTime = order.orderTime;
+                                            existing.price = detail.amount;
+                                            existing.orderId = order.id;
+                                        }
+                                    } else {
+                                        itemMap.set(key, {
+                                            key: key,
+                                            name: detail.name,
+                                            price: detail.amount,
+                                            count: detail.number || 1,
+                                            category: cat,
+                                            lastOrderTime: order.orderTime,
+                                            orderId: order.id,
+                                            image: detail.image || detail.dishImage || '',
+                                            // 修改点(2026-09-18)：保留真实菜品/套餐ID，供单菜加购使用
+                                            dishId: detail.dishId || null,
+                                            setmealId: detail.setmealId || null
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                        hasMore = page < (res.data.pages || 1);
+                        page++;
+                    }
+
+                    this.items = Array.from(itemMap.values())
+                        .sort((a, b) => b.count - a.count)
+                        .slice(0, 20);
+                    this.categories = Array.from(categorySet);
+                },
+                async reorder(item) {
+                    if (this.submitting) return;
+                    // 修改点(2026-09-18)：原实现调 /order/again 把「整单」加入购物车，
+                    // 但卡片是单个菜品、按钮却在该菜品上，用户预期只复购这一道菜。改为调购物车加购单品。
+                    if (!item.dishId && !item.setmealId) {
+                        vant.Toast.fail('该菜品暂不支持单独复购');
+                        return;
+                    }
+                    this.submitting = item.key;
+                    try {
+                        var isSetmeal = !!item.setmealId;
+                        var params = {
+                            amount: parseFloat(Number(item.price || 0).toFixed(2)),
+                            name: item.name,
+                            image: item.image || '',
+                            dishId: isSetmeal ? undefined : item.dishId,
+                            setmealId: isSetmeal ? item.setmealId : undefined
+                        };
+                        const res = await addCartApi(params);
+                        if (res && res.code === 1) {
+                            vant.Toast.success('已加入购物车');
+                        } else {
+                            vant.Toast.fail((res && res.msg) || '添加失败');
+                        }
+                    } catch (e) {
+                        console.error('单菜复购失败:', e);
+                        vant.Toast.fail('网络异常，请稍后重试');
+                    } finally {
+                        this.submitting = null;
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

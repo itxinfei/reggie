@@ -1,0 +1,167 @@
+-- Payment module test schema (H2 / MySQL compatible)
+-- H2 内存库为空库，测试脚本须自建模块表（原"只插入数据不建表"仅适用于直连生产库，已废弃）。
+-- 建表使用 IF NOT EXISTS，避免同一测试上下文多个 @Sql 脚本互相 DROP 覆盖。
+
+-- ==================== 业务订单表（定义与 schema.sql 一致） ====================
+CREATE TABLE IF NOT EXISTS orders (
+  id bigint NOT NULL COMMENT '主键',
+  number varchar(50) NULL DEFAULT NULL COMMENT '订单',
+  status int NOT NULL DEFAULT 1 COMMENT '订单状',
+  user_id bigint NULL DEFAULT NULL COMMENT '用户id',
+  address_book_id bigint NULL DEFAULT NULL COMMENT '地址id',
+  order_time datetime NULL DEFAULT NULL COMMENT '下单时间',
+  checkout_time datetime NULL DEFAULT NULL COMMENT '结账时间',
+  pay_method int NULL DEFAULT NULL COMMENT '攻方式',
+  amount decimal(10,2) NOT NULL COMMENT '实收金',
+  delivery_fee decimal(10,2) NULL DEFAULT NULL COMMENT '配送费（外卖单独立存储，堂食为0）',
+  full_reduction_amount decimal(10,2) NULL DEFAULT 0.00 COMMENT '满减优惠金额（满减活动扣减，未享受为0）',
+  new_customer_discount_amount decimal(10,2) NULL DEFAULT 0.00 COMMENT '新客立减金额（新客活动扣减，未享受为0）',
+  remark varchar(100) NULL DEFAULT NULL COMMENT '备注',
+  internal_remark varchar(500) NULL DEFAULT NULL COMMENT '内部备注（仅后台可见）',
+  cancel_reason varchar(255) NULL DEFAULT NULL COMMENT '取消/拒单原因（P0-5 回执，顾客端可见；不再覆盖 remark）',
+  pickup_code varchar(16) NULL DEFAULT NULL COMMENT '取餐码（P0-6 核销：派单/抢单时生成，骑手取餐须校验）',
+  expect_delivery_time varchar(20) NULL DEFAULT NULL COMMENT '预送达时间',
+  user_name varchar(50) NULL DEFAULT NULL COMMENT '用户',
+  phone varchar(255) NULL DEFAULT NULL COMMENT '手机',
+  address varchar(255) NULL DEFAULT NULL COMMENT '地址',
+  consignee varchar(50) NULL DEFAULT NULL COMMENT '收货',
+  dining_type varchar(20) NULL DEFAULT 'OUTSIDE' COMMENT '用类型',
+  table_id bigint NULL DEFAULT NULL COMMENT '堂桌台ID',
+  table_name varchar(32) NULL DEFAULT NULL COMMENT '堂桌台名称',
+  idempotency_key varchar(128) NULL DEFAULT NULL COMMENT '幂等',
+  stock_refunded int NULL DEFAULT 0 COMMENT '已库存数量',
+  used_coupon_id bigint NULL DEFAULT NULL COMMENT '优惠券ID',
+  rider_id bigint NULL DEFAULT NULL COMMENT '配送骑手ID（店长派单/骑手抢单后写入）',
+  dispatch_time datetime NULL DEFAULT NULL COMMENT '派单/抢单时间（超时回流判断）',
+  platform_type varchar(32) NULL DEFAULT NULL COMMENT '平台来源',
+  platform_order_id varchar(128) NULL DEFAULT NULL COMMENT '平台订单',
+  platform_shop_id varchar(128) NULL DEFAULT NULL COMMENT '平台门店ID',
+  platform_raw longtext NULL COMMENT '平台原订单JSON',
+  create_time datetime NOT NULL COMMENT '创建时间',
+  update_time datetime NOT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建',
+  update_user bigint NULL DEFAULT NULL COMMENT '俔',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '昐删除',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
+  version int NOT NULL DEFAULT 0 COMMENT '乐锁版朏',
+  master_order_id bigint NULL DEFAULT NULL COMMENT '父订单ID（AA分账时指向主订单）',
+  split_count int NULL DEFAULT NULL COMMENT '分账份数（AA分账记录拆分数量）',
+  PRIMARY KEY (id)
+);
+
+-- ==================== 订单明细表 ====================
+CREATE TABLE IF NOT EXISTS order_detail (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  name varchar(50) NOT NULL COMMENT '名称',
+  order_id bigint NOT NULL COMMENT '订单id',
+  dish_id bigint NULL DEFAULT NULL COMMENT '菜品id',
+  setmeal_id bigint NULL DEFAULT NULL COMMENT '套餐id',
+  dish_flavor varchar(50) NULL DEFAULT NULL COMMENT '口味',
+  number int NOT NULL DEFAULT 1 COMMENT '数量',
+  amount decimal(10,2) NOT NULL COMMENT '单价',
+  remark varchar(255) NULL DEFAULT NULL COMMENT '订单明细备注',
+  image varchar(255) NULL DEFAULT NULL COMMENT '图片',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  create_time datetime NOT NULL COMMENT '创建时间',
+  update_time datetime NOT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  PRIMARY KEY (id)
+);
+
+-- ==================== 支付订单表 ====================
+CREATE TABLE IF NOT EXISTS payment_order (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  order_id bigint NOT NULL COMMENT '业务订单id',
+  biz_type varchar(20) NOT NULL DEFAULT 'ORDER' COMMENT '业务类型 ORDER/RECHARGE',
+  tenant_id bigint DEFAULT NULL COMMENT '租户id',
+  trade_no varchar(64) NOT NULL COMMENT '系统交易号',
+  channel_trade_no varchar(128) DEFAULT NULL COMMENT '通道交易号',
+  channel varchar(20) NOT NULL COMMENT '支付通道 ALIPAY/WECHAT/UNIONPAY',
+  amount decimal(10,2) NOT NULL COMMENT '金额',
+  status varchar(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态 PENDING/SUCCESS/FAIL/REFUND',
+  paid_time datetime DEFAULT NULL COMMENT '支付时间',
+  notify_time datetime DEFAULT NULL COMMENT '回调时间',
+  created_time datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  update_time datetime DEFAULT NULL,
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除 0=未删除 1=已删除',
+  version int NOT NULL DEFAULT 1 COMMENT '版本号',
+  create_user bigint DEFAULT NULL COMMENT '创建人ID',
+  update_user bigint DEFAULT NULL COMMENT '修改人ID',
+  PRIMARY KEY (id)
+);
+
+-- ==================== 退款记录表 ====================
+CREATE TABLE IF NOT EXISTS refund_record (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  payment_order_id bigint NOT NULL COMMENT '支付订单id',
+  order_id bigint DEFAULT NULL COMMENT '业务订单ID',
+  tenant_id bigint DEFAULT NULL COMMENT '租户ID',
+  refund_no varchar(64) NOT NULL COMMENT '退款单号',
+  amount decimal(10,2) NOT NULL COMMENT '退款金额',
+  reason varchar(255) DEFAULT NULL COMMENT '退款原因',
+  status varchar(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态 PENDING/SUCCESS/FAIL',
+  refund_type int DEFAULT NULL COMMENT '售后类型：1=整单退款 2=部分退款',
+  apply_user_id bigint DEFAULT NULL COMMENT '申请人ID',
+  audit_user_id bigint DEFAULT NULL COMMENT '审核人ID',
+  audit_time datetime DEFAULT NULL COMMENT '审核时间',
+  reject_reason varchar(500) DEFAULT NULL COMMENT '拒绝原因',
+  refund_time datetime DEFAULT NULL COMMENT '退款完成时间',
+  created_time datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除 0=未删除 1=已删除',
+  version int NOT NULL DEFAULT 1 COMMENT '版本号',
+  create_user bigint DEFAULT NULL COMMENT '创建人ID',
+  update_time datetime NOT NULL COMMENT '更新时间',
+  update_user bigint DEFAULT NULL COMMENT '修改人ID',
+  PRIMARY KEY (id)
+);
+
+-- ==================== 支付渠道配置表 ====================
+CREATE TABLE IF NOT EXISTS payment_channel_config (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  config_name varchar(128) NOT NULL COMMENT '配置名称',
+  channel varchar(20) NOT NULL COMMENT '渠道 WECHAT/ALIPAY',
+  wx_app_id varchar(64) DEFAULT NULL COMMENT '微信appId',
+  wx_mch_id varchar(32) DEFAULT NULL COMMENT '微信商户号',
+  wx_api_v3_key varchar(512) DEFAULT NULL COMMENT '微信APIv3密钥(加密)',
+  wx_mch_cert_serial_no varchar(128) DEFAULT NULL COMMENT '商户证书序列号',
+  wx_mch_private_key varchar(4096) DEFAULT NULL COMMENT '商户私钥(加密)',
+  wx_public_key_id varchar(64) DEFAULT NULL COMMENT '微信支付公钥ID',
+  wx_public_key varchar(2048) DEFAULT NULL COMMENT '微信支付公钥',
+  ali_app_id varchar(64) DEFAULT NULL COMMENT '支付宝APPID',
+  ali_private_key varchar(4096) DEFAULT NULL COMMENT '支付宝应用私钥(加密)',
+  ali_public_key varchar(2048) DEFAULT NULL COMMENT '支付宝公钥',
+  pay_notify_url varchar(500) DEFAULT NULL COMMENT '支付回调地址',
+  refund_notify_url varchar(500) DEFAULT NULL COMMENT '退款回调地址',
+  enabled int NOT NULL DEFAULT 1 COMMENT '启用 0停 1启',
+  remark varchar(500) DEFAULT NULL COMMENT '备注',
+  tenant_id bigint NOT NULL DEFAULT 0 COMMENT '租户ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  version int NOT NULL DEFAULT 0 COMMENT '乐观锁',
+  create_time datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  update_time datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  create_user bigint DEFAULT NULL COMMENT '创建人',
+  update_user bigint DEFAULT NULL COMMENT '修改人',
+  PRIMARY KEY (id)
+);
+
+-- 清理测试残留数据
+-- 单库隔离（2026-10-06）：仅清理测试租户 999 的残留，禁止无条件全表 DELETE（会清掉租户 1 演示数据）
+DELETE FROM refund_record WHERE tenant_id = 999;
+DELETE FROM payment_order WHERE tenant_id = 999;
+DELETE FROM orders WHERE id IN (100, 101, 102) AND tenant_id = 999;
+DELETE FROM order_detail WHERE tenant_id = 999 AND order_id IN (100, 101, 102);
+
+-- 测试支付单需要的业务订单（orderId=100/101/102）
+-- 修改点(2026-09-26)：先清空再插种子，保证每方法状态确定
+DELETE FROM order_detail WHERE tenant_id = 999;
+DELETE FROM orders WHERE tenant_id = 999;
+DELETE FROM payment_order WHERE tenant_id = 999;
+DELETE FROM refund_record WHERE tenant_id = 999;
+DELETE FROM payment_channel_config WHERE tenant_id = 999;
+INSERT INTO orders (id, number, status, user_id, address_book_id, order_time, amount, user_name, phone, address, consignee, dining_type, create_time, update_time, tenant_id, is_deleted)
+VALUES
+  (100, 'PAY001', 1, 1, 1, CURRENT_TIMESTAMP, 99.99, '测试用户', '13800000001', '测试地址', '张三', 'OUTSIDE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 999, 0),
+  (101, 'PAY002', 1, 1, 1, CURRENT_TIMESTAMP, 50.00, '测试用户', '13800000002', '测试地址', '李四', 'OUTSIDE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 999, 0),
+  (102, 'PAY003', 1, 1, 1, CURRENT_TIMESTAMP, 200.00, '测试用户', '13800000003', '测试地址', '王五', 'OUTSIDE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 999, 0);

@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>买赠活动管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <!-- ==================== 买赠活动管理 ==================== -->
+  <!-- 功能说明：管理买赠促销活动，支持按菜品/套餐/全场设置买X赠Y规则，含起送金额/每单限次/活动时段 -->
+</head>
+<body>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="dashboard-container" id="app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">买赠活动</h1>
+      <!-- 统计卡片：全部/进行中/已暂停/已结束，点击可筛选 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
+
+      <!-- 搜索栏：按活动名称搜索 + 新增买赠活动按钮 -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        :show-refresh="true"
+        @search="onSearch"
+        @reset="onReset"
+        @refresh="init()"
+        @action="onAction"
+      ></table-bar>
+
+      <!-- 数据表格：ID/活动名称/买赠规则/适用范围/赠品/起送金额/每单限次/活动时间/状态/使用次数 -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :selection="false"
+        :show-actions="true" :viewable="true"
+        :actions-width="180"
+        :actions-fixed="true"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+        aria-label="买赠活动列表"
+      >
+        <template #col-buyGet="{ row }">
+          <span>买 {{ row.buyQuantity }} 赠 {{ row.getQuantity }}</span>
+        </template>
+        <template #col-applicable="{ row }">
+          <el-tag v-if="row.dishId" size="small" type="info">指定菜品</el-tag>
+          <el-tag v-else-if="row.setmealId" size="small" type="info">指定套餐</el-tag>
+          <el-tag v-else size="small">全场适用</el-tag>
+        </template>
+        <template #col-gift="{ row }">
+          <span>{{ row.giftDishName || '-' }}</span>
+        </template>
+        <template #col-minOrderAmount="{ row }">
+          <span>{{ row.minOrderAmount ? '满¥' + formatMoney(row.minOrderAmount) : '不限' }}</span>
+        </template>
+        <template #col-time="{ row }">
+          <span>{{ formatDate(row.startTime) }} ~ {{ formatDate(row.endTime) }}</span>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="statusTagType(row.status)" size="small">
+            {{ statusText(row.status) }}
+          </el-tag>
+        </template>
+        <template #col-usageCount="{ row }">
+          <span>{{ row.usageCount || 0 }}</span>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="handleEdit(row)">编辑</el-button>
+          <el-button type="text" size="small" :class="row.status === 1 ? 'btn-warning' : 'btn-success'" @click="handleToggleStatus(row)" :disabled="row.status === 0 || row.status === 3">
+            {{ row.status === 1 ? '暂停' : '启用' }}
+          </el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- 新增/编辑弹窗：活动名称/买赠数量/适用菜品/赠品/起送金额/每单限次/活动时段/描述/状态 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :size="'lg'"
+      :title="dialogTitle"
+      :visible.sync="dialogVisible"
+      :close-on-click-modal="false"
+      :submit-loading="submitLoading"
+      @submit="handleSubmit"
+    >
+      <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="100px" size="small">
+        <el-form-item label="活动名称" prop="name">
+          <el-input v-model="formData.name" placeholder="请输入活动名称"></el-input>
+        </el-form-item>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="买数量" prop="buyQuantity">
+              <el-input-number v-model="formData.buyQuantity" :min="1" :max="99" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="赠数量" prop="getQuantity">
+              <el-input-number v-model="formData.getQuantity" :min="1" :max="99" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="适用菜品" prop="dishId">
+          <el-select v-model="formData.dishId" placeholder="选择菜品（留空=全场适用）" clearable filterable style="width: 100%;">
+            <el-option v-for="d in dishOptions" :key="d.value" :label="d.label" :value="d.value"></el-option>
+          </el-select>
+          <div class="form-tip">选择具体菜品仅对该菜品生效，留空表示对全场菜品生效</div>
+        </el-form-item>
+        <el-form-item label="赠品菜品" prop="giftDishId">
+          <el-select v-model="formData.giftDishId" placeholder="请选择赠品菜品" filterable @change="onGiftDishChange" style="width: 100%;">
+            <el-option v-for="d in dishOptions" :key="d.value" :label="d.label" :value="d.value"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="起送金额">
+          <el-input-number v-model="formData.minOrderAmount" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+          <div class="form-tip">留空表示不限制</div>
+        </el-form-item>
+        <el-form-item label="每单限次">
+          <el-input-number v-model="formData.maxTimesPerOrder" :min="1" :max="99" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="活动时段" prop="timeRange">
+          <el-date-picker
+            v-model="formData.timeRange"
+            type="datetimerange"
+            range-separator="至"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+            :picker-options="{ shortcuts: dateShortcuts }"
+            style="width: 100%;">
+          </el-date-picker>
+        </el-form-item>
+        <el-form-item label="活动描述">
+          <el-input v-model="formData.description" type="textarea" :rows="2" placeholder="请输入活动描述"></el-input>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-radio-group v-model="formData.status">
+            <el-radio :label="0">草稿</el-radio>
+            <el-radio :label="1">进行中</el-radio>
+            <el-radio :label="2">暂停</el-radio>
+            <el-radio :label="3">结束</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../js/common.js?v=20260926"></script>
+  <script src="../../api/marketing.js?v=20260926"></script>
+  <script src="../../api/food.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data: function() {
+        return {
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          loading: false,
+          activeFilter: '',
+          tableData: [],
+          // 修改点：后端返回全量活动，保存全量供本地筛选/切片/统计使用
+          allData: [],
+          dishOptions: [],
+          searchConfig: [
+            { type: 'input', field: 'name', placeholder: '请输入活动名称', width: '200px' }
+          ],
+          actionConfig: [
+            { key: 'add', text: '+ 新增买赠活动', type: 'primary' }
+          ],
+          columns: [
+            { prop: 'id', label: 'ID', width: 60, align: 'center' },
+            { prop: 'name', label: '活动名称', minWidth: 160 },
+            { prop: 'buyGet', label: '买赠', slot: true, width: 90, align: 'center' },
+            { prop: 'applicable', label: '适用范围', slot: true, width: 90, align: 'center' },
+            { prop: 'gift', label: '赠品', slot: true, minWidth: 130 },
+            { prop: 'minOrderAmount', label: '起送金额', slot: true, width: 100, type: 'money' },
+            { prop: 'maxTimesPerOrder', label: '每单限次', width: 80, align: 'center' },
+            { prop: 'time', label: '活动时间', slot: true, width: 240 },
+            { prop: 'status', label: '状态', slot: true, width: 80, align: 'center' },
+            { prop: 'usageCount', label: '使用次数', slot: true, width: 80, align: 'center' }
+          ],
+          stats: { total: 0, active: 0, paused: 0, ended: 0 },
+          lastSearch: {},
+          dialogVisible: false,
+          dialogTitle: '新增买赠活动',
+          submitLoading: false,
+          dateShortcuts: [
+            { text: '未来 1 周', onClick: function(picker) { const start = new Date(); const end = new Date(); end.setTime(start.getTime() + 7 * 24 * 60 * 60 * 1000); picker.$emit('pick', [start, end]) } },
+            { text: '未来 3 天', onClick: function(picker) { const start = new Date(); const end = new Date(); end.setTime(start.getTime() + 3 * 24 * 60 * 60 * 1000); picker.$emit('pick', [start, end]) } }
+          ],
+          formData: {
+            id: null,
+            name: '',
+            description: '',
+            buyQuantity: 1,
+            getQuantity: 1,
+            dishId: null,
+            setmealId: null,
+            giftDishId: null,
+            giftDishName: '',
+            minOrderAmount: null,
+            maxTimesPerOrder: 1,
+            startTime: null,
+            endTime: null,
+            timeRange: null,
+            status: 1,
+            usageCount: 0
+          },
+          formRules: {
+            name: [{ required: true, message: '请输入活动名称', trigger: 'blur' }],
+            buyQuantity: [{ required: true, message: '请输入买数量', trigger: 'blur' }],
+            getQuantity: [{ required: true, message: '请输入赠数量', trigger: 'blur' }],
+            giftDishId: [{ required: true, message: '请选择赠品菜品', trigger: 'change' }],
+            timeRange: [{ required: true, message: '请选择活动时间', trigger: 'change' }]
+          }
+        }
+      },
+      computed: {
+        statsCards: function() {
+          const self = this
+          return [
+            { key: '', icon: 'ri-gift-2-line', label: '全部活动', value: self.stats.total, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: '1', icon: 'ri-checkbox-circle-line', label: '进行中', value: self.stats.active, color: 'success', clickable: true, active: self.activeFilter === '1' },
+            { key: '2', icon: 'ri-pause-circle-line', label: '已暂停', value: self.stats.paused, color: 'warning', clickable: true, active: self.activeFilter === '2' },
+            { key: '3', icon: 'ri-close-circle-line', label: '已结束', value: self.stats.ended, color: 'info', clickable: true, active: self.activeFilter === '3' }
+          ]
+        }
+      },
+      created: function() {
+        this.loadDishOptions()
+        this.init()
+        this.loadStats()
+      },
+      methods: {
+        // ========== 辅助方法 ==========
+        formatMoney: function(value) {
+          if (!value && value !== 0) return '0.00'
+          return Number(value).toFixed(2)
+        },
+        formatDate: function(dt) {
+          if (!dt) return '-'
+          const d = new Date(dt)
+          const year = d.getFullYear()
+          const month = ('0' + (d.getMonth() + 1)).slice(-2)
+          const day = ('0' + d.getDate()).slice(-2)
+          const hour = ('0' + d.getHours()).slice(-2)
+          const min = ('0' + d.getMinutes()).slice(-2)
+          return year + '-' + month + '-' + day + ' ' + hour + ':' + min
+        },
+        statusTagType: function(status) {
+          const map = { 0: 'info', 1: 'success', 2: 'warning', 3: 'info' }
+          return map[status] || 'info'
+        },
+        statusText: function(status) {
+          const map = { 0: '草稿', 1: '进行中', 2: '已暂停', 3: '已结束' }
+          return map[status] || '未知'
+        },
+        // 修改点：/dish/options 返回 Map<String,List<String>>（无 id），赠品需按 id 回写名称，
+        // 故改用 /dish/list 获取带 id 与 name 的菜品列表
+        // ========== 数据加载 ==========
+        loadDishOptions: function() {
+          const self = this
+          queryDishList({}).then(function(res) {
+            if (res.code === 1 && Array.isArray(res.data)) {
+              self.dishOptions = res.data.map(function(d) {
+                return { value: d.id, label: d.name }
+              })
+            }
+          }).catch(function(err) {
+            console.warn('加载菜品选项失败:', err)
+          })
+        },
+        async init() {
+          this.loading = true
+          const self = this
+          try {
+            // 修改点：后端 list 不接收任何参数且返回全量（无分页），
+            // 改为一次拉取全量，由前端完成名称搜索、状态筛选与切片
+            const res = await getBuyGetFreeActivities({})
+            const list = (String(res.code) === '1' && Array.isArray(res.data)) ? res.data : []
+            self.allData = list
+            self.applyFilter()
+            self.loadStats()
+          } catch (err) {
+            ReggieUI.error('获取买赠活动列表失败')
+          }
+          self.loading = false
+        },
+        // 修改点：活动名称搜索 + 状态卡片筛选 + 前端切片分页
+        applyFilter: function() {
+          const self = this
+          let list = self.allData || []
+          if (self.lastSearch.name) {
+            const kw = String(self.lastSearch.name).toLowerCase()
+            list = list.filter(function(r) {
+              return r.name && String(r.name).toLowerCase().indexOf(kw) !== -1
+            })
+          }
+          if (self.activeFilter !== '' && self.activeFilter != null) {
+            const st = Number(self.activeFilter)
+            list = list.filter(function(r) { return Number(r.status) === st })
+          }
+          self.counts = list.length
+          const start = (self.page - 1) * self.pageSize
+          self.tableData = list.slice(start, start + self.pageSize)
+        },
+        // 修改点：统计基于全量数据本地计算（原按 status 发三次请求，后端忽略 status 导致三个数字都等于总数）
+        loadStats: function() {
+          const list = this.allData || []
+          const countBy = function(status) {
+            return list.filter(function(r) { return Number(r.status) === status }).length
+          }
+          const active = countBy(1)
+          const paused = countBy(2)
+          const ended = countBy(3)
+          this.stats = {
+            total: list.length,
+            active: active,
+            paused: paused,
+            ended: ended
+          }
+        },
+        // ========== 筛选/分页事件 ==========
+        onCardClick: function(payload) {
+          const self = this
+          self.activeFilter = payload.activeKey
+          self.lastSearch = {}
+          self.page = 1
+          self.init()
+        },
+        onSearch: function(searchParams) {
+          this.activeFilter = ''
+          this.lastSearch = searchParams
+          this.page = 1
+          this.init()
+        },
+        onReset: function() {
+          this.activeFilter = ''
+          this.lastSearch = {}
+          this.page = 1
+          this.init()
+        },
+        onAction: function(payload) {
+          switch (payload.key) {
+            case 'add': this.handleAdd(); break
+          }
+        },
+        onPageChange: function(payload) {
+          // 修改点：数据已在本地全量缓存，翻页直接切片，无需重新请求
+          this.page = payload.page
+          this.applyFilter()
+        },
+        onSizeChange: function(payload) {
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
+          this.applyFilter()
+        },
+        // ========== 新增/编辑 ==========
+        onGiftDishChange: function(id) {
+          const self = this
+          var opt = self.dishOptions.filter(function(d) { return d.value === id })[0]
+          self.formData.giftDishName = opt ? opt.label : ''
+        },
+        handleAdd: function() {
+          this.dialogTitle = '新增买赠活动'
+          this.formData = {
+            id: null,
+            name: '',
+            description: '',
+            buyQuantity: 1,
+            getQuantity: 1,
+            dishId: null,
+            setmealId: null,
+            giftDishId: null,
+            giftDishName: '',
+            minOrderAmount: null,
+            maxTimesPerOrder: 1,
+            startTime: null,
+            endTime: null,
+            timeRange: null,
+            status: 1,
+            usageCount: 0
+          }
+          this.dialogVisible = true
+          this.$nextTick(function() {
+            this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
+          }.bind(this))
+        },
+        handleEdit: function(row) {
+          this.dialogTitle = '编辑买赠活动'
+          const fd = Object.assign({}, row)
+          if (fd.startTime && fd.endTime) {
+            fd.timeRange = [fd.startTime, fd.endTime]
+          }
+          this.formData = fd
+          this.dialogVisible = true
+          this.$nextTick(function() {
+            this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
+          }.bind(this))
+        },
+        // ========== 状态切换/删除 ==========
+        async handleToggleStatus(row) {
+          try {
+            if (row.status === 0 || row.status === 3) {
+              ReggieUI.warning('草稿或已结束状态不可切换')
+              return
+            }
+            const newStatus = row.status === 1 ? 2 : 1
+            var res = await updateBuyGetFree(Object.assign({}, row, { status: newStatus }))
+            if (res.code === 1) {
+              ReggieUI.success(newStatus === 1 ? '已启用' : '已暂停')
+              this.init()
+              this.loadStats()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          } catch (err) {
+            ReggieUI.error('操作失败')
+          }
+        },
+        async handleDelete(row) {
+          try {
+            await ReggieUI.confirm('确定要删除该买赠活动吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+            const res = await deleteBuyGetFree(row.id)
+            if (res.code === 1) {
+              ReggieUI.success('删除成功')
+              this.init()
+              this.loadStats()
+            } else {
+              ReggieUI.error(res.msg || '删除失败')
+            }
+          } catch (err) {
+            if (err === 'cancel') return
+            console.warn('[buy-get-free] 删除失败:', err)
+            ReggieUI.error('删除失败')
+          }
+        },
+        // 修改点：`async X: function(){}` 是非法语法（整页 JS 解析失败导致白屏），改为合法的 async 方法简写
+        async handleSubmit() {
+          const self = this
+          if (self.submitLoading) return // 提交防重
+          // 修改点：原 catch 吞掉校验失败后仍继续执行提交，改为校验不通过直接中断
+          let valid = false
+          try {
+            valid = await new Promise(function(resolve) {
+              self.$refs.ruleForm.validate(function(v) { resolve(v) })
+            })
+          } catch (e) {
+            valid = false
+          }
+          if (!valid) return
+          if (self.formData.timeRange && self.formData.timeRange.length === 2) {
+            self.formData.startTime = self.formData.timeRange[0]
+            self.formData.endTime = self.formData.timeRange[1]
+          }
+          self.submitLoading = true
+          const submitData = Object.assign({}, self.formData, { timeRange: null })
+          const apiCall = self.formData.id ? updateBuyGetFree(submitData) : saveBuyGetFree(submitData)
+          apiCall.then(function(res) {
+            if (res.code === 1) {
+              ReggieUI.success(self.formData.id ? '更新成功' : '新增成功')
+              self.dialogVisible = false
+              self.init()
+              self.loadStats()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          }).catch(function(err) {
+            ReggieUI.error('操作失败')
+          }).finally(function() {
+            self.submitLoading = false
+          })
+        }
+      }
+    })
+  </script>
+</body>
+</html>

@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数据概览 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/chart-panel.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260926" />
+  <!-- 性能优化：ECharts(~1MB)改为 preload 提前并行下载，运行时动态注入，不再阻塞首屏渲染 -->
+  <link rel="preload" as="script" href="../../plugins/echarts/echarts.min.js" />
+  <style>
+    /* ========== 现代化数据概览设计 ========== */
+
+    /* 防止 Vue 挂载前原始模板（{{ }}）闪烁，提升首屏观感 */
+    [v-cloak] { display: none !important; }
+
+    /* 基础重置 */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: var(--bg-page);
+      font-family: var(--font-family-base);
+    }
+    /* 防抖动（2026-09-20）：滚动统一由 body 承担；若 html 也产生滚动条，append-to-body 的
+       下拉浮层超出视口底部时会撑高 html、闪现第二滚动条挤占宽度，表格随之左右横跳 */
+    html {
+      overflow: hidden;
+    }
+    body {
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    /* 主容器 */
+    .overview-container {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .overview-container .container {
+      flex: 1;
+      background: transparent;
+      padding: 10px; /* 主内容区边距全站统一 10px（原 12px 16px） */
+      min-width: 0;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ========== 库存预警条（内联样式收敛为类） ========== */
+    .inventory-alert {
+      margin-bottom: var(--space-3);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      background: var(--color-warning-light);
+      border: 1px solid var(--color-warning);
+      border-radius: var(--radius-lg);
+      padding: var(--space-3) var(--space-5);
+      flex-wrap: wrap;
+    }
+    /* P0: #e6a23c 压 #fdf6ec 仅 2.04:1，改用已达标的深橙文字色 4.92:1 */
+    .inventory-alert__title {
+      font-weight: var(--font-weight-bold);
+      color: var(--color-warning-text);
+      font-size: var(--font-size-md);
+    }
+    .inventory-alert__desc {
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .charts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+
+    .chart-panel {
+      padding: var(--space-4);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .chart-panel .chart-title {
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      color: var(--el-text-primary);
+      margin-bottom: var(--space-3);
+      padding-left: 10px;
+      border-left: 3px solid var(--color-brand-500);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chart-box {
+      width: 100%;
+      min-height: 300px;
+      flex: 1;
+    }
+    /* ECharts 脚本加载失败时的图表区占位 */
+    .chart-box--failed {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: var(--font-size-base);
+    }
+
+    /* ========== 底部面板 ========== */
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+    }
+
+    .bottom-panel {
+      padding: var(--space-4);
+      min-width: 0;
+    }
+
+    .bottom-panel .panel-title {
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      color: var(--el-text-primary);
+      margin-bottom: var(--space-3);
+      padding-left: 10px;
+      border-left: 3px solid var(--color-brand-500);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ========== 热销排名列表 ========== */
+    .hot-dish-list .hot-dish-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--el-bg-light);
+      transition: all 0.2s;
+    }
+    .hot-dish-list .hot-dish-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .hot-dish-rank {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: var(--radius-md);
+      font-size:var(--font-size-sm);
+      font-weight: 700;
+      margin-right: 14px;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    /* P0: 原「浅色底 + 白字」仅 2.90:1 / 2.19:1，改用深文字色作底 */
+    .hot-dish-rank.top-1 { background: var(--color-danger-text); color: var(--bg-surface); }
+    .hot-dish-rank.top-2 { background: var(--color-brand-500); color: var(--text-on-brand); }
+    .hot-dish-rank.top-3 { background: var(--color-warning-text); color: var(--bg-surface); }
+    .hot-dish-rank.normal { background: var(--el-bg-lighter); color: var(--gray-666); }
+
+    .hot-dish-list .hot-dish-item:hover .hot-dish-rank {
+      transform: scale(1.1);
+    }
+
+    .hot-dish-name {
+      flex: 1;
+      font-size:var(--font-size-base);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 60px;
+      color: var(--el-text-primary);
+      font-weight: 500;
+    }
+
+    .hot-dish-count {
+      font-size:var(--font-size-base);
+      font-weight: 600;
+      color: var(--color-brand-text); /* P0 对比度修复：brand-600 白底仅 2.02:1 */
+      margin-left: 12px;
+      flex-shrink: 0;
+    }
+
+    .hot-dish-bar {
+      width: 100px;
+      height: 8px;
+      background: var(--el-bg-page);
+      border-radius: var(--radius-sm);
+      margin-left: 16px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .hot-dish-bar-fill {
+      height: 100%;
+      background: var(--color-brand-500);
+      border-radius: var(--radius-sm);
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ========== 运营速览面板 ========== */
+    .ops-summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .ops-metric {
+      background: var(--el-bg-ghost);
+      border-radius: var(--radius-md);
+      padding: 14px 12px;
+      border: 1px solid var(--el-bg-page);
+      transition: all 0.2s;
+    }
+    .ops-metric:hover {
+      background: var(--color-warning-light);
+      border-color: var(--color-warning);
+    }
+    .ops-metric-label {
+      font-size:var(--font-size-xs);
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .ops-metric-value {
+      font-size:var(--font-size-2xl);
+      font-weight: 700;
+      color: var(--el-text-primary);
+      line-height: 1.2;
+    }
+    .ops-metric-compare {
+      font-size:var(--font-size-xs);
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .ops-metric-compare.up { color: var(--color-success); }
+    .ops-metric-compare.down { color: var(--color-danger); }
+    .ops-metric-compare.flat { color: var(--text-secondary); }
+
+    .ops-progress {
+      margin-top: 12px;
+    }
+    .ops-progress-bar {
+      height: 8px;
+      background: var(--el-bg-page);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .ops-progress-fill {
+      height: 100%;
+      border-radius: var(--radius-sm);
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .ops-progress-label {
+      font-size:var(--font-size-xs);
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* 系统状态精简条 */
+    .ops-sys-bar {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--el-bg-page);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .ops-sys-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size:var(--font-size-xs);
+      color: var(--text-secondary);
+    }
+    .ops-sys-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .ops-sys-dot.ok { background: var(--color-success); }
+    .ops-sys-dot.err { background: var(--color-danger); }
+
+    /* ========== 入场动效（细节打磨，遵循减弱动效偏好） ========== */
+    @keyframes ds-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .chart-panel { animation: ds-fade-in 0.3s ease both; }
+    .bottom-panel { animation: ds-fade-in 0.3s ease both; }
+
+    /* ========== 响应式设计 ========== */
+    @media (max-width: 1200px) {
+      .container {
+        padding: var(--space-3) var(--space-4) !important;
+      }
+      .ops-summary-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .charts-row {
+        grid-template-columns: 1fr;
+        gap: var(--space-4);
+      }
+      .bottom-row {
+        grid-template-columns: 1fr;
+        gap: var(--space-4);
+      }
+    }
+
+    /* ========== 首屏待办台（8.7.1） ========== */
+    .todo-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--el-border-lighter);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+      padding: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+    .todo-panel__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-3);
+    }
+    .todo-panel__title {
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      color: var(--el-text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-left: 10px;
+      border-left: 3px solid var(--color-brand-500);
+    }
+    .todo-panel__count {
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+    }
+    .todo-panel__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: var(--space-3);
+    }
+    .todo-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--el-border-lighter);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      font-size: var(--font-size-sm);
+      text-align: left;
+    }
+    .todo-item:hover {
+      border-color: var(--color-brand-500);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+      transform: translateY(-1px);
+    }
+    .todo-item__icon {
+      font-size: var(--font-size-xl);
+      color: var(--color-brand-500);
+      flex-shrink: 0;
+    }
+    .todo-item__label {
+      flex: 1;
+      color: var(--text-secondary);
+    }
+    .todo-item__count {
+      font-size: var(--font-size-base);
+      font-weight: 700;
+      color: var(--el-text-secondary);
+      min-width: 22px;
+      text-align: center;
+    }
+    .todo-item__count--hot {
+      color: var(--color-danger-text);
+    }
+    .todo-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 24px 0;
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+    }
+    .todo-empty i {
+      font-size: var(--font-size-2xl);
+      color: var(--color-success);
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 12px 16px 16px !important;
+      }
+      .ops-summary-grid {
+        grid-template-columns: 1fr;
+      }
+      .chart-box {
+        min-height: 260px;
+      }
+      .chart-panel, .bottom-panel {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">跳到主内容</a>
+  <!-- 修改点：P2-1 骨架屏——移除根 v-loading 全屏转圈遮罩，加载态改由页面级骨架屏呈现 -->
+  <div class="overview-container" id="dashboard-app" v-cloak>
+    <main class="container" id="main-content" role="main" aria-labelledby="page-title">
+      <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
+      <h1 class="sr-only" id="page-title">数据概览</h1>
+
+      <!-- 修改点：P2-1 骨架屏——工作台首屏加载态（待办台 + KPI 卡片区域脉冲骨架，替代纯转圈） -->
+      <div v-if="loading" class="overview-skeleton">
+        <div class="ds-skeleton">
+          <div class="ds-skeleton-title"></div>
+          <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+          <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+          <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+          <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+          <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+        </div>
+      </div>
+
+      <!-- ========== KPI 指标卡片（统一布局：统计卡置顶；点击下钻） ========== -->
+      <div style="position:relative;">
+        <stat-cards :cards="kpiCards" :loading="loading" @card-click="onKpiClick"></stat-cards>
+        <!-- 修改点：营收目标设置入口 -->
+        <el-tooltip content="设置营收目标" placement="top">
+          <el-button size="small" circle aria-label="设置营收目标" style="position:absolute;top:8px;right:8px;" @click="openTargetDialog">
+            <i class="ri-settings-3-line" aria-hidden="true"></i>
+          </el-button>
+        </el-tooltip>
+      </div>
+
+      <!-- ========== 今日待办台（8.7.1：待处理事项直达入口） ========== -->
+      <section v-if="!loading" class="todo-panel" aria-label="今日待办">
+        <div class="todo-panel__head">
+          <h2 class="todo-panel__title"><i class="ri-todo-line" aria-hidden="true"></i> 今日待办</h2>
+          <span class="todo-panel__count" v-if="todoTotal > 0">共 {{ todoTotal }} 项</span>
+        </div>
+        <div v-if="todoTotal > 0" class="todo-panel__grid">
+          <button
+            v-for="item in todoItems"
+            :key="item.key"
+            type="button"
+            class="todo-item"
+            @click="goTo(item.url)"
+            :aria-label="item.label + '，' + item.count + ' 项，点击前往处理'"
+          >
+            <i :class="item.icon" class="todo-item__icon" aria-hidden="true"></i>
+            <span class="todo-item__label">{{ item.label }}</span>
+            <span class="todo-item__count" :class="{ 'todo-item__count--hot': item.count > 0 }">{{ item.count }}</span>
+          </button>
+        </div>
+        <div v-else class="todo-empty">
+          <i class="ri-checkbox-circle-line" aria-hidden="true"></i>
+          <span>今日暂无待办，辛苦啦</span>
+        </div>
+      </section>
+
+      <!-- ========== 库存预警提示 ========== -->
+      <!-- 修改点：集成库存预警，显示低库存食材名称 -->
+      <div v-if="!loading && inventoryAlert && inventoryAlert.lowStockCount > 0" class="inventory-alert">
+        <div style="display:flex;align-items:center;gap:var(--space-3);">
+          <span style="font-size:var(--font-size-3xl);"><i class="ri-error-warning-line" aria-hidden="true"></i></span>
+          <div>
+            <div class="inventory-alert__title">库存预警：{{ inventoryAlert.lowStockCount }} 种食材库存不足</div>
+            <div class="inventory-alert__desc">
+              <span v-for="(item, idx) in (inventoryAlert.lowStockItems || [])" :key="idx" style="margin-right:var(--space-3);">
+                {{ item.name }}({{ item.stockQty }}{{ item.unit }})
+              </span>
+            </div>
+          </div>
+        </div>
+        <el-button type="warning" size="small" plain @click="goTo('page/inventory/material-list.html')">去补货</el-button>
+      </div>
+
+      <!-- ========== 图表区域: 趋势图 + 订单状态饼图 ========== -->
+      <div class="charts-row">
+        <div class="chart-panel">
+          <div class="chart-title" style="display:flex;align-items:center;justify-content:space-between;">
+            <span><i class="ri-line-chart-line" aria-hidden="true"></i> 近{{ trendDays }}日订单与营收趋势</span>
+            <!-- 修改点：趋势图时间范围切换 -->
+            <el-radio-group v-model="trendDays" size="small" @change="switchTrendDays" style="margin-left:12px;">
+              <el-radio-button :label="7">7天</el-radio-button>
+              <el-radio-button :label="14">14天</el-radio-button>
+              <el-radio-button :label="30">30天</el-radio-button>
+            </el-radio-group>
+          </div>
+          <div class="chart-box" id="trendChart" v-show="!echartsLoadFailed" role="img" :aria-label="'近' + trendDays + '日订单与营收趋势图表'"></div>
+          <div v-if="echartsLoadFailed" class="chart-box chart-box--failed">图表加载失败，请刷新重试</div>
+        </div>
+        <div class="chart-panel">
+          <div class="chart-title"><i class="ri-pie-chart-line" aria-hidden="true"></i> 今日订单状态分布</div>
+          <div class="chart-box" id="statusChart" v-show="!echartsLoadFailed" role="img" aria-label="今日订单状态分布环形图"></div>
+          <div v-if="echartsLoadFailed" class="chart-box chart-box--failed">图表加载失败，请刷新重试</div>
+        </div>
+      </div>
+
+      <!-- ========== 底部: 热销菜品 + 系统健康 ========== -->
+      <div class="bottom-row">
+        <div class="bottom-panel chart-panel">
+          <div class="panel-title"><i class="ri-fire-line" aria-hidden="true"></i> 今日热销菜品 Top {{ hotDishes.length }}</div>
+          <div class="hot-dish-list" v-if="hotDishes.length > 0">
+            <div class="hot-dish-item" v-for="(item, index) in hotDishes" :key="index">
+              <span :class="['hot-dish-rank', index < 3 ? 'top-' + (index + 1) : 'normal']">{{ index + 1 }}</span>
+              <span class="hot-dish-name">{{ item.name }}</span>
+              <span class="hot-dish-count">{{ item.count }} 份</span>
+              <div class="hot-dish-bar">
+                <div class="hot-dish-bar-fill" :style="{ width: hotDishBarWidth(index) }"></div>
+              </div>
+            </div>
+          </div>
+          <div v-else style="text-align:center;padding:var(--space-10);color:var(--text-muted);">今日暂无订单</div>
+        </div>
+
+        <div class="bottom-panel chart-panel">
+          <div class="panel-title"><i class="ri-file-list-3-line" aria-hidden="true"></i> 今日运营速览</div>
+          <div class="ops-summary-grid">
+            <!-- 订单完成度 -->
+            <div class="ops-metric">
+              <div class="ops-metric-label">订单完成度</div>
+              <div class="ops-metric-value">{{ overview.completionRate || 0 }}%</div>
+              <div class="ops-progress">
+                <div class="ops-progress-bar">
+                  <div class="ops-progress-fill" :style="{ width: (overview.completionRate || 0) + '%', background: 'var(--color-brand-500)' }"></div>
+                </div>
+                <div class="ops-progress-label">
+                  <span>已完成 {{ overview.completedOrders || 0 }}</span>
+                  <span>总计 {{ overview.totalOrders || 0 }}</span>
+                </div>
+              </div>
+            </div>
+            <!-- 客单价 -->
+            <div class="ops-metric">
+              <div class="ops-metric-label">客单价</div>
+              <div class="ops-metric-value">¥{{ overview.avgAmount || '0.00' }}</div>
+              <div class="ops-metric-compare" :class="avgAmountTrendClass" v-if="yesterdayOrders > 0">
+                客单价 {{ avgAmountTrendText }} vs 昨日
+              </div>
+              <div class="ops-metric-compare flat" v-else>暂无昨日数据</div>
+            </div>
+            <!-- 对比昨日订单 -->
+            <div class="ops-metric">
+              <div class="ops-metric-label">对比昨日订单量</div>
+              <div class="ops-metric-value">{{ yesterdayOrders || '--' }} 单</div>
+              <div class="ops-metric-compare" :class="orderTrendClass" v-if="yesterdayOrders > 0">
+                {{ orderTrendText }}
+              </div>
+              <div class="ops-metric-compare flat" v-else>暂无昨日数据</div>
+            </div>
+            <!-- 对比昨日营业额 -->
+            <div class="ops-metric">
+              <div class="ops-metric-label">对比昨日营业额</div>
+              <div class="ops-metric-value">¥{{ formatMoney(yesterdayRevenue) }}</div>
+              <div class="ops-metric-compare" :class="revenueTrendClass" v-if="yesterdayRevenue > 0">
+                {{ revenueTrendText }}
+              </div>
+              <div class="ops-metric-compare flat" v-else>暂无昨日数据</div>
+            </div>
+          </div>
+          <!-- 系统状态精简条 -->
+          <div class="ops-sys-bar">
+            <div class="ops-sys-item">
+              <span :class="['ops-sys-dot', health.redisAvailable ? 'ok' : 'err']"></span>
+              Redis {{ health.redisAvailable ? '正常' : '离线' }}
+            </div>
+            <div class="ops-sys-item">
+              <span :class="['ops-sys-dot', health.dbAvailable ? 'ok' : 'err']"></span>
+              DB {{ health.dbAvailable ? '正常' : '离线' }}
+            </div>
+            <div class="ops-sys-item">
+              JVM {{ health.freeMemoryMB || 0 }}/{{ health.totalMemoryMB || 0 }} MB
+            </div>
+            <div class="ops-sys-item">
+              CPU {{ health.availableProcessors || 0 }}核
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- 修改点：营收目标设置弹窗 -->
+    <crud-dialog
+      :visible.sync="targetDialogVisible"
+      title="设置营收目标"
+      size="sm"
+      :show-submit="true"
+      submit-text="保存"
+      @submit="saveTargets"
+    >
+      <el-form label-width="100px">
+        <el-form-item label="日目标（元）">
+          <el-input-number v-model="targetForm.daily" :min="0" :step="500" :precision="2" controls-position="right" style="width:100%;" placeholder="如 5000"></el-input-number>
+        </el-form-item>
+        <el-form-item label="月目标（元）">
+          <el-input-number v-model="targetForm.monthly" :min="0" :step="5000" :precision="2" controls-position="right" style="width:100%;" placeholder="如 150000"></el-input-number>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+  </div>
+
+  <!-- JS依赖 -->
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/inventory.js?v=20260926"></script>
+  <script src="../../api/dashboard.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+
+  <script>
+    // ========== ECharts 按需懒加载（性能优化核心） ==========
+    // 原先在 <head> 同步加载 1MB 的 echarts.min.js 会阻塞首屏渲染；
+    // 改为运行时动态注入，下载与首屏数据请求并行，且不阻塞 HTML 解析。
+    let _echartsPromise = null;
+    function loadEchartsScript() {
+      if (_echartsPromise) return _echartsPromise;
+      _echartsPromise = new Promise(function (resolve, reject) {
+        if (typeof window.echarts !== 'undefined') { resolve(window.echarts); return; }
+        const s = document.createElement('script');
+        s.src = '../../plugins/echarts/echarts.min.js';
+        s.async = true;
+        s.onload = function () { resolve(window.echarts); };
+        s.onerror = function (e) { reject(e); };
+        document.head.appendChild(s);
+      });
+      return _echartsPromise;
+    }
+
+    new Vue({
+      el: '#dashboard-app',
+      data() {
+        return {
+          loading: false,
+          overview: {},
+          trend: [],
+          // 修改点：趋势图天数切换（7/14/30天）
+          trendDays: 7,
+          // ECharts 脚本懒加载失败标志：失败时图表区显示占位文案而非静默留白
+          echartsLoadFailed: false,
+          orderStatus: {},
+          hotDishes: [],
+          inventoryAlert: null,
+          health: {
+            redisAvailable: false,
+            redisInfo: '未连接',
+            dbAvailable: false,
+            dbInfo: '未知',
+            javaVersion: '',
+            osName: '',
+            availableProcessors: 0,
+            freeMemoryMB: 0,
+            totalMemoryMB: 0
+          },
+          trendChart: null,
+          statusChart: null,
+          _resizeHandler: null,
+          // 修改点：昨日对比数据
+          yesterdayOrders: 0,
+          // 修改点：营收目标（localStorage 持久化）
+          dailyTarget: 0,
+          monthlyTarget: 0,
+          targetDialogVisible: false,
+          targetForm: { daily: '', monthly: '' },
+          yesterdayRevenue: 0,
+          orderTrendClass: 'neutral',
+          orderTrendText: '--',
+          revenueTrendClass: 'neutral',
+          revenueTrendText: '--',
+          // 客单价环比（由趋势中今日/昨日 营业额÷订单数 计算）
+          avgAmountTrendClass: 'neutral',
+          avgAmountTrendText: '--'
+        }
+      },
+      computed: {
+        // KPI 指标卡（统一 stat-cards 组件）
+        kpiCards() {
+          const ov = this.overview || {};
+          // 百分比前加主语，避免紧跟“完成率/客单价”被误读为后者变化
+          const orderTrend = this.yesterdayOrders > 0 ? ' · 订单 ' + this.orderTrendText : '';
+          const revenueTrend = this.yesterdayRevenue > 0 ? ' · 营业额 ' + this.revenueTrendText : '';
+          // 修改点：营收目标进度
+          var revSub = '客单价 ¥' + (ov.avgAmount || '0.00') + revenueTrend;
+          if (this.dailyTarget > 0) {
+            var curRev = Number(ov.totalRevenue) || 0;
+            var pct = Math.min(100, Math.round(curRev / this.dailyTarget * 100));
+            revSub = '目标 ¥' + this.formatMoney(this.dailyTarget) + ' · 完成 ' + pct + '%' + revenueTrend;
+          }
+          return [
+            { key: 'orders', icon: 'ri-file-list-3-line', label: '今日订单数', value: ov.totalOrders || 0, color: 'primary', clickable: true, subText: '完成率 ' + (ov.completionRate || 0) + '%' + orderTrend },
+            { key: 'revenue', icon: 'ri-money-cny-circle-line', label: '今日营业额 (元)', value: this.formatMoney(ov.totalRevenue), color: 'success', clickable: true, subText: revSub },
+            { key: 'pending', icon: 'ri-time-line', label: '待处理订单', value: ov.pendingOrders || 0, color: 'warning', clickable: true, subText: '已完成 ' + (ov.completedOrders || 0) + ' | 已取消 ' + (ov.cancelledOrders || 0) },
+            { key: 'users', icon: 'ri-group-line', label: '注册用户 / 在职员工', value: (ov.totalUsers || 0) + ' / ' + (ov.activeEmployees || 0), color: 'info', clickable: true, subText: '数据来源: ' + (ov.cacheSource || 'MySQL') }
+          ];
+        },
+        // 首屏待办台（8.7.1）：数据源复用 dashboard overview + 库存预警；待评价/待退款后端暂无独立计数，暂不展示
+        todoItems: function() {
+          const list = []
+          const ov = this.overview || {}
+          const orderStatus = this.orderStatus || {}
+          const pendingCount = ov.pendingOrders || orderStatus['待派送/处理'] || 0
+          list.push({ key: 'pending', icon: 'ri-time-line', label: '待接单/待处理', count: pendingCount, url: 'page/order/list.html?status=2' })
+          const deliveringCount = orderStatus['派送中'] || 0
+          list.push({ key: 'delivering', icon: 'ri-truck-line', label: '配送中', count: deliveringCount, url: 'page/order/list.html?status=3' })
+          const invCount = (this.inventoryAlert && this.inventoryAlert.lowStockCount) || 0
+          list.push({ key: 'inventory', icon: 'ri-error-warning-line', label: '库存预警', count: invCount, url: 'page/inventory/material-list.html' })
+          return list
+        },
+        todoTotal: function() {
+          return this.todoItems.reduce(function(sum, it) { return sum + (Number(it.count) || 0) }, 0)
+        }
+      },
+      created() {
+        // 提前触发 ECharts 懒加载，使其与首屏数据请求并行下载
+        loadEchartsScript();
+        // 修改点：从 localStorage 加载营收目标
+        try {
+          this.dailyTarget = Number(localStorage.getItem('rg_dashboard_dailyTarget')) || 0;
+          this.monthlyTarget = Number(localStorage.getItem('rg_dashboard_monthlyTarget')) || 0;
+        } catch (e) { /* 静默 */ }
+        this.loadAllData();
+      },
+      mounted() {
+        // 修改点：监听窗口resize，自适应调整ECharts大小（iframe内必须）
+        this._resizeHandler = () => {
+          this.resizeCharts();
+        };
+        window.addEventListener('resize', this._resizeHandler);
+      },
+      beforeDestroy() {
+        // 修改点：解绑resize事件
+        if (this._resizeHandler) {
+          window.removeEventListener('resize', this._resizeHandler);
+        }
+        if (this.trendChart) {
+          this.trendChart.dispose();
+        }
+        if (this.statusChart) {
+          this.statusChart.dispose();
+        }
+      },
+      methods: {
+        // 修改点：KPI 卡点击下钻到对应页面（8.7.1）
+        onKpiClick: function(payload) {
+          const map = {
+            orders: 'page/order/list.html',
+            revenue: 'page/order/list.html?status=4',
+            pending: 'page/order/list.html?status=2',
+            users: 'page/member-center/member-list.html'
+          }
+          const url = map[payload.key]
+          if (url) this.goTo(url)
+        },
+        // 一次性加载所有数据
+        async loadAllData() {
+          this.loading = true;
+          try {
+            // 性能优化：概览数据与库存预警无依赖，并行请求，避免串行等待
+            const dashPromise = dashboardAll({ hotDishLimit: 10 });
+            const invPromise = inventoryStatsOverview().catch(() => null);
+            const [res, invRes] = await Promise.all([dashPromise, invPromise]);
+
+            if (String(res.code) === '1') {
+              const data = res.data;
+              this.overview = data.overview || {};
+              this.trend = data.trend || [];
+              this.orderStatus = data.orderStatus || {};
+              this.hotDishes = data.hotDishes || [];
+              this.health = data.health || {};
+              this.serverTime = data.serverTime;
+
+              // 修改点：计算昨日对比
+              this.calcYesterdayCompare();
+
+              // 库存预警：并行结果直接赋值（失败已降级为 null）
+              if (invRes && String(invRes.code) === '1') {
+                this.inventoryAlert = invRes.data || null;
+              }
+
+              // 图表渲染不阻塞 KPI 展示：ECharts 加载失败仅跳过图表，不影响其余数据
+              try {
+                await this.ensureEcharts();
+                this.echartsLoadFailed = false;
+                this.$nextTick(() => {
+                  this.renderTrendChart();
+                  this.renderStatusChart();
+                });
+              } catch (e) {
+                console.warn('ECharts 加载失败，已跳过图表渲染', e);
+                this.echartsLoadFailed = true;
+              }
+            } else {
+              ReggieUI.error(res.msg || '数据加载失败');
+            }
+          } catch (err) {
+            ReggieUI.error('请求失败：' + (err.message || err));
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        // 修改点：切换趋势图天数，重新加载趋势数据
+        async switchTrendDays(days) {
+          try {
+            // 初次懒加载若失败过，切换时再尝试加载一次，避免静默无响应
+            if (!this.echartsReady()) {
+              await this.ensureEcharts();
+            }
+            this.echartsLoadFailed = false;
+            var res = await dashboardTrend({ days: days });
+            if (String(res.code) === '1') {
+              this.trend = res.data || [];
+              this.$nextTick(() => this.renderTrendChart());
+            } else {
+              ReggieUI.error(res.msg || '趋势数据加载失败');
+            }
+          } catch (e) {
+            console.warn('切换趋势图天数失败:', e);
+            if (!this.echartsReady()) this.echartsLoadFailed = true;
+          }
+        },
+
+        // 修改点：打开营收目标设置弹窗
+        openTargetDialog() {
+          this.targetForm.daily = this.dailyTarget || '';
+          this.targetForm.monthly = this.monthlyTarget || '';
+          this.targetDialogVisible = true;
+        },
+        // 修改点：保存营收目标到 localStorage
+        saveTargets() {
+          this.dailyTarget = Number(this.targetForm.daily) || 0;
+          this.monthlyTarget = Number(this.targetForm.monthly) || 0;
+          try {
+            localStorage.setItem('rg_dashboard_dailyTarget', String(this.dailyTarget));
+            localStorage.setItem('rg_dashboard_monthlyTarget', String(this.monthlyTarget));
+          } catch (e) { /* 静默 */ }
+          this.targetDialogVisible = false;
+          ReggieUI.success('营收目标已保存');
+        },
+
+        // 修改点：从趋势数据计算昨日对比
+        calcYesterdayCompare() {
+          const trend = this.trend || [];
+          if (trend.length < 2) {
+            this.yesterdayOrders = 0;
+            this.yesterdayRevenue = 0;
+            this.orderTrendClass = 'neutral';
+            this.orderTrendText = '--';
+            this.revenueTrendClass = 'neutral';
+            this.revenueTrendText = '--';
+            this.avgAmountTrendClass = 'neutral';
+            this.avgAmountTrendText = '--';
+            return;
+          }
+          const today = trend[trend.length - 1];
+          const yesterday = trend[trend.length - 2];
+          const todayOrders = today.orderCount || 0;
+          const yesterdayOrdersVal = yesterday.orderCount || 0;
+          const todayRevenue = Number(today.revenue) || 0;
+          const yesterdayRevenueVal = Number(yesterday.revenue) || 0;
+
+          this.yesterdayOrders = yesterdayOrdersVal;
+          this.yesterdayRevenue = yesterdayRevenueVal;
+
+          // 订单对比
+          if (yesterdayOrdersVal > 0) {
+            const orderChange = ((todayOrders - yesterdayOrdersVal) / yesterdayOrdersVal * 100);
+            this.orderTrendClass = orderChange > 0 ? 'up' : orderChange < 0 ? 'down' : 'neutral';
+            this.orderTrendText = (orderChange > 0 ? '↑' : orderChange < 0 ? '↓' : '→')
+              + ' ' + Math.abs(orderChange).toFixed(1) + '%';
+          }
+
+          // 营业额对比
+          if (yesterdayRevenueVal > 0) {
+            const revenueChange = ((todayRevenue - yesterdayRevenueVal) / yesterdayRevenueVal * 100);
+            this.revenueTrendClass = revenueChange > 0 ? 'up' : revenueChange < 0 ? 'down' : 'neutral';
+            this.revenueTrendText = (revenueChange > 0 ? '↑' : revenueChange < 0 ? '↓' : '→')
+              + ' ' + Math.abs(revenueChange).toFixed(1) + '%';
+          }
+
+          // 客单价对比：今日(营业额/订单数) vs 昨日(营业额/订单数)
+          if (yesterdayOrdersVal > 0 && todayOrders > 0) {
+            const todayAvg = todayRevenue / todayOrders;
+            const yesterdayAvg = yesterdayRevenueVal / yesterdayOrdersVal;
+            if (yesterdayAvg > 0) {
+              const avgChange = ((todayAvg - yesterdayAvg) / yesterdayAvg * 100);
+              this.avgAmountTrendClass = avgChange > 0 ? 'up' : avgChange < 0 ? 'down' : 'neutral';
+              this.avgAmountTrendText = (avgChange > 0 ? '↑' : avgChange < 0 ? '↓' : '→')
+                + ' ' + Math.abs(avgChange).toFixed(1) + '%';
+            }
+          }
+        },
+
+        // 检查ECharts是否已加载（CDN可能延迟）
+        echartsReady() {
+          return typeof echarts !== 'undefined';
+        },
+
+        // 确保 ECharts 已加载（运行时动态注入，返回 Promise）
+        ensureEcharts() {
+          return loadEchartsScript();
+        },
+
+        // 读取设计令牌（CSS 变量），使图表文本/坐标轴色值与全站令牌体系一致
+        cssVar(name) {
+          try {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+          } catch (e) {
+            return '';
+          }
+        },
+
+        // 渲染趋势图（柱状 + 折线混合，双Y轴）
+        renderTrendChart() {
+          if (!this.echartsReady()) return;
+          const dom = document.getElementById('trendChart');
+          if (!dom) return;
+          if (!this.trendChart) {
+            this.trendChart = echarts.init(dom);
+          }
+          const dates = this.trend.map(t => t.date);
+          const orders = this.trend.map(t => t.orderCount || 0);
+          const revenues = this.trend.map(t => Number(t.revenue) || 0);
+
+          // 空态：居中文字提示（不渲染 0 值灰柱 + 假类目轴），与全站报表图空态范式一致
+          if (dates.length === 0) {
+            this.trendChart.setOption({ title: { text: '所选时间范围内暂无销售数据',
+              left: 'center', top: 'center',
+              textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } } }, true);
+            this.$nextTick(() => { if (this.trendChart) this.trendChart.resize(); });
+            return;
+          }
+          // 数据点较多（切到 30 天）时常显柱顶/折点标签会互相压叠，超过 14 个点仅靠 tooltip 查看数值
+          const showPointLabel = dates.length <= 14;
+          const xData = dates;
+          const barData = orders;
+          const lineData = revenues;
+
+          this.trendChart.setOption({
+            title: { show: false },
+            color: [RgPalette.brand600, RgPalette.success],
+            tooltip: {
+              trigger: 'axis',
+              axisPointer: { type: 'cross', crossStyle: { color: this.cssVar('--gray-999') || RgPalette.gray999 } },
+              backgroundColor: RgPalette.white,
+              borderColor: this.cssVar('--el-border-lighter2') || RgPalette.borderLighter2,
+              borderWidth: 1,
+              textStyle: { color: this.cssVar('--el-text-primary') || RgPalette.textPrimary, fontSize: 13 },
+              formatter: function(params) {
+                let html = '<strong>' + params[0].axisValue + '</strong><br/>';
+                params.forEach(function(p) {
+                  const val = p.seriesName === '营业额'
+                    ? '¥' + Number(p.value).toFixed(2)
+                    : p.value + ' 单';
+                  html += p.marker + ' ' + p.seriesName + '：<b>' + val + '</b><br/>';
+                });
+                return html;
+              }
+            },
+            legend: {
+              data: ['订单量', '营业额'],
+              bottom: 8,
+              itemWidth: 14,
+              itemHeight: 14,
+              textStyle: { color: this.cssVar('--el-text-regular') || RgPalette.textRegular, fontSize: 13 }
+            },
+            grid: {
+              left: 55,
+              right: 55,
+              top: 30,
+              bottom: 50
+            },
+            xAxis: {
+              type: 'category',
+              data: xData,
+              axisLine: { lineStyle: { color: this.cssVar('--el-border-lighter2') || RgPalette.borderLighter2 } },
+              axisTick: { show: false },
+              axisLabel: { color: this.cssVar('--el-text-secondary') || RgPalette.textSecondary, fontSize: 12 }
+            },
+            yAxis: [
+              {
+                type: 'value',
+                name: '订单量(单)',
+                // 修改点：订单数为整数类目轴，强制刻度间隔 1，避免出现小数刻度
+                minInterval: 1,
+                nameTextStyle: { color: this.cssVar('--el-text-secondary') || RgPalette.textSecondary, fontSize: 12, padding: [0, 40, 0, 0] },
+                axisLabel: { color: this.cssVar('--el-text-secondary') || RgPalette.textSecondary, fontSize: 12 },
+                splitLine: { lineStyle: { color: RgPalette.bgLight, type: 'dashed' } },
+                axisLine: { show: false },
+                axisTick: { show: false }
+              },
+              {
+                type: 'value',
+                name: '营业额(元)',
+                nameTextStyle: { color: this.cssVar('--el-text-secondary') || RgPalette.textSecondary, fontSize: 12, padding: [0, 0, 0, 40] },
+                axisLabel: { color: this.cssVar('--el-text-secondary') || RgPalette.textSecondary, fontSize: 12, formatter: '¥{value}' },
+                splitLine: { show: false },
+                axisLine: { show: false },
+                axisTick: { show: false }
+              }
+            ],
+            series: [
+              {
+                name: '订单量',
+                type: 'bar',
+                data: barData,
+                barWidth: 28,
+                barGap: '20%',
+                itemStyle: {
+                  borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0],
+                  color: RgPalette.brand
+                },
+                label: {
+                  show: showPointLabel,
+                  position: 'top',
+                  color: RgPalette.brand800,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  formatter: '{c}'
+                },
+                emphasis: {
+                  itemStyle: {
+                    color: RgPalette.brand
+                  }
+                }
+              },
+              {
+                name: '营业额',
+                type: 'line',
+                yAxisIndex: 1,
+                data: lineData,
+                smooth: true,
+                symbol: 'emptyCircle',
+                symbolSize: 10,
+                lineStyle: { color: RgPalette.success, width: 3 },
+                itemStyle: {
+                  color: RgPalette.success,
+                  borderColor: RgPalette.white,
+                  borderWidth: 2
+                },
+                areaStyle: {
+                  color: RgPalette.successArea
+                },
+                label: {
+                  show: showPointLabel,
+                  position: 'top',
+                  color: RgPalette.successDeep,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  formatter: function(p) { return '¥' + Number(p.value).toFixed(0); }
+                }
+              }
+            ]
+            // 修改点：第二参 true（notMerge）——切换时间范围（今日/7日/30日）后清掉旧系列与旧类目轴，
+            // 防止点数缩短/空数据占位时残留旧柱；每次均传完整 option，不依赖 merge 动画
+          }, true);
+          this.$nextTick(() => {
+            if (this.trendChart) this.trendChart.resize();
+          });
+        },
+
+        // 渲染订单状态环形图
+        renderStatusChart() {
+          if (!this.echartsReady()) return;
+          const dom = document.getElementById('statusChart');
+          if (!dom) return;
+          if (!this.statusChart) {
+            this.statusChart = echarts.init(dom);
+          }
+          const statusData = [];
+          const colorPalette = [
+            RgPalette.brand, RgPalette.success, RgPalette.warning, RgPalette.danger, RgPalette.textSecondary,
+            RgPalette.seriesPurple, RgPalette.antdBlue, RgPalette.seriesGreen2, RgPalette.antdOrange, RgPalette.seriesCyan
+          ];
+
+          Object.keys(this.orderStatus).forEach(key => {
+            if (key !== 'cacheSource' && key !== 'redisEnabled') {
+              const v = this.orderStatus[key];
+              if (v > 0) {
+                statusData.push({ name: key, value: v });
+              }
+            }
+          });
+
+          const isEmpty = statusData.length === 0;
+          if (isEmpty) {
+            statusData.push({ name: '暂无数据', value: 1, itemStyle: { color: this.cssVar('--el-border-lighter2') || RgPalette.borderLighter2 } });
+          }
+
+          this.statusChart.setOption({
+            color: colorPalette,
+            tooltip: {
+              trigger: 'item',
+              backgroundColor: RgPalette.white,
+              borderColor: this.cssVar('--el-border-lighter2') || RgPalette.borderLighter2,
+              borderWidth: 1,
+              textStyle: { color: this.cssVar('--el-text-primary') || RgPalette.textPrimary, fontSize: 13 },
+              formatter: function(p) {
+                return '<b>' + p.name + '</b><br/>' + p.marker
+                  + ' 订单数：<b>' + p.value + '</b> 单'
+                  + (isEmpty ? '' : '（<b>' + p.percent + '%</b>）');
+              }
+            },
+            legend: {
+              bottom: 0,
+              left: 'center',
+              itemWidth: 10,
+              itemHeight: 10,
+              itemGap: 20,
+              textStyle: { color: this.cssVar('--el-text-regular') || RgPalette.textRegular, fontSize: 12, padding: [2, 0, 0, 0] }
+            },
+            series: [{
+              type: 'pie',
+              radius: isEmpty ? ['0%', '60%'] : ['50%', '72%'],
+              center: ['50%', '46%'],
+              avoidLabelOverlap: false,
+              itemStyle: {
+                borderRadius: RgPalette.radiusMd,
+                borderColor: RgPalette.white,
+                borderWidth: 3
+              },
+              label: {
+                show: !isEmpty,
+                position: 'outside',
+                formatter: '{b}\n{d}%',
+                color: this.cssVar('--el-text-regular') || RgPalette.textRegular,
+                fontSize: 13,
+                lineHeight: 18
+              },
+              labelLine: {
+                show: !isEmpty,
+                length: 25,
+                length2: 20,
+                lineStyle: { color: this.cssVar('--el-border-base') || RgPalette.borderBase }
+              },
+              emphasis: {
+                scaleSize: 12,
+                label: { fontSize: 16, fontWeight: 'bold' },
+                labelLine: { lineStyle: { width: 2 } }
+              },
+              data: statusData
+            }]
+            // 修改点：第二参 true（notMerge）——刷新/重查后状态集合可能增减（如从 6 类变 3 类），
+            // 清掉旧扇区与图例残留；每次均传完整 option，不依赖 merge
+          }, true);
+          this.$nextTick(() => {
+            if (this.statusChart) this.statusChart.resize();
+          });
+        },
+
+        // 修改点：统一resize图表，供window.resize事件调用
+        resizeCharts() {
+          if (this.trendChart) {
+            this.trendChart.resize();
+          }
+          if (this.statusChart) {
+            this.statusChart.resize();
+          }
+        },
+
+        // 热销菜品进度条宽度
+        hotDishBarWidth(index) {
+          if (!this.hotDishes.length) return '0%';
+          const maxCount = this.hotDishes[0].count || 1;
+          const count = this.hotDishes[index].count || 0;
+          return Math.max((count / maxCount * 100), 8) + '%';
+        },
+
+        // 格式化金额
+        formatMoney(val) {
+          if (val === null || val === undefined) return '0.00'
+          return Number(val).toFixed(2)
+        },
+        // 修改点：统一页面跳转（供 KPI 卡片、待办台、库存预警按钮等使用）
+        // 注意：带 query 的 URL（如 page/order/list.html?status=2）无法与菜单「精确」匹配，
+        // 若直接 window.location.href 会在 iframe 内相对「当前文档目录」解析，
+        // 产生错误路径 /backend/page/dashboard/page/order/list.html 而 404（Whitelabel）。
+        // 因此这里先完整 URL 匹配、再「仅路径(忽略 query)」匹配，命中即交给顶层 menuHandle
+        // （iframe 的 src 相对顶层文档解析，路径正确）；都不命中才用 /backend/ 绝对前缀兜底。
+        // 修改点：递归遍历菜单树（最多两级，扁平结构），
+        // 父级分组节点（无 url）不匹配，仅叶子（有 url）参与命中。
+        goTo(url) {
+          try {
+            const path = String(url || '').split('?')[0];
+            if (window.parent && window.parent !== window && typeof window.parent.menuHandle === 'function') {
+              const menuList = window.parent.menuList;
+              if (menuList && menuList.length) {
+                // 递归匹配菜单树中的叶子节点；mode=0 完整 URL 精确匹配，mode=1 仅路径匹配
+                const matchLeaf = function(nodes, mode) {
+                  for (let i = 0; i < nodes.length; i++) {
+                    const node = nodes[i];
+                    if (node.url) {
+                      if ((mode === 0 && node.url === url) || (mode === 1 && node.url === path)) {
+                        return node;
+                      }
+                    }
+                    if (node.children && node.children.length) {
+                      const found = matchLeaf(node.children, mode);
+                      if (found) return found;
+                    }
+                  }
+                  return null;
+                };
+                // 第一轮：完整 URL 精确匹配（无 query 的菜单项走这里）
+                const hit0 = matchLeaf(menuList, 0);
+                if (hit0) { window.parent.menuHandle(hit0, false); return; }
+                // 第二轮：仅按路径匹配（忽略 ?query），命中后带 query 整体交给 menuHandle，
+                // 由 iframe 的 src 相对顶层文档解析，避免相对 iframe 文档产生错误路径
+                const hit1 = matchLeaf(menuList, 1);
+                if (hit1) {
+                  const leaf = { ...hit1, url: url };
+                  window.parent.menuHandle(leaf, false);
+                  return;
+                }
+              }
+            }
+            // 兜底：用 /backend/ 绝对前缀跳转，确保相对 iframe 文档也能解析到正确位置
+            window.location.href = '/backend/' + String(url || '').replace(/^\/?/, '');
+          } catch (e) {
+            window.location.href = '/backend/' + String(url || '').replace(/^\/?/, '');
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+
+

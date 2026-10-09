@@ -1,0 +1,257 @@
+/**
+ * AI智能助手 - 管理端API
+ * 修改点：使用IIFE模块模式，避免全局变量污染，挂载到 window 以兼容 iframe 架构
+ * 修改点：chat() 支持 conversationId，实现多轮对话持久化
+ * @author reggie
+ * @since 2026-07-10
+ */
+(function() {
+    'use strict';
+
+    var aiBackendApi = {
+        // ==================== 核心对话 ====================
+
+        /**
+         * 通用AI对话（非流式，流式网络失败时的降级通道）
+         * @param {string} message - 用户消息（携带附件时可空字符串）
+         * @param {string} scene - 场景：business_analysis / dish_desc / marketing
+         * @param {string} conversationId - 会话ID（可选，不传则后端自动创建）
+         * @param {string[]} [attachmentIds] - 附件ID列表（P2 视觉多模态，可选）
+         */
+        chat: function(message, scene, conversationId, attachmentIds) {
+            var params = {
+                message: message,
+                scene: scene || 'business_analysis'
+            };
+            if (conversationId) {
+                params.conversationId = conversationId;
+            }
+            if (attachmentIds && attachmentIds.length) {
+                params.attachments = attachmentIds;
+            }
+            return $axios.post('/api/ai/chat', params);
+        },
+
+        /**
+         * 流式对话端点（POST+SSE，由 AiChatCore.ChatClient 直接 fetch 消费）
+         */
+        streamUrl: '/api/ai/chat/stream',
+
+        /**
+         * 场景前端配置（欢迎语、快捷问题、能力开关；不含 system prompt）
+         * @param {string} scene - 场景标识（可选）
+         */
+        getSceneConfig: function(scene) {
+            return $axios.get('/api/ai/scene-config', {
+                params: scene ? { scene: scene } : {}
+            });
+        },
+
+        /**
+         * AI 服务状态（兼作 CSRF Token 预热请求）
+         */
+        getStatus: function() {
+            return $axios.get('/api/ai/status');
+        },
+
+        /**
+         * 生成菜品描述
+         */
+        generateDishDesc: function(dishName, categoryName, ingredients) {
+            return $axios.post('/api/ai/dish-description', {
+                dishName: dishName,
+                categoryName: categoryName || '',
+                ingredients: ingredients || ''
+            });
+        },
+
+        /**
+         * 经营分析
+         */
+        analyzeBusiness: function(question, dataJson) {
+            return $axios.post('/api/ai/business-analysis', {
+                question: question,
+                data: dataJson || '{}'
+            });
+        },
+
+        /**
+         * AI健康检查
+         */
+        health: function() {
+            return $axios.get('/api/ai/health');
+        },
+
+        // ==================== 对话管理 ====================
+
+        /**
+         * 获取用户对话列表
+         * @param {number} page - 页码，默认1
+         * @param {number} pageSize - 每页条数，默认20
+         */
+        getConversations: function(page, pageSize) {
+            return $axios.get('/api/ai/conversations', {
+                params: { page: page || 1, pageSize: pageSize || 20 }
+            });
+        },
+
+        /**
+         * 获取对话详情（含消息历史）
+         * @param {string} conversationId - 会话ID
+         */
+        getConversationDetail: function(conversationId) {
+            return $axios.get('/api/ai/conversations/' + conversationId);
+        },
+
+        /**
+         * 创建新对话
+         * @param {string} title - 对话标题（可选）
+         * @param {string} scene - 对话场景
+         */
+        createConversation: function(title, scene) {
+            return $axios.post('/api/ai/conversations', {
+                title: title || null,
+                scene: scene || 'business_analysis'
+            });
+        },
+
+        /**
+         * 删除对话
+         * @param {string} conversationId - 会话ID
+         */
+        deleteConversation: function(conversationId) {
+            return $axios.delete('/api/ai/conversations/' + conversationId);
+        },
+
+        /**
+         * 重命名对话（PATCH 局部更新）
+         * @param {string} conversationId - 会话ID
+         * @param {string} title - 新标题
+         */
+        renameConversation: function(conversationId, title) {
+            return $axios.patch('/api/ai/conversations/' + conversationId, { title: title });
+        },
+
+        /**
+         * 删除对话内单条消息（后端同步失效上下文缓存）
+         * @param {string} conversationId - 会话ID
+         * @param {number|string} messageId - 消息ID
+         */
+        deleteMessage: function(conversationId, messageId) {
+            return $axios.delete('/api/ai/conversations/' + conversationId + '/messages/' + messageId);
+        },
+
+        // ==================== 反馈 ====================
+
+        /**
+         * 记录用户反馈（有用/没用）
+         * @param {object} params - { messageId, feedbackType }
+         */
+        recordFeedback: function(params) {
+            return $axios.post('/api/ai/feedback', {
+                messageId: params.messageId,
+                feedbackType: params.feedbackType
+            });
+        },
+
+        // ==================== 用户画像 ====================
+
+        /**
+         * 获取用户画像摘要
+         */
+        getProfile: function() {
+            return $axios.get('/api/ai/profile/summary');
+        },
+
+        // ==================== AI供应商管理 ====================
+
+        providerList: function() {
+            return $axios.get('/admin/ai/provider/list');
+        },
+        providerActive: function() {
+            return $axios.get('/admin/ai/provider/active');
+        },
+        providerActivate: function(id) {
+            return $axios.post('/admin/ai/provider/activate/' + id);
+        },
+        providerTest: function(id) {
+            return $axios.get('/admin/ai/provider/test/' + id);
+        },
+        providerDelete: function(id) {
+            return $axios.delete('/admin/ai/provider/delete/' + id);
+        },
+        // 修改点(2026-09-18)：reveal=true 返回明文API密钥（编辑弹窗直接显示）
+        providerGet: function(id, reveal) {
+            return $axios({ url: '/admin/ai/provider/get/' + id, method: 'get', params: reveal ? { reveal: true } : {} });
+        },
+        providerUpdate: function(data) {
+            return $axios.post('/admin/ai/provider/update', data);
+        },
+        providerAdd: function(data) {
+            return $axios.post('/admin/ai/provider/add', data);
+        },
+        providerInitPresets: function() {
+            return $axios.post('/admin/ai/provider/init-presets');
+        },
+        providerFetchModels: function(baseUrl, apiKey) {
+            return $axios.post('/admin/ai/provider/fetch-models', { baseUrl: baseUrl, apiKey: apiKey });
+        },
+
+        // ==================== AI 提示词模板（P3） ====================
+
+        promptPage: function(params) {
+            return $axios({ url: '/admin/ai/prompt/page', method: 'get', params: params });
+        },
+        promptMeta: function() {
+            return $axios.get('/admin/ai/prompt/meta');
+        },
+        promptAdd: function(data) {
+            return $axios.post('/admin/ai/prompt/add', data);
+        },
+        promptUpdate: function(data) {
+            return $axios.post('/admin/ai/prompt/update', data);
+        },
+        promptDelete: function(id) {
+            return $axios.delete('/admin/ai/prompt/delete/' + id);
+        },
+        promptReset: function(id) {
+            return $axios.post('/admin/ai/prompt/reset/' + id);
+        },
+        promptHistory: function(id) {
+            return $axios.get('/admin/ai/prompt/history/' + id);
+        },
+        promptRollback: function(id, historyId) {
+            return $axios.post('/admin/ai/prompt/rollback/' + id + '/' + historyId);
+        },
+
+        // ==================== AI 智能输入提示 ====================
+
+        inputSuggestions: function(q, scene) {
+            return $axios({ url: '/api/ai/input-suggestions', method: 'get', params: { q: q || '', scene: scene || '' } });
+        },
+
+        // ==================== AI 知识库（P5 RAG） ====================
+
+        knowledgePage: function(params) {
+            return $axios({ url: '/admin/ai/knowledge/page', method: 'get', params: params });
+        },
+        knowledgeStats: function() {
+            return $axios.get('/admin/ai/knowledge/stats');
+        },
+        knowledgeAdd: function(data) {
+            return $axios.post('/admin/ai/knowledge/add', data);
+        },
+        knowledgeUpdate: function(data) {
+            return $axios.post('/admin/ai/knowledge/update', data);
+        },
+        knowledgeDelete: function(id) {
+            return $axios.delete('/admin/ai/knowledge/delete/' + id);
+        },
+        knowledgeReindex: function(id) {
+            return $axios.post('/admin/ai/knowledge/reindex/' + id);
+        }
+    };
+
+    // 挂载到全局（兼容 iframe 架构）
+    window.aiBackendApi = aiBackendApi;
+})();

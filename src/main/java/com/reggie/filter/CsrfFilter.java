@@ -1,0 +1,225 @@
+package com.reggie.filter;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reggie.common.AuthConstants;
+import com.reggie.common.ObjectMapperHolder;
+import com.reggie.common.CsrfTokenUtil;
+import com.reggie.common.R;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import java.io.IOException;
+
+/**
+ * CSRF防护过滤器
+ * 对POST/PUT/DELETE请求验证CSRF Token，防止跨站请求伪造攻击
+ *
+ * 工作原理：
+ * 1. 登录成功后，后端生成CSRF Token存入Session，并通过响应头返回给前端
+ * 2. 前端保存Token到Cookie/SessionStorage，后续POST/PUT/DELETE请求携带在X-CSRF-Token头部
+ * 3. 后端验证请求头中的Token与Session中的Token是否一致
+ *
+ * @author reggie
+ * @since 2026-07-23
+ */
+// 注册方式（2026-10-02 P0 修复）：原 @WebFilter + @Order(1) + @Profile("!dev") 经
+// ServletComponentScan 注册时 @Order/@Profile 均不生效，已改由
+// com.reggie.config.FilterRegistrationConfig 以 FilterRegistrationBean 显式注册
+// （order=2，先于 LoginCheckFilter；dev 环境经 setEnabled(false) 真实禁用）。
+@Slf4j
+public class CsrfFilter implements Filter {
+
+    private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
+
+    /** 路径匹配器，支持通配符（与 LoginCheckFilter 保持一致） */
+    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
+
+    /** CSRF Token Session Key */
+    private static final String CSRF_TOKEN_KEY = "csrfToken";
+    /** Token 有效期：30 分钟（与会话超时一致） */
+    private static final long CSRF_TOKEN_MAX_AGE_MS = 30L * 60 * 1000;
+
+    /** 响应头名称 */
+    private static final String CSRF_HEADER_NAME = "X-CSRF-Token";
+
+    /** 不需要CSRF校验的路径（引用 AuthConstants，保持单一来源） */
+    private static final String[] EXCLUDE_URLS = AuthConstants.CSRF_EXCLUDE_URLS;
+
+    /**
+     * 初始化。
+     * @param filterConfig 参数 filterConfig
+     */
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+        log.info("CSRF防护过滤器初始化完成");
+    }
+
+    /**
+     * 处理 do filter。
+     * @param servletRequest 参数 servletRequest
+     * @param servletResponse 参数 servletResponse
+     * @param filterChain 参数 filterChain
+     */
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
+            throws IOException, ServletException {
+
+        HttpServletRequest request = (HttpServletRequest) servletRequest;
+        HttpServletResponse response = (HttpServletResponse) servletResponse;
+
+        String method = request.getMethod();
+        String requestURI = request.getRequestURI();
+
+        // GET等安全方法：生成并返回CSRF Token（如果Session中有用户）
+        if (!"POST".equals(method) && !"PUT".equals(method) && !"DELETE".equals(method) && !"PATCH".equals(method)) {
+            // 在doFilter之前设置CSRF Token响应头，避免响应提交后无法设置
+            setCsrfTokenHeader(request, response);
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // 检查是否为排除路径（登录等接口不需要CSRF校验）
+        if (isExcludedPath(requestURI)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // 获取Session中的CSRF Token
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            // 未登录用户，放行（由LoginCheckFilter处理）
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String sessionToken = (String) session.getAttribute(CSRF_TOKEN_KEY);
+
+        // 从请求头获取CSRF Token
+        String requestToken = request.getHeader(CSRF_HEADER_NAME);
+        if (requestToken == null || requestToken.isEmpty()) {
+            // 尝试从请求参数获取
+            requestToken = request.getParameter("_csrf");
+        }
+
+        // 验证CSRF Token
+        // 修复 P1-3：使用常量时间比较，防止时序侧信道攻击
+        // 修复 P1-4：校验 Token 过期（30 分钟），防止长期不销毁
+        if (sessionToken == null || requestToken == null) {
+            log.warn("CSRF验证失败(token为空) - URI: {}", requestURI);
+            rejectCsrf(request, response, requestURI);
+            return;
+        }
+        // P1-4：检查 Token 是否过期
+        if (!CsrfTokenUtil.isTokenNotExpired(sessionToken, CSRF_TOKEN_MAX_AGE_MS)) {
+            log.warn("CSRF Token 已过期 - URI: {}", requestURI);
+            // 过期后自动刷新：生成新 Token 存入 Session
+            String newToken = CsrfTokenUtil.generateToken();
+            session.setAttribute(CSRF_TOKEN_KEY, newToken);
+            response.setHeader(CSRF_HEADER_NAME, newToken);
+            // 但本次请求仍拒绝（过期 Token 不可用）
+            rejectCsrf(request, response, requestURI);
+            return;
+        }
+        // P1-3：常量时间比较
+        if (!CsrfTokenUtil.validateToken(requestToken, sessionToken)) {
+            log.warn("CSRF验证失败(不匹配) - URI: {}", requestURI);
+            rejectCsrf(request, response, requestURI);
+            return;
+        }
+
+        // 验证通过，继续处理
+        filterChain.doFilter(request, response);
+    }
+
+    /**
+     * 处理 destroy。
+     */
+    @Override
+    public void destroy() {
+        log.info("CSRF防护过滤器销毁");
+    }
+
+    /**
+     * 检查是否为排除路径（使用 AntPathMatcher 精确匹配，避免 startsWith 匹配过宽）
+     */
+    private boolean isExcludedPath(String requestURI) {
+        for (String excludeUrl : EXCLUDE_URLS) {
+            if (PATH_MATCHER.match(excludeUrl, requestURI)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 在响应头中设置CSRF Token（仅对已登录用户）
+     * 修复 P1-4：同时检查 Token 是否过期，过期时自动刷新
+     */
+    private void setCsrfTokenHeader(HttpServletRequest request, HttpServletResponse response) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return;
+        }
+
+        // 只有已登录用户（员工 / C端顾客 / 骑手）才生成CSRF Token
+        if (session.getAttribute("employee") == null
+                && session.getAttribute("user") == null
+                && session.getAttribute("rider") == null) {
+            return;
+        }
+
+        String token = (String) session.getAttribute(CSRF_TOKEN_KEY);
+        if (token == null || !CsrfTokenUtil.isTokenNotExpired(token, CSRF_TOKEN_MAX_AGE_MS)) {
+            // 修复 P1-4：Token 过期，重新生成
+            token = CsrfTokenUtil.generateToken();
+            session.setAttribute(CSRF_TOKEN_KEY, token);
+            log.debug("为用户生成新的CSRF Token");
+        }
+
+        // 设置响应头
+        response.setHeader(CSRF_HEADER_NAME, token);
+    }
+
+
+    /**
+     * 拒绝 CSRF 验证失败的请求
+     */
+    private void rejectCsrf(HttpServletRequest request, HttpServletResponse response, String requestURI)
+            throws IOException {
+        log.warn("CSRF验证失败 - URI: {}", requestURI);
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write(OBJECT_MAPPER.writeValueAsString(
+                R.error("CSRF验证失败，请刷新页面后重试")));
+    }
+
+    
+
+    /**
+     * 获取当前用户的CSRF Token（供Controller调用）
+     * 修复 P1-4：Token 过期时自动刷新
+     */
+    public static String getCsrfToken(HttpSession session) {
+        if (session == null) {
+            return null;
+        }
+        String token = (String) session.getAttribute(CSRF_TOKEN_KEY);
+        if (token == null || !CsrfTokenUtil.isTokenNotExpired(token, CSRF_TOKEN_MAX_AGE_MS)) {
+            token = CsrfTokenUtil.generateToken();
+            session.setAttribute(CSRF_TOKEN_KEY, token);
+        }
+        return token;
+    }
+}
+
+

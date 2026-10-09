@@ -1,0 +1,383 @@
+package com.reggie.module.sys.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
+import com.reggie.module.sys.model.Role;
+import com.reggie.module.sys.model.RolePermission;
+import com.reggie.module.sys.model.EmployeeRoleRelation;
+import com.reggie.module.sys.mapper.RoleMapper;
+import com.reggie.module.sys.mapper.RolePermissionMapper;
+import com.reggie.module.sys.mapper.EmployeeRoleRelationMapper;
+import com.reggie.module.sys.service.RoleService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
+
+/**
+ * 角色服务实现
+ */
+@Slf4j
+@Service
+public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements RoleService {
+
+    @Autowired
+    private RoleMapper roleMapper;
+
+    @Autowired
+    private RolePermissionMapper rolePermissionMapper;
+
+    @Autowired
+    private EmployeeRoleRelationMapper employeeRoleRelationMapper;
+    /**
+     * 获取 by role key。
+     * @param roleKey 参数 roleKey
+     * @return 返回结果
+     */
+    @Override
+    public Role getByRoleKey(String roleKey) {
+        LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Role::getRoleKey, roleKey)
+               .eq(Role::getIsDeleted, 0)
+               .last("LIMIT 1");
+        return this.getOne(wrapper);
+    }
+
+    /**
+     * 查询列表 enabled by tenant id。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
+    @Override
+    public List<Role> listEnabledByTenantId(Long tenantId) {
+        return roleMapper.listEnabledByTenantId(tenantId);
+    }
+
+    /**
+     * 分配 permissions。
+     * @param roleId 参数 roleId
+     * @param permissionIds 参数 permissionIds
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void assignPermissions(Long roleId, List<Long> permissionIds) {
+        // 租户归属校验（前置）：role_permission 无 tenant_id、不受租户插件保护，
+        // 必须先确认角色属于当前租户，否则可通过猜测 roleId 清空他租户角色的权限（口径同 deleteTenantRole）。
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在，无法分配角色权限");
+        }
+        LambdaQueryWrapper<Role> roleWrapper = new LambdaQueryWrapper<>();
+        roleWrapper.eq(Role::getId, roleId)
+                   .eq(Role::getTenantId, tenantId)
+                   .eq(Role::getIsDeleted, 0);
+        if (this.getOne(roleWrapper) == null) {
+            throw new CustomException("角色不存在或不属于当前租户（id=" + roleId + "）");
+        }
+        // 删除旧权限关联
+        LambdaQueryWrapper<RolePermission> delWrapper = new LambdaQueryWrapper<>();
+        delWrapper.eq(RolePermission::getRoleId, roleId);
+        rolePermissionMapper.delete(delWrapper);
+
+        // 批量插入新权限
+        if (permissionIds != null && !permissionIds.isEmpty()) {
+            for (Long pid : permissionIds) {
+                RolePermission rp = new RolePermission();
+                rp.setRoleId(roleId);
+                rp.setPermissionId(pid);
+                rp.setCreateTime(java.time.LocalDateTime.now());
+                rolePermissionMapper.insert(rp);
+            }
+        }
+        log.info("[角色权限] 角色{} 分配了{}个权限", roleId,
+                permissionIds != null ? permissionIds.size() : 0);
+    }
+
+    /**
+     * 获取 permission ids。
+     * @param roleId 参数 roleId
+     * @return 返回结果
+     */
+    @Override
+    public List<Long> getPermissionIds(Long roleId) {
+        LambdaQueryWrapper<RolePermission> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(RolePermission::getRoleId, roleId)
+               .select(RolePermission::getPermissionId);
+        List<RolePermission> rpList = rolePermissionMapper.selectList(wrapper);
+        return rpList.stream()
+                .map(RolePermission::getPermissionId)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 分配 users to role。
+     * @param roleId 参数 roleId
+     * @param employeeIds 参数 employeeIds
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void assignUsersToRole(Long roleId, List<Long> employeeIds) {
+        // 租户归属校验（前置）：确认角色属于当前租户，否则可借他租户 roleId 篡改其员工-角色关联
+        // （口径同 deleteTenantRole）
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在，无法分配角色员工");
+        }
+        LambdaQueryWrapper<Role> roleWrapper = new LambdaQueryWrapper<>();
+        roleWrapper.eq(Role::getId, roleId)
+                   .eq(Role::getTenantId, tenantId)
+                   .eq(Role::getIsDeleted, 0);
+        if (this.getOne(roleWrapper) == null) {
+            throw new CustomException("角色不存在或不属于当前租户（id=" + roleId + "）");
+        }
+        // 删除旧关联：按 role_id + 当前租户过滤，防跨租户误删（与 MP 租户拦截器双保险）
+        LambdaQueryWrapper<EmployeeRoleRelation> delWrapper = new LambdaQueryWrapper<>();
+        delWrapper.eq(EmployeeRoleRelation::getRoleId, roleId);
+        if (tenantId != null) {
+            delWrapper.eq(EmployeeRoleRelation::getTenantId, tenantId);
+        }
+        employeeRoleRelationMapper.delete(delWrapper);
+
+        // 批量插入新关联（uk_employee_role 唯一索引兜底幂等）
+        if (employeeIds != null && !employeeIds.isEmpty()) {
+            for (Long empId : employeeIds) {
+                EmployeeRoleRelation rel = new EmployeeRoleRelation();
+                rel.setEmployeeId(empId);
+                rel.setRoleId(roleId);
+                rel.setTenantId(tenantId);
+                rel.setCreateTime(java.time.LocalDateTime.now());
+                employeeRoleRelationMapper.insert(rel);
+            }
+        }
+        log.info("[角色用户] 角色{} 分配了{}个员工", roleId,
+                employeeIds != null ? employeeIds.size() : 0);
+    }
+
+    /**
+     * 获取 role user ids。
+     * @param roleId 参数 roleId
+     * @return 返回结果
+     */
+    @Override
+    public List<Long> getRoleUserIds(Long roleId) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        LambdaQueryWrapper<EmployeeRoleRelation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(EmployeeRoleRelation::getRoleId, roleId);
+        if (tenantId != null) {
+            wrapper.eq(EmployeeRoleRelation::getTenantId, tenantId);
+        }
+        wrapper.select(EmployeeRoleRelation::getEmployeeId);
+        List<EmployeeRoleRelation> rels = employeeRoleRelationMapper.selectList(wrapper);
+        return rels.stream()
+                .map(EmployeeRoleRelation::getEmployeeId)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取 employee role ids。
+     * @param employeeId 参数 employeeId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
+    @Override
+    public List<Long> getEmployeeRoleIds(Long employeeId, Long tenantId) {
+        LambdaQueryWrapper<EmployeeRoleRelation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(EmployeeRoleRelation::getEmployeeId, employeeId);
+        if (tenantId != null) {
+            wrapper.eq(EmployeeRoleRelation::getTenantId, tenantId);
+        }
+        wrapper.select(EmployeeRoleRelation::getRoleId);
+        List<EmployeeRoleRelation> rels = employeeRoleRelationMapper.selectList(wrapper);
+        return rels.stream()
+                .map(EmployeeRoleRelation::getRoleId)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取 role options。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
+    @Override
+    public List<Map<String, Object>> getRoleOptions(Long tenantId) {
+        List<Role> roles = listEnabledByTenantId(tenantId);
+        return roles.stream().map(r -> {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("value", r.getId());
+            map.put("label", r.getRoleName());
+            map.put("roleKey", r.getRoleKey());
+            return map;
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * 处理 stat roles。
+     * @return 返回结果
+     */
+    @Override
+    public Map<String, Object> statRoles() {
+        return roleMapper.statRoles();
+    }
+
+    /**
+     * 删除 role by cascade。
+     * @param roleId 参数 roleId
+     * @return 返回结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteRoleByCascade(Long roleId) {
+        Role role = this.getById(roleId);
+        if (role == null) {
+            return false;
+        }
+        // 租户归属校验：防止跨租户越权删除角色
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(role.getTenantId())) {
+            throw new CustomException("无权删除其他租户的角色");
+        }
+        // 清理角色-权限关联
+        LambdaQueryWrapper<RolePermission> delWrapper = new LambdaQueryWrapper<>();
+        delWrapper.eq(RolePermission::getRoleId, roleId);
+        rolePermissionMapper.delete(delWrapper);
+
+        // 清理员工-角色关联（避免孤儿关联指向已删角色）
+        LambdaQueryWrapper<EmployeeRoleRelation> delUserRole = new LambdaQueryWrapper<>();
+        delUserRole.eq(EmployeeRoleRelation::getRoleId, roleId);
+        employeeRoleRelationMapper.delete(delUserRole);
+
+        role.setIsDeleted(1);
+        this.updateById(role);
+        log.info("[角色删除] 逻辑删除角色{}，同时清理权限关联", roleId);
+        return true;
+    }
+
+    /**
+     * 新增角色（租户安全）
+     * <p>tenantId 从 BaseContext 强制取得，前端无法通过 DTO 字段篡改租户归属。
+     * 若当前租户已存在同 roleKey 角色，则拒绝创建。</p>
+     */
+    @Override
+    public boolean addTenantRole(String roleName, String roleKey, String description,
+                                  Integer sort, Integer status) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在，无法创建角色");
+        }
+        // 校验 roleKey 在当前租户下唯一
+        LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Role::getTenantId, tenantId)
+               .eq(Role::getRoleKey, roleKey)
+               .eq(Role::getIsDeleted, 0);
+        Long count = Long.valueOf(this.count(wrapper));
+        if (count > 0) {
+            throw new CustomException("当前租户已存在角色标识 [" + roleKey + "]，请更换标识后重试");
+        }
+        Role role = new Role();
+        role.setTenantId(tenantId);
+        role.setRoleName(roleName);
+        role.setRoleKey(roleKey);
+        role.setDescription(description);
+        role.setSort(sort != null ? sort : 0);
+        role.setStatus(status != null ? status : 1);
+        role.setIsDeleted(0);
+        role.setCreateTime(java.time.LocalDateTime.now());
+        role.setCreateUser(BaseContext.getCurrentId());
+        return this.save(role);
+    }
+
+    /**
+     * 更新角色信息（租户安全）
+     * <p>先通过 id 查询确认该角色属于当前租户，再仅更新业务字段，
+     * 避免前端通过全实体覆盖 tenantId / roleKey 等敏感字段。
+     * roleKey 允许修改，但需校验新值在当前租户下唯一（且非自身已有值）。</p>
+     */
+    @Override
+    public boolean updateTenantRole(Long id, String roleName, String roleKey,
+                                     String description, Integer sort, Integer status) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在，无法更新角色");
+        }
+        // 先按 tenantId + id 查询确认归属
+        LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Role::getId, id)
+               .eq(Role::getTenantId, tenantId)
+               .eq(Role::getIsDeleted, 0);
+        Role existing = this.getOne(wrapper);
+        if (existing == null) {
+            throw new CustomException("角色不存在或不属于当前租户（id=" + id + "）");
+        }
+        // 若 roleKey 发生变更，校验新值唯一性
+        if (roleKey != null && !roleKey.equals(existing.getRoleKey())) {
+            LambdaQueryWrapper<Role> keyWrapper = new LambdaQueryWrapper<>();
+            keyWrapper.eq(Role::getTenantId, tenantId)
+                      .eq(Role::getRoleKey, roleKey)
+                      .eq(Role::getIsDeleted, 0)
+                      .ne(Role::getId, id);
+            Long count = Long.valueOf(this.count(keyWrapper));
+            if (count > 0) {
+                throw new CustomException("角色标识 [" + roleKey + "] 已被其他角色使用");
+            }
+        }
+        existing.setRoleName(roleName);
+        existing.setRoleKey(roleKey);
+        existing.setDescription(description);
+        existing.setSort(sort);
+        existing.setStatus(status);
+        existing.setUpdateTime(java.time.LocalDateTime.now());
+        existing.setUpdateUser(BaseContext.getCurrentId());
+        return this.updateById(existing);
+    }
+
+    /**
+     * 删除角色并校验租户归属（租户安全）
+     * <p>先查询确认该角色属于当前租户，再执行级联删除，防止通过 ID 猜测跨租户删除。</p>
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteTenantRole(Long roleId) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在，无法删除角色");
+        }
+        LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Role::getId, roleId)
+               .eq(Role::getTenantId, tenantId)
+               .eq(Role::getIsDeleted, 0);
+        Role existing = this.getOne(wrapper);
+        if (existing == null) {
+            throw new CustomException("角色不存在或不属于当前租户（id=" + roleId + "）");
+        }
+        // 清理角色-权限关联
+        LambdaQueryWrapper<RolePermission> delWrapper = new LambdaQueryWrapper<>();
+        delWrapper.eq(RolePermission::getRoleId, roleId);
+        rolePermissionMapper.delete(delWrapper);
+        // 清理员工-角色关联（避免孤儿关联指向已删角色）
+        LambdaQueryWrapper<EmployeeRoleRelation> delUserRole = new LambdaQueryWrapper<>();
+        delUserRole.eq(EmployeeRoleRelation::getRoleId, roleId);
+        employeeRoleRelationMapper.delete(delUserRole);
+        // 逻辑删除：用 UpdateWrapper.set() 强制写入 is_deleted
+        // MyBatis-Plus @TableLogic 会自动从普通 update 的 SET 子句中移除 is_deleted，
+        // 但 UpdateWrapper.set() 显式设置的列不会被过滤
+        UpdateWrapper<Role> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("id", roleId)
+                     .eq("tenant_id", tenantId)
+                     .eq("is_deleted", 0)
+                     .set("is_deleted", 1)
+                     .set("update_time", java.time.LocalDateTime.now())
+                     .set("update_user", BaseContext.getCurrentId());
+        roleMapper.update(null, updateWrapper);
+        log.info("[角色删除] 租户{} 逻辑删除角色{}，同时清理权限关联", tenantId, roleId);
+        return true;
+    }
+}
+

@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>成本核算 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/chart-panel.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260926" />
+  <script src="../../plugins/echarts/echarts.min.js"></script>
+  <style>
+    /* ── 全局基础 ── */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: var(--bg-page);
+      font-family: var(--font-family-base);
+    }
+    /* 防抖动（2026-09-20）：滚动统一由 body 承担；若 html 也产生滚动条，append-to-body 的
+       下拉浮层超出视口底部时会撑高 html、闪现第二滚动条挤占宽度，表格随之左右横跳 */
+    html {
+      overflow: hidden;
+    }
+    body {
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+    /* ── 图表卡片内标题 ── */
+    .chart-title {
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--space-3);
+      padding-left: 10px;
+      border-left: 3px solid var(--color-brand-500);
+    }
+    .chart-container {
+      min-height: 300px;
+      flex: 1;
+    }
+    /* ── 预警条目（自定义语义色，使用设计令牌） ── */
+    .alert-item {
+      display: flex;
+      align-items: center;
+      padding: var(--space-3) 0;
+      border-bottom: 1px solid var(--border-default);
+    }
+    .alert-item:last-child {
+      border-bottom: none;
+    }
+    .alert-level {
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+      margin-right: var(--space-3);
+      flex-shrink: 0;
+    }
+    .alert-level.critical {
+      background: var(--color-danger-light);
+      color: var(--color-danger);
+    }
+    .alert-level.warning {
+      background: var(--color-warning-light);
+      color: var(--color-warning);
+    }
+    .alert-level.info {
+      background: var(--color-info-light);
+      color: var(--color-info);
+    }
+    .alert-level.normal {
+      background: var(--color-success-light);
+      color: var(--color-success);
+    }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div id="app" class="dashboard-container">
+    <main class="container ds-page" id="main-content" role="main" aria-label="页面主要内容">
+      <!-- 统计卡片（统一 <stat-cards> 组件） -->
+      <stat-cards :cards="statsCards"></stat-cards>
+
+      <!-- 搜索栏（统一 <table-bar> 组件） -->
+      <table-bar
+        :search-items="searchItems"
+        :loading="loading"
+        :show-refresh="true"
+        @search="handleSearch"
+        @reset="handleReset"
+        @refresh="fetchData()">
+      </table-bar>
+
+      <!-- 图表区（el-row/el-col 24 栅格，小屏自动折叠为单列） -->
+      <el-row :gutter="12" style="margin-bottom: var(--space-4);">
+        <el-col :xs="24" :sm="12">
+          <div class="chart-panel">
+            <div class="chart-title">成本趋势分析</div>
+            <div id="trendChart" class="chart-container"></div>
+          </div>
+        </el-col>
+        <el-col :xs="24" :sm="12">
+          <div class="chart-panel">
+            <div class="chart-title">成本结构分析</div>
+            <div id="structureChart" class="chart-container"></div>
+          </div>
+        </el-col>
+      </el-row>
+
+      <!-- 成本排名（整行卡片） -->
+      <div class="chart-panel" style="margin-bottom: var(--space-4);">
+        <div class="chart-title">菜品成本排名<span style="font-size:var(--font-size-xs);color:var(--text-muted);font-weight:400;margin-left:6px;">（不限时间，按累计成本 Top10）</span></div>
+        <div id="rankingChart" class="chart-container"></div>
+      </div>
+
+      <!-- 成本预警（整行卡片） -->
+      <div class="chart-panel">
+        <div class="chart-title">成本预警</div>
+        <div v-if="alerts.length === 0" style="text-align: center; padding: var(--space-5); color: var(--text-secondary);">
+          暂无预警信息
+        </div>
+        <div v-else>
+          <div v-for="(alert, index) in alerts" :key="index" class="alert-item">
+            <span class="alert-level" :class="alert.level">{{ alert.levelText }}</span>
+            <span>{{ alert.message }}</span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/common.js?v=20260926"></script>
+  <script src="../../api/cost.js?v=20260926"></script>
+  <script>
+    // 颜色调色板已由 js/components.js 的全局 window.RgPalette 提供（运行时从 tokens.css 读取），
+    // 本页不再定义本地调色板，消除重复并保证与设计令牌一致。
+
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          loading: false,
+          dateRange: [],
+          // 修改点：<table-bar> 统一组件配置
+          searchItems: [
+            { type: 'daterange', field: 'dateRange', placeholder: '日期范围', width: '300px' }
+          ],
+          summary: {
+            totalCost: 0,
+            materialCost: 0,
+            laborCost: 0,
+            otherCost: 0
+          },
+          trendData: {
+            dates: [],
+            materialCosts: [],
+            laborCosts: [],
+            otherCosts: [],
+            totalCosts: []
+          },
+          structureData: [],
+          rankingData: [],
+          alerts: [],
+          trendChart: null,
+          structureChart: null,
+          rankingChart: null
+        }
+      },
+      computed: {
+        // 统计卡片配置 - 使用统一的 <stat-cards> 组件
+        statsCards() {
+          return [
+            {
+              key: 'totalCost',
+              icon: 'ri-money-cny-circle-line',
+              label: '总成本',
+              value: '¥' + this.formatMoney(this.summary.totalCost),
+              color: 'primary',
+              flex: true
+            },
+            {
+              key: 'materialCost',
+              icon: 'ri-restaurant-line',
+              label: '食材成本',
+              value: '¥' + this.formatMoney(this.summary.materialCost),
+              color: 'success',
+              flex: true
+            },
+            {
+              key: 'laborCost',
+              icon: 'ri-user-line',
+              label: '人工成本',
+              value: '¥' + this.formatMoney(this.summary.laborCost),
+              color: 'warning',
+              flex: true
+            },
+            {
+              key: 'otherCost',
+              icon: 'ri-more-line',
+              label: '其他成本',
+              value: '¥' + this.formatMoney(this.summary.otherCost),
+              color: 'info',
+              flex: true
+            }
+          ]
+        }
+      },
+      created() {
+        // 默认查询最近7天
+        const end = new Date()
+        const start = new Date()
+        start.setTime(start.getTime() - 7 * 24 * 3600 * 1000)
+        this.dateRange = [
+          this.formatDate(start),
+          this.formatDate(end)
+        ]
+      },
+      mounted() {
+        this.initCharts()
+        this.fetchData()
+      },
+      // 修改点：补 beforeDestroy 清理 —— 原先 resize 监听与 echarts 实例从不释放，
+      // 切换页面后监听器残留、图表实例泄漏（多次进入会累积）
+      beforeDestroy() {
+        if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler)
+        const charts = [this.trendChart, this.structureChart, this.rankingChart]
+        charts.forEach(function(ch) {
+          if (ch && !ch.isDisposed()) { try { ch.dispose() } catch (e) {} }
+        })
+      },
+      methods: {
+        /* ── 工具方法 ── */
+        formatDate(date) {
+          const year = date.getFullYear()
+          const month = String(date.getMonth() + 1).padStart(2, '0')
+          const day = String(date.getDate()).padStart(2, '0')
+          return year + '-' + month + '-' + day
+        },
+        formatMoney(value) {
+          if (!value && value !== 0) return '0.00'
+          return Number(value).toFixed(2)
+        },
+        /* ── 图表初始化与数据加载 ── */
+        initCharts() {
+          var dom1 = document.getElementById('trendChart');
+          if (dom1) this.trendChart = echarts.init(dom1);
+          var dom2 = document.getElementById('structureChart');
+          if (dom2) this.structureChart = echarts.init(dom2);
+          var dom3 = document.getElementById('rankingChart');
+          if (dom3) this.rankingChart = echarts.init(dom3);
+          
+          // 修改点：把回调存为 this.resizeHandler，否则 beforeDestroy 无法解绑（匿名函数无引用）
+          this.resizeHandler = () => {
+            const charts = [this.trendChart, this.structureChart, this.rankingChart]
+            charts.forEach(function(ch) {
+              if (ch && !ch.isDisposed()) ch.resize()
+            })
+          }
+          window.addEventListener('resize', this.resizeHandler)
+        },
+        async fetchData() {
+          this.loading = true
+          try {
+            const startDate = this.dateRange[0]
+            const endDate = this.dateRange[1]
+
+            // 使用 Promise.allSettled 避免单个接口失败导致整页无数据
+            // 注意：ranking 和 alert 接口参数与 summary/trend/structure 不同，不能传 startDate/endDate
+            var results = await Promise.allSettled([
+              getCostSummary({ startDate: startDate, endDate: endDate }),
+              getCostTrend({ startDate: startDate, endDate: endDate }),
+              getCostStructure({ startDate: startDate, endDate: endDate }),
+              getCostRanking({ limit: 10 }),
+              getCostAlerts({ threshold: 20 })
+            ])
+
+            var summaryRes = results[0].status === 'fulfilled' ? results[0].value : null
+            var trendRes = results[1].status === 'fulfilled' ? results[1].value : null
+            var structureRes = results[2].status === 'fulfilled' ? results[2].value : null
+            var rankingRes = results[3].status === 'fulfilled' ? results[3].value : null
+            var alertRes = results[4].status === 'fulfilled' ? results[4].value : null
+
+            // 打印失败的接口，方便定位
+            results.forEach(function(r, i) {
+              if (r.status === 'rejected') {
+                console.error('[cost] 接口 #' + i + ' 失败:', r.reason)
+              }
+            })
+
+            if (summaryRes && summaryRes.code === 1) {
+              this.summary = summaryRes.data
+            }
+
+            // 成功用新数据渲染；失败/异常置空并渲染空态，避免图区保留旧图或永久留白
+            if (trendRes && trendRes.code === 1 && trendRes.data) {
+              this.trendData = trendRes.data
+            } else {
+              this.trendData = { dates: [], materialCosts: [], laborCosts: [], otherCosts: [], totalCosts: [] }
+            }
+            this.updateTrendChart()
+
+            if (structureRes && structureRes.code === 1) {
+              this.structureData = structureRes.data.structure || []
+            } else {
+              this.structureData = []
+            }
+            this.updateStructureChart()
+
+            if (rankingRes && rankingRes.code === 1) {
+              this.rankingData = rankingRes.data || []
+            } else {
+              this.rankingData = []
+            }
+            this.updateRankingChart()
+
+            if (alertRes && alertRes.code === 1) {
+              this.alerts = alertRes.data || []
+            }
+
+            // 全部失败才提示
+            var allFailed = results.every(function(r) { return r.status === 'rejected' })
+            if (allFailed) {
+              ReggieUI.error('获取数据失败，请检查网络或刷新重试')
+            }
+          } catch (err) {
+            console.error('[cost] fetchData 异常:', err)
+            ReggieUI.error('获取数据失败')
+          } finally {
+            this.loading = false
+          }
+        },
+        /* ── 图表渲染 ── */
+        updateTrendChart() {
+          if (!this.trendData || !this.trendData.dates || this.trendData.dates.length === 0) {
+            this.trendChart.setOption({
+              title: { text: '暂无成本趋势数据', left: 'center', top: 'center',
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+            }, true)
+            return
+          }
+          const option = {
+            tooltip: {
+              trigger: 'axis',
+              // Y 轴带 ¥ 前缀，tooltip 金额也需带单位，避免裸数字与坐标轴口径不一致
+              formatter: function(params) {
+                var html = '<b>' + params[0].axisValue + '</b>'
+                params.forEach(function(p) {
+                  html += '<br/>' + p.marker + ' ' + p.seriesName + '：<b>¥' + Number(p.value).toFixed(2) + '</b>'
+                })
+                return html
+              }
+            },
+            legend: {
+              data: ['食材成本', '人工成本', '其他成本', '总成本']
+            },
+            grid: {
+              left: '3%',
+              right: '4%',
+              bottom: '3%',
+              containLabel: true
+            },
+            xAxis: {
+              type: 'category',
+              boundaryGap: false,
+              data: this.trendData.dates
+            },
+            yAxis: {
+              type: 'value',
+              axisLabel: {
+                formatter: '¥{value}'
+              }
+            },
+            series: [
+              {
+                name: '食材成本',
+                type: 'line',
+                stack: 'Total',
+                data: this.trendData.materialCosts,
+                areaStyle: {},
+                itemStyle: { color: RgPalette.success }
+              },
+              {
+                name: '人工成本',
+                type: 'line',
+                stack: 'Total',
+                data: this.trendData.laborCosts,
+                areaStyle: {},
+                itemStyle: { color: RgPalette.warning }
+              },
+              {
+                name: '其他成本',
+                type: 'line',
+                stack: 'Total',
+                data: this.trendData.otherCosts,
+                areaStyle: {},
+                itemStyle: { color: RgPalette.textSecondary }
+              },
+              {
+                name: '总成本',
+                type: 'line',
+                data: this.trendData.totalCosts,
+                itemStyle: { color: RgPalette.linkBlue },
+                lineStyle: { width: 3 }
+              }
+            ]
+          }
+          this.trendChart.setOption(option, true)
+        },
+        updateStructureChart() {
+          if (!this.structureData || this.structureData.length === 0) {
+            this.structureChart.setOption({
+              title: { text: '暂无成本数据', left: 'center', top: 'center',
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+            }, true)
+            return
+          }
+          const option = {
+            tooltip: {
+              trigger: 'item',
+              formatter: function(p) {
+                return p.seriesName + '<br/>' + p.marker + p.name + '：<b>¥' + Number(p.value).toFixed(2) + '</b>（' + p.percent + '%）'
+              }
+            },
+            legend: {
+              orient: 'vertical',
+              right: '5%',
+              top: 'center',
+              textStyle: { fontSize: 12, color: RgPalette.textSecondary }
+            },
+            series: [
+              {
+                name: '成本结构',
+                type: 'pie',
+                radius: ['40%', '70%'],
+                center: ['35%', '50%'],
+                avoidLabelOverlap: true,
+                itemStyle: {
+                  borderRadius: RgPalette.radiusMd,
+                  borderColor: RgPalette.white,
+                  borderWidth: 2
+                },
+                label: {
+                  show: true,
+                  formatter: '{b}\n{d}%',
+                  fontSize: 12,
+                  color: RgPalette.textSecondary
+                },
+                labelLine: { show: true, length: 10, length2: 8 },
+                emphasis: {
+                  label: {
+                    show: true,
+                    fontSize: 14,
+                    fontWeight: 'bold'
+                  }
+                },
+                data: this.structureData.map(item => ({
+                  value: item.value,
+                  name: item.name
+                }))
+              }
+            ]
+          }
+          this.structureChart.setOption(option, true)
+        },
+        updateRankingChart() {
+          if (!this.rankingData || this.rankingData.length === 0) {
+            this.rankingChart.setOption({
+              title: { text: '暂无成本排名数据', left: 'center', top: 'center',
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+            }, true)
+            return
+          }
+          const option = {
+            tooltip: {
+              trigger: 'axis',
+              axisPointer: {
+                type: 'shadow'
+              },
+              formatter: function(params) {
+                var p = params[0]
+                return '<b>' + p.name + '</b><br/>' + p.marker + ' 总成本：<b>¥' + Number(p.value).toFixed(2) + '</b>'
+              }
+            },
+            grid: {
+              left: '3%',
+              right: '4%',
+              bottom: '3%',
+              containLabel: true
+            },
+            xAxis: {
+              type: 'value',
+              axisLabel: {
+                formatter: '¥{value}'
+              }
+            },
+            yAxis: {
+              type: 'category',
+              data: this.rankingData.map(item => item.dishName).reverse(),
+              axisLabel: {
+                width: 100,
+                overflow: 'truncate'
+              }
+            },
+            series: [
+              {
+                name: '总成本',
+                type: 'bar',
+                data: this.rankingData.map(item => item.totalCost).reverse(),
+                itemStyle: {
+                  color: RgPalette.linkBlue
+                }
+              }
+            ]
+          }
+          this.rankingChart.setOption(option, true)
+        },
+        /* ── 筛选 ── */
+        resetQuery() {
+          const end = new Date()
+          const start = new Date()
+          start.setTime(start.getTime() - 7 * 24 * 3600 * 1000)
+          this.dateRange = [
+            this.formatDate(start),
+            this.formatDate(end)
+          ]
+          this.fetchData()
+        },
+        // 修改点：<table-bar> 组件回调桥接
+        handleSearch(params) {
+          // table-bar daterange 下发 dateRangeBegin/End（yyyy-MM-dd HH:mm:ss），本页口径纯日期，截取前10位
+          if (params && params.dateRangeBegin && params.dateRangeEnd) {
+            this.dateRange = [String(params.dateRangeBegin).substring(0, 10), String(params.dateRangeEnd).substring(0, 10)]
+          }
+          this.fetchData()
+        },
+        handleReset() {
+          this.resetQuery()
+        }
+      }
+    })
+  </script>
+</body>
+</html>

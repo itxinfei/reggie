@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>外卖平台对接 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260926" />
+</head>
+<body>
+<!-- ====== 外卖平台对接配置页 ====== -->
+<!-- 功能：统一管理外卖平台接入，支持新增/编辑/启停用/删除平台配置，按状态统计卡片快速筛选 -->
+<a href="#main-content" class="skip-link">跳转到主内容</a>
+<div class="dashboard-container" id="platform-app">
+  <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+    <h1 class="sr-only" id="page-title">外卖平台对接管理</h1>
+    <!-- 统计卡片：点击总数/已启用/已停用按状态过滤 -->
+    <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
+
+    <!-- 工具栏：添加平台 -->
+    <table-bar
+      :show-search-btns="false"
+      :show-refresh="true"
+      :actions="barActions"
+      @action="onBarAction"
+      @refresh="fetchData(false)"
+    ></table-bar>
+
+    <!-- 数据表格（空态走 crud-table 内置 empty-hint） -->
+    <crud-table
+      :data="tableData"
+      :columns="columns"
+      :page="page"
+      :page-size="pageSize"
+      :total="counts"
+      :loading="loading"
+      :show-actions="true"
+      :actions-width="180"
+      :actions-fixed="true"
+      empty-hint="暂无平台配置，点击上方「添加平台」开始接入外卖平台"
+      @page-change="handlePageChange"
+      @size-change="handleSizeChange"
+    >
+        <!-- 平台类型：标签展示 -->
+        <template #col-platformType="{ row }">
+          <el-tag size="small">{{ platformTypeText(row.platformType) }}</el-tag>
+        </template>
+        <!-- 同步范围：位标记拆解为标签 -->
+        <template #col-syncScope="{ row }">
+          <el-tag v-for="s in scopeBits(row.syncScope)" :key="s" size="small" type="info" class="scope-tag">{{ s }}</el-tag>
+          <span v-if="!scopeBits(row.syncScope).length" class="ds-text-secondary">—</span>
+        </template>
+        <!-- 状态：启用/停用 -->
+        <template #col-enabled="{ row }">
+          <el-tag :type="row.enabled === 1 ? 'success' : 'info'" size="small">
+            {{ row.enabled === 1 ? '启用' : '停用' }}
+          </el-tag>
+        </template>
+        <!-- 操作列：编辑 / 启停 / 删除（语义色走 btn-view/btn-warning/btn-success/btn-delete） -->
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="openEdit(row)">编辑</el-button>
+          <el-button type="text" size="small" :class="row.enabled === 1 ? 'btn-warning' : 'btn-success'" @click="toggle(row)">
+            {{ row.enabled === 1 ? '停用' : '启用' }}
+          </el-button>
+          <el-dropdown trigger="click" @command="(cmd) => cmd === 'delete' && remove(row)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+        </template>
+      </crud-table>
+  </main>
+
+  <!-- 新增/编辑对话框 -->
+  <crud-dialog :show-submit="true" :show-cancel="true"
+    :title="dialogTitle"
+    :visible.sync="dialogVisible"
+    size="lg"
+    :close-on-click-modal="false"
+    :submit-loading="submitting"
+    @submit="submit"
+  >
+    <el-form :model="form" :rules="formRules" ref="formRef" label-width="100px">
+      <el-row :gutter="16">
+        <el-col :xs="24" :sm="12">
+          <el-form-item label="平台类型" prop="platformType">
+            <el-select v-model="form.platformType" placeholder="请选择平台类型" style="width:100%;">
+              <el-option label="美团外卖" value="MEITUAN"></el-option>
+              <el-option label="饿了么" value="ELEME"></el-option>
+              <el-option label="抖音本地生活" value="DOUYIN"></el-option>
+              <el-option label="京东外卖" value="JD"></el-option>
+              <el-option label="自营小程序" value="SELF"></el-option>
+              <el-option label="其他" value="OTHER"></el-option>
+            </el-select>
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :sm="12">
+          <el-form-item label="平台名称" prop="platformName">
+            <el-input v-model="form.platformName" placeholder="如：美团外卖-总店" maxlength="128"></el-input>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-form-item label="门店ID" prop="shopId">
+        <el-input v-model="form.shopId" placeholder="平台侧门店 ID" maxlength="128"></el-input>
+      </el-form-item>
+      <el-row :gutter="16">
+        <el-col :xs="24" :sm="12">
+          <el-form-item label="AppKey">
+            <el-input v-model="form.appKey" placeholder="留空则不修改原值" maxlength="512"></el-input>
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :sm="12">
+          <el-form-item label="AccessToken">
+            <el-input v-model="form.accessToken" placeholder="留空则不修改原值" maxlength="512"></el-input>
+          </el-form-item>
+        </el-col><!-- 修改点：补回漏写的 </el-col>（原缺失导致 el-row 栅格结构错乱、表单错位） -->
+      </el-row>
+      <el-form-item label="AppSecret">
+        <el-input v-model="form.appSecret" type="password" placeholder="留空则不修改原值" maxlength="512"></el-input>
+      </el-form-item>
+      <el-form-item label="同步范围" prop="syncScope">
+        <el-checkbox-group v-model="scopeBitsModel">
+          <el-checkbox label="1">订单</el-checkbox>
+          <el-checkbox label="2">商品</el-checkbox>
+          <el-checkbox label="4">库存</el-checkbox>
+          <el-checkbox label="8">营业状态</el-checkbox>
+        </el-checkbox-group>
+      </el-form-item>
+      <el-form-item label="启用">
+        <el-switch v-model="form.enabled" :active-value="1" :inactive-value="0"></el-switch>
+      </el-form-item>
+      <el-form-item label="备注">
+        <el-input v-model="form.remark" type="textarea" :rows="2" maxlength="500"></el-input>
+      </el-form-item>
+    </el-form>
+  </crud-dialog>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js?v=20260915"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js?v=20260930"></script>
+<script src="../../js/components.js?v=20261002"></script>
+<script src="../../api/platform.js?v=20260926"></script>
+<script>
+  new Vue({
+    el: '#platform-app',
+    // 引入列表页通用 Mixin，自动提供分页(page/pageSize/counts/loading)与翻页处理
+    mixins: [window.ReggieListMixin],
+    data() {
+      return {
+        // 修改点：补声明 tableData —— ReggieListMixin 只提供 page/pageSize/counts/loading，
+        // 不含 tableData；此前模板与 statsCards 计算属性直接访问 this.tableData.filter(...)，
+        // 首次渲染时为 undefined 触发 TypeError，导致整页渲染失败（白屏）
+        tableData: [],
+        // 修改点：当前激活的统计卡片 key（'' 全部 / '1' 启用 / '0' 停用），点击卡片按状态筛选
+        activeFilter: '',
+        // 修改点：平台配置统计（总数/已启用/已停用），由 /admin/platform/config/stats 加载
+        stats: { total: 0, enabledCount: 0, disabledCount: 0 },
+        // 修改点：列配置（供 <crud-table> 使用，对齐走 resolveColAlign 单一来源）
+        columns: [
+          { prop: 'platformName', label: '平台名称', minWidth: 160, align: 'center' },
+          { prop: 'platformType', label: '平台类型', width: 120, align: 'center', slot: true },
+          { prop: 'shopId', label: '门店ID', minWidth: 140, align: 'center' },
+          { prop: 'syncScope', label: '同步范围', minWidth: 200, align: 'center', slot: true },
+          { prop: 'enabled', label: '状态', width: 100, align: 'center', slot: true }
+        ],
+        // 修改点：对话框与表单状态
+        action: '',
+        // 工具栏操作（无搜索项，show-search-btns=false）
+        barActions: [
+          { key: 'add', text: '添加平台', type: 'primary', icon: 'ri-add-line' }
+        ],
+        submitting: false,
+        dialogVisible: false,
+        scopeBitsModel: ['1'],
+        form: this.emptyForm(),
+        // 修改点：表单校验规则（Element UI el-form :rules）
+        formRules: {
+          platformType: [{ required: true, message: '请选择平台类型', trigger: 'change' }],
+          platformName: [
+            { required: true, message: '请输入平台名称', trigger: 'blur' },
+            { max: 128, message: '平台名称最多128个字符', trigger: 'blur' }
+          ],
+          shopId: [
+            { required: true, message: '请输入门店ID', trigger: 'blur' },
+            { max: 128, message: '门店ID最多128个字符', trigger: 'blur' }
+          ]
+        }
+      }
+    },
+    computed: {
+      // 修改点：对话框标题
+      dialogTitle() {
+        return this.action === 'edit' ? '编辑平台配置' : '添加平台配置'
+      },
+      // 修改点：3 张可点击统计卡片（总数/已启用/已停用），点击按启用状态筛选数据
+      statsCards() {
+        var s = this.stats || {}
+        return [
+          { key: '', icon: 'ri-building-line', label: '平台总数', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
+          { key: '1', icon: 'ri-checkbox-circle-line', label: '已启用', value: s.enabledCount || 0, color: 'success', clickable: true, active: this.activeFilter === '1' },
+          { key: '0', icon: 'ri-close-circle-line', label: '已停用', value: s.disabledCount || 0, color: 'info', clickable: true, active: this.activeFilter === '0' }
+        ]
+      }
+    },
+    created() {
+      this.fetchData()
+    },
+    methods: {
+      /* ── 表单工具 ── */
+      emptyForm() {
+        return {
+          id: null, platformType: 'MEITUAN', platformName: '', shopId: '',
+          appKey: '', appSecret: '', accessToken: '', syncScope: 1, enabled: 1, remark: ''
+        }
+      },
+      /* ── 数据加载 ── */
+      // 修改点：列表数据拉取（后端分页，返回 records/total）
+      // reloadStats=true 时并行重载统计卡片（初始进入/增删改/启停后）；卡片筛选/翻页时传 false 不重算
+      async fetchData(reloadStats) {
+        if (reloadStats === undefined) { reloadStats = true }
+        this.loading = true
+        // 启用状态筛选：统计卡片 activeFilter（'' 全部 / '1' 启用 / '0' 停用）
+        var enabled = this.activeFilter === '' ? undefined : Number(this.activeFilter)
+        var params = { page: this.page, pageSize: this.pageSize }
+        if (enabled !== undefined) { params.enabled = enabled }
+        try {
+          var requests = [window.platformApi.list(params)]
+          if (reloadStats) { requests.push(this.loadPlatformStats()) }
+          var results = await Promise.all(requests)
+          var res = results[0]
+          if (String(res.code) === '1' && res.data) {
+            this.tableData = res.data.records || []
+            this.counts = Number(res.data.total) || 0
+          } else {
+            ReggieUI.error((res && res.msg) || '加载平台配置失败')
+          }
+          if (reloadStats) {
+            var statsRes = results[1]
+            if (statsRes && statsRes.code === 1 && statsRes.data) {
+              this.stats = statsRes.data
+            }
+          }
+        } catch (err) {
+          if (err.message !== 'NOTLOGIN') {
+            ReggieUI.error('加载平台配置失败，请刷新重试')
+          }
+        } finally {
+          this.loading = false
+        }
+      },
+      // 修改点：加载平台配置统计（总数/已启用/已停用），供统计卡片展示
+      async loadPlatformStats() {
+        try {
+          var res = await window.platformApi.stats()
+          if (res && String(res.code) === '1' && res.data) {
+            return { code: 1, data: res.data }
+          }
+        } catch (err) {
+          if (err.message !== 'NOTLOGIN') {
+            console.warn('加载平台统计失败:', err)
+          }
+        }
+        return { code: 0 }
+      },
+      /* ── 筛选与分页 ── */
+      // table-bar 操作桥接
+      onBarAction(payload) {
+        if (payload.key === 'add') { this.openAdd() }
+      },
+      onCardClick(payload) {
+        this.activeFilter = payload.activeKey
+        this.page = 1
+        this.fetchData(false)
+      },
+      // 修改点：翻页/改页大小（不重算统计，仅刷新当前页数据）
+      handlePageChange(p) {
+        // 修改点：crud-table emit 的是 {page, pageSize} 对象，需提取 page 数字
+        this.page = p.page
+        this.fetchData(false)
+      },
+      handleSizeChange(s) {
+        this.pageSize = s
+        this.page = 1
+        this.fetchData(false)
+      },
+      platformTypeText(type) {
+        const map = { MEITUAN: '美团', ELEME: '饿了么', DOUYIN: '抖音', JD: '京东', SELF: '自营', OTHER: '其他' }
+        return map[type] || type
+      },
+      // 修改点：位标记拆解
+      scopeBits(scope) {
+        if (scope == null) return []
+        const map = { 1: '订单', 2: '商品', 4: '库存', 8: '营业状态' }
+        const res = []
+        ;[1, 2, 4, 8].forEach(function (b) { if (scope & b) res.push(map[b]) })
+        return res
+      },
+      /* ── 弹窗表单（新增/编辑/提交） ── */
+      openAdd() {
+        this.action = 'add'
+        this.form = this.emptyForm()
+        this.scopeBitsModel = ['1']
+        this.dialogVisible = true
+        this.$nextTick(() => {
+          this.$refs.formRef && this.$refs.formRef.clearValidate()
+        })
+      },
+      // 修改点：打开编辑（凭据留空，提交时不修改原密文）
+      openEdit(row) {
+        this.action = 'edit'
+        this.form = {
+          id: row.id, platformType: row.platformType, platformName: row.platformName,
+          shopId: row.shopId, appKey: '', appSecret: '', accessToken: '',
+          syncScope: row.syncScope, enabled: row.enabled, remark: row.remark
+        }
+        this.scopeBitsModel = this.scopeBits(row.syncScope).map(function (b) {
+          return ({ '订单': '1', '商品': '2', '库存': '4', '营业状态': '8' })[b]
+        })
+        this.dialogVisible = true
+        this.$nextTick(() => {
+          this.$refs.formRef && this.$refs.formRef.clearValidate()
+        })
+      },
+      // 修改点：提交（新增/更新统一入口）
+      async submit() {
+        // 修改点：validate 回调内使用了 await，回调本身必须是 async
+        // （原写法整页 JS 解析失败 -> 页面白屏）
+        this.$refs.formRef.validate(async (valid) => {
+          if (!valid) return
+          const payload = Object.assign({}, this.form, {
+            syncScope: this.scopeBitsModel.reduce(function (a, b) { return a + Number(b) }, 0)
+          })
+          this.submitting = true
+          try {
+            const api = this.action === 'edit' ? window.platformApi.update : window.platformApi.add
+            const res = await api(payload)
+            if (res && String(res.code) === '1') {
+              ReggieUI.success('保存成功')
+              this.dialogVisible = false
+              this.fetchData()
+            } else {
+              ReggieUI.error((res && res.msg) || '保存失败')
+            }
+          } catch (err) {
+            ReggieUI.error('保存失败，请重试')
+          } finally {
+            this.submitting = false
+          }
+        })
+      },
+      /* ── 启停用与删除 ── */
+      toggle(row) {
+        const enabled = row.enabled === 1 ? 0 : 1
+        const tip = enabled === 1 ? '确认启用该平台配置？' : '确认停用该平台配置？'
+        ReggieUI.confirm(tip, '提示', { type: 'warning' }).then(async () => {
+          const res = await window.platformApi.toggle(row.id, enabled)
+          if (res && String(res.code) === '1') {
+            ReggieUI.success(enabled === 1 ? '已启用' : '已停用')
+            this.fetchData()
+          } else {
+            ReggieUI.error('操作失败')
+          }
+        }).catch((err) => {
+          // 业务失败 reject(new Error) 需提示；用户点取消 reject('cancel') 静默
+          if (err instanceof Error) { ReggieUI.error(err.message || '操作失败') }
+        })
+      },
+      // 修改点：删除（高危二次确认）
+      remove(row) {
+        ReggieUI.confirm('确认删除该平台配置？删除后不可恢复。', '提示', { type: 'warning' }).then(async () => {
+          const res = await window.platformApi.remove(row.id)
+          if (res && String(res.code) === '1') {
+            ReggieUI.success('已删除')
+            this.fetchData()
+          } else {
+            ReggieUI.error('删除失败')
+          }
+        }).catch((err) => {
+          // 业务失败 reject(new Error) 需提示；用户点取消 reject('cancel') 静默
+          if (err instanceof Error) { ReggieUI.error(err.message || '删除失败') }
+        })
+      }
+    }
+  })
+</script>
+<style>
+  /* 本页局部细节，主视觉走 tokens.css */
+  .scope-tag { margin-right: 4px; }
+</style>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+</body>
+</html>
+

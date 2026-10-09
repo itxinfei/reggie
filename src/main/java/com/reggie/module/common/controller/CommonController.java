@@ -1,0 +1,422 @@
+package com.reggie.module.common.controller;
+
+import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.annotation.PostConstruct;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * <p>
+ * 公共文件控制器
+ * 提供文件上传和下载接口
+ * </p>
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
+@RestController
+@RequestMapping("/common")
+@Slf4j
+@Tag(name = "公共接口", description = "文件上传下载等公共接口")
+public class CommonController {
+
+    // pdf：发票票面上传（P2-5），仅 bizType=invoice 时使用，落 private 目录
+    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif", "pdf");
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
+    private static final int BUFFER_SIZE = 1024;
+
+    /** 图片魔数：扩展名 → 合法文件头集合 */
+    private static final Map<String, byte[][]> MAGIC_BYTES = new HashMap<>();
+    static {
+        MAGIC_BYTES.put("jpg", new byte[][]{
+                { (byte) 0xFF, (byte) 0xD8, (byte) 0xFF }
+        });
+        MAGIC_BYTES.put("jpeg", new byte[][]{
+                { (byte) 0xFF, (byte) 0xD8, (byte) 0xFF }
+        });
+        MAGIC_BYTES.put("png", new byte[][]{
+                { (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }
+        });
+        MAGIC_BYTES.put("gif", new byte[][]{
+                { 0x47, 0x49, 0x46, 0x38, 0x37, 0x61 },
+                { 0x47, 0x49, 0x46, 0x38, 0x39, 0x61 }
+        });
+        // PDF 文件头 %PDF-（发票票面，P2-5）
+        MAGIC_BYTES.put("pdf", new byte[][]{
+                { 0x25, 0x50, 0x44, 0x46, 0x2D }
+        });
+    }
+
+    @Value("${reggie.path:}")
+    private String configPath;
+
+    private String basePath;
+
+    /**
+     * 初始化上传根目录：委托 ImageStoragePathResolver（reggie.path 优先，否则工作目录 uploads）
+     */
+    @PostConstruct
+    public void init() {
+        basePath = com.reggie.utils.ImageStoragePathResolver.resolveRoot(configPath);
+        File dir = new File(basePath);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+        log.info("文件上传目录初始化完成: {}", basePath);
+    }
+
+    /**
+     * 检查登录态（文件上传/下载需要登录）
+     */
+    private R<String> checkLogin(HttpServletRequest request) {
+        if (request.getSession().getAttribute("employee") == null
+                && request.getSession().getAttribute("user") == null) {
+            return R.error("NOTLOGIN");
+        }
+        return null; // 已登录
+    }
+
+    /**
+     * 文件上传
+     * @param file 上传的文件
+     * @return 上传后的文件路径
+     */
+    @PostMapping("/upload")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "文件上传", description = "上传图片文件（支持jpg、jpeg、png、gif，最大5MB），需要登录；可选 bizType 区分业务目录")
+    @Parameter(name = "file", description = "上传的文件", required = true)
+    public R<String> upload(MultipartFile file,
+                            @RequestParam(value = "bizType", required = false) String bizType,
+                            HttpServletRequest request) {
+        // 登录态校验
+        R<String> loginCheck = checkLogin(request);
+        if (loginCheck != null) {
+            return loginCheck;
+        }
+        // 1. 校验文件是否为空
+        if (file.isEmpty()) {
+            return R.error("上传文件不能为空");
+        }
+
+        // 2. 校验文件类型（仅允许图片格式）
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || !originalFilename.contains(".")) {
+            return R.error("文件名不合法");
+        }
+        String extension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            return R.error("文件类型不支持，仅支持jpg、jpeg、png、gif格式");
+        }
+
+        // 3. 校验文件大小（5MB）
+        if (file.getSize() > MAX_FILE_SIZE) {
+            return R.error("文件大小不能超过5MB");
+        }
+
+        // 4. 校验文件魔数（Magic Bytes），防止扩展名绕过（如 shell.jsp.png）
+        if (!checkMagicBytes(file, extension)) {
+            return R.error("文件内容与声明类型不符，上传被拒绝");
+        }
+
+        //file是一个临时文件，需要转存到指定位置，否则本次请求完成后临时文件会删除
+        log.info("文件上传：originalFilename={}, size={}", originalFilename, file.getSize());
+
+        //原始文件名
+        String suffix = originalFilename.substring(originalFilename.lastIndexOf("."));
+
+        //使用UUID重新生成文件名，防止文件名称重复造成文件覆盖
+        String fileName = UUID.randomUUID().toString() + suffix;
+
+        // 来源段只信 session（employee→admin，user→user），防前端伪造 bizType 越权落 public/admin
+        String sessionRole;
+        if (request.getSession().getAttribute("employee") != null) {
+            sessionRole = "admin";
+        } else if (request.getSession().getAttribute("user") != null) {
+            sessionRole = "user";
+        } else {
+            return R.error("NOTLOGIN");
+        }
+        String relativePath = com.reggie.utils.ImageStoragePathResolver
+                .resolveUploadPath(bizType, sessionRole, fileName);
+
+        log.info("文件上传: originalFilename={}, size={} bytes, path={}",
+                originalFilename, file.getSize(), basePath + relativePath);
+        File dir = new File(basePath + relativePath).getParentFile();
+        if (dir != null && !dir.exists()) {
+            dir.mkdirs();
+        }
+
+        try {
+            file.transferTo(new File(basePath + relativePath));
+        } catch (IOException e) {
+            log.error("文件上传失败", e);
+            return R.error("文件上传失败");
+        }
+        return R.success(relativePath);
+    }
+
+    /**
+     * 校验文件魔数（Magic Bytes），确认文件内容与声明的扩展名一致
+     * <p>
+     * 仅校验扩展名可被绕过（如将 shell.jsp 重命名为 .png），魔数校验可拒绝此类伪装。
+     *
+     * @param file      MultipartFile
+     * @param extension 小写扩展名
+     * @return true=魔数匹配
+     */
+    private boolean checkMagicBytes(MultipartFile file, String extension) {
+        byte[][] expectedMags = MAGIC_BYTES.get(extension);
+        if (expectedMags == null || expectedMags.length == 0) {
+            return false;
+        }
+        InputStream is = null;
+        try {
+            is = file.getInputStream();
+            int maxLen = expectedMags[0].length;
+            for (byte[] other : expectedMags) {
+                if (other.length > maxLen) {
+                    maxLen = other.length;
+                }
+            }
+            byte[] head = new byte[maxLen];
+            int bytesRead = is.read(head);
+            if (bytesRead < maxLen) {
+                return false;
+            }
+            for (byte[] expected : expectedMags) {
+                boolean match = true;
+                for (int i = 0; i < expected.length; i++) {
+                    if (head[i] != expected[i]) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (IOException e) {
+            log.error("文件魔数校验失败: extension={}, error={}", extension, e.getMessage(), e);
+            return false;
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (IOException e) {
+                    log.warn("文件流关闭异常", e);
+                }
+            }
+        }
+    }
+
+    /**
+     * 文件下载
+     * @param name 文件名（支持 / 或 \ 分隔符）
+     * @param response HTTP响应对象
+     */
+    @GetMapping("/download")
+    @Operation(summary = "文件下载", description = "下载图片文件，需要登录")
+    @Parameter(name = "name", description = "文件名", required = true)
+    public void download(String name, HttpServletResponse response, HttpServletRequest request) {
+        String filePath = null;
+        try {
+            String decodedName = java.net.URLDecoder.decode(name, java.nio.charset.StandardCharsets.UTF_8.name());
+            String normalizedPath = decodedName.replace("\\", "/");
+            File baseDir = new File(basePath).getCanonicalFile();
+            File targetFile = new File(baseDir, normalizedPath).getCanonicalFile();
+
+            if (!targetFile.equals(baseDir)
+                    && !targetFile.getPath().startsWith(baseDir.getPath() + File.separator)) {
+                log.warn("路径穿越攻击被拦截: name={}, resolved={}", name, targetFile.getPath());
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "非法路径访问");
+                return;
+            }
+
+            // 按 canonical 相对路径分流鉴权（public 免登录；private 细分角色；旧路径任一登录可读），
+            // 不能用 raw name——raw 串 startsWith 前缀可被 public/../private 等穿越写法绕过/误伤
+            String canonicalRelativePath;
+            if (targetFile.equals(baseDir)) {
+                canonicalRelativePath = "";
+            } else {
+                canonicalRelativePath = baseDir.toPath().relativize(targetFile.toPath())
+                        .toString().replace("\\", "/");
+            }
+            if (authorizeDownload(canonicalRelativePath, request) == false) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":0,\"msg\":\"NOTLOGIN\"}");
+                return;
+            }
+
+            filePath = targetFile.getAbsolutePath();
+            if (!targetFile.exists()) {
+                log.warn("文件不存在，返回占位图: {}", filePath);
+                sendPlaceholderImage(response);
+                return;
+            }
+            applyContentType(response, decodedName);
+            streamFile(targetFile, response);
+        } catch (Exception e) {
+            // 修改点(2026-09-26)：浏览器取消图片/下载请求（滚动出可视区、切页、关 tab、切 src）
+            // 是常态，容器会抛 ClientAbortException。原实现一律 log.error 打全堆栈，
+            // 且继续 sendError()——此时响应已提交，必然再抛 IllegalStateException 并冒泡到
+            // 全局异常处理器，一次取消刷出 3 条 ERROR（Controller + Aspect + GlobalExceptionHandler）。
+            if (isClientAbort(e)) {
+                log.warn("客户端取消下载（正常现象，忽略）: {}", filePath);
+                return;
+            }
+            log.error("文件下载失败: {}", filePath, e);
+            if (response.isCommitted()) {
+                log.warn("响应已提交，不再回写错误状态: {}", filePath);
+                return;
+            }
+            try {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "文件不存在");
+            } catch (IOException ex) {
+                log.error("发送错误响应失败", ex);
+            }
+        }
+    }
+
+    /**
+     * 判定异常是否为「客户端主动断开连接」。
+     * 用类名匹配而非 instanceof，避免强依赖具体容器实现（Tomcat / Jetty / Undertow 类名不同），
+     * 同时规避 maven 无 tomcat 显式依赖时的编译耦合。
+     *
+     * @param e 异常（含 cause 链）
+     * @return true 表示客户端取消，属正常现象
+     */
+    private boolean isClientAbort(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            String name = t.getClass().getName();
+            if (name.indexOf("ClientAbortException") >= 0
+                    || name.indexOf("ClientAbortedException") >= 0
+                    || name.indexOf("EofException") >= 0
+                    || name.indexOf("ConnectionClosedException") >= 0) {
+                return true;
+            }
+            if (t.getCause() == t) {
+                break;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * download 鉴权分流：public 放行；private/admin 要求 employee；private/user 要求 user；
+     * 旧相对路径（无 public|private 前缀）兼容 employee 或 user 任一登录。
+     *
+     * @param canonicalRelativePath targetFile 相对 baseDir 的 canonical 相对路径（正斜杠分隔），非 raw name
+     * @return true 放行；false 拒绝（调用方写 401 NOTLOGIN）
+     */
+    private boolean authorizeDownload(String canonicalRelativePath, HttpServletRequest request) {
+        boolean hasEmployee = request.getSession().getAttribute("employee") != null;
+        boolean hasUser = request.getSession().getAttribute("user") != null;
+        if (com.reggie.utils.ImageStoragePathResolver.isPublicPath(canonicalRelativePath)) {
+            return true;
+        }
+        // 旧 images 路径下的公开商品图（菜品/套餐/评价/二维码/活动）匿名放行，
+        // 否则匿名扫码点餐页全部菜品图 401 裂图；私密目录不在该判定内
+        if (com.reggie.utils.ImageStoragePathResolver.isLegacyPublicCatalogImage(canonicalRelativePath)) {
+            return true;
+        }
+        // 发票由员工上传、向购买顾客开放：任一登录(employee/user)即可访问，UUID 文件名不可枚举
+        if (com.reggie.utils.ImageStoragePathResolver.isInvoicePath(canonicalRelativePath)) {
+            return hasEmployee || hasUser;
+        }
+        if (com.reggie.utils.ImageStoragePathResolver.isAdminPrivatePath(canonicalRelativePath)) {
+            return hasEmployee;
+        }
+        if (com.reggie.utils.ImageStoragePathResolver.isUserPrivatePath(canonicalRelativePath)) {
+            return hasUser;
+        }
+        return hasEmployee || hasUser;
+    }
+
+    /**
+     * 根据解码后的文件名设置响应 Content-Type（等价抽取，降低方法长度）。
+     */
+    private void applyContentType(HttpServletResponse response, String decodedName) {
+        int dotIdx = decodedName.lastIndexOf(".");
+        if (dotIdx < 0 || dotIdx == decodedName.length() - 1) {
+            // 无扩展名或以点号结尾，按二进制流处理
+            response.setContentType("application/octet-stream");
+            return;
+        }
+        String extension = decodedName.substring(dotIdx + 1).toLowerCase();
+        switch (extension) {
+            case "jpg":
+            case "jpeg":
+                response.setContentType("image/jpeg");
+                break;
+            case "png":
+                response.setContentType("image/png");
+                break;
+            case "gif":
+                response.setContentType("image/gif");
+                break;
+            case "pdf":
+                // 发票票面内联展示（P2-5）
+                response.setContentType("application/pdf");
+                break;
+            default:
+                response.setContentType("application/octet-stream");
+        }
+    }
+
+    /**
+     * 流式写出文件到响应（等价抽取）。
+     */
+    private void streamFile(File targetFile, HttpServletResponse response) throws IOException {
+        try (FileInputStream fileInputStream = new FileInputStream(targetFile);
+             ServletOutputStream outputStream = response.getOutputStream()) {
+            int len;
+            byte[] bytes = new byte[BUFFER_SIZE];
+            while ((len = fileInputStream.read(bytes)) != -1) {
+                outputStream.write(bytes, 0, len);
+                outputStream.flush();
+            }
+        }
+    }
+
+    /**
+     * 返回 SVG 占位图（图片不存在时显示）
+     */
+    private void sendPlaceholderImage(HttpServletResponse response) throws IOException {
+        String svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"200\" viewBox=\"0 0 200 200\">" +
+                "<rect width=\"200\" height=\"200\" fill=\"#f0f0f0\"/>" +
+                "<text x=\"100\" y=\"90\" font-family=\"Arial\" font-size=\"14\" fill=\"#999\" " +
+                        "text-anchor=\"middle\">No Image</text>" +
+                "<text x=\"100\" y=\"115\" font-family=\"Arial\" font-size=\"12\" fill=\"#bbb\" " +
+                        "text-anchor=\"middle\">&#x1F5BC;</text>" +
+                "</svg>";
+        response.setContentType("image/svg+xml");
+        response.getWriter().write(svg);
+        response.getWriter().flush();
+    }
+}
+

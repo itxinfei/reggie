@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>通知模板 - 瑞吉外卖管理端</title>
+
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <style>
+    /* ========== 内容预览 ========== */
+    .content-preview {
+      background: var(--el-bg-subtle);
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      font-size:var(--font-size-xs);
+      color: var(--el-text-regular);
+      font-family: 'Courier New', monospace;
+      line-height: 1.6;
+      max-height: 60px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    /* ========== 渠道徽章 ========== */
+    .channel-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size:var(--font-size-xs);
+      font-weight: 500;
+    }
+    .channel-badge .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="template-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">通知模板管理</h1>
+      
+      
+      <!-- 数据统计卡片 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
+
+      <!-- 搜索 + 操作栏 -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+        :show-refresh="true"
+        @refresh="init(false)"
+      ></table-bar>
+
+      <!-- 数据表格 -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :show-actions="true"
+        :actions-width="180"
+        row-key="id"
+        :batch-delete="doBatchDelete"
+        @batch-deleted="init(true)"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-bizType="{ row }">
+          <el-tag size="small" :type="bizTypeTagType(row.bizType)" effect="plain">
+            <i :class="bizTypeIcon(row.bizType)" style="margin-right:4px;"></i>{{ bizTypeName(row.bizType) }}
+          </el-tag>
+        </template>
+        <template #col-channel="{ row }">
+          <el-tag size="small" :type="channelTagType(row.channel)" effect="plain">
+            {{ channelName(row.channel) }}
+          </el-tag>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small" effect="plain">
+            {{ row.status === 1 ? '启用' : '停用' }}
+          </el-tag>
+        </template>
+        <template #col-content="{ row }">
+          <!-- 套用文件头现成的两行截断样式，避免长模板全文把整行撑高 -->
+          <div class="content-preview">{{ row.content }}</div>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="openDialog(row)">编辑</el-button>
+          <el-button type="text" size="small" :class="row.status === 1 ? 'btn-warning' : 'btn-success'" @click="toggleStatus(row)">
+            {{ row.status === 1 ? '停用' : '启用' }}
+          </el-button>
+          <el-dropdown trigger="click" @command="(cmd) => cmd === 'delete' && deleteHandle(row.id)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- 编辑弹窗 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :title="formData.title"
+      :visible.sync="formData.dialogVisible"
+      :submit-loading="submitting"
+      size="lg"
+      @submit="submitForm"
+      @close="formData.dialogVisible = false"
+    >
+      <!-- 修改点：补全 ref/:model/:rules 与 prop，启用 Element 校验（原 required 无 prop 不生效） -->
+      <el-form ref="templateForm" :model="formData" :rules="templateRules" label-width="100px" size="small">
+        <el-form-item label="模板名称" prop="templateName">
+          <el-input v-model="formData.templateName" placeholder="如：订单确认通知"></el-input>
+        </el-form-item>
+        <el-form-item label="业务类型" prop="bizType">
+          <el-select v-model="formData.bizType" style="width:100%">
+            <el-option label="订单通知" value="ORDER_NOTICE"></el-option>
+            <el-option label="营销推送" value="PROMOTION"></el-option>
+            <el-option label="验证码" value="VERIFY_CODE"></el-option>
+            <el-option label="系统通知" value="SYSTEM"></el-option>
+            <el-option label="工作通知" value="JOB_NOTICE"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="发送渠道" prop="channel">
+          <el-select v-model="formData.channel" style="width:100%">
+            <el-option label="短信" :value="1"></el-option>
+            <el-option label="APP推送" :value="2"></el-option>
+            <el-option label="短信+APP推送" :value="3"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="模板内容" prop="content">
+          <el-input v-model="formData.content" type="textarea" :rows="4"
+            placeholder="尊敬的${userName}，您的订单${orderNo}已确认。"></el-input>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-radio-group v-model="formData.status">
+            <el-radio :label="1">启用</el-radio>
+            <el-radio :label="0">停用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../api/sys.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#template-app',
+      data() {
+        return {
+          loading: false,
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          tableData: [],
+          // 统计数据
+          stats: { total: 0, enabled: 0, disabled: 0, sms: 0 },
+          activeFilter: '',
+          lastSearch: {},
+          submitting: false,
+          // 搜索配置
+          searchConfig: [
+            { type: 'select', field: 'bizType', placeholder: '业务类型', width: '140px',
+              options: [
+                { label: '订单通知', value: 'ORDER_NOTICE' },
+                { label: '营销推送', value: 'PROMOTION' },
+                { label: '验证码', value: 'VERIFY_CODE' },
+                { label: '系统通知', value: 'SYSTEM' },
+                { label: '工作通知', value: 'JOB_NOTICE' }
+              ] },
+            { type: 'select', field: 'channel', placeholder: '发送渠道', width: '130px',
+              options: [
+                { label: '短信', value: '1' },
+                { label: 'APP推送', value: '2' },
+                { label: '短信+APP推送', value: '3' }
+              ] },
+            // 修改点：后端 pageTemplates 已实现 channel/status/bizType 三条件过滤，
+            // channel 下拉参与列表筛选，与统计卡片口径一致
+            { type: 'select', field: 'status', placeholder: '状态', width: '100px',
+              options: [
+                { label: '启用', value: '1' },
+                { label: '停用', value: '0' }
+              ] }
+          ],
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'add', text: '+ 新增模板', type: 'primary' }
+          ],
+          // 表格列配置
+          columns: [
+            { prop: 'templateName', label: '模板名称', width: 110, align: 'center' },
+            { prop: 'templateCode', label: '外部编码', width: 115, align: 'center' },
+            { prop: 'bizType', label: '业务类型', width: 100, align: 'center', slot: true },
+            { prop: 'channel', label: '渠道', width: 90, align: 'center', slot: true },
+            { prop: 'title', label: '推送标题', width: 90, align: 'center' },
+            { prop: 'content', label: '内容预览', minWidth: 200, slot: true },
+            { prop: 'signName', label: '短信签名', width: 90, align: 'center' },
+            { prop: 'remark', label: '备注', minWidth: 90 },
+            { prop: 'status', label: '状态', width: 75, align: 'center', slot: true },
+            { prop: 'updateTime', label: '更新时间', width: 150, align: 'center' }
+          ],
+          // 弹窗表单
+          formData: {
+            title: '新增模板',
+            dialogVisible: false,
+            id: null, templateName: '', bizType: 'ORDER_NOTICE', channel: 1,
+            content: '', status: 1
+          },
+          // 修改点：模板表单校验规则（配合 el-form :rules + validate()）
+          templateRules: {
+            templateName: [{ required: true, message: '请输入模板名称', trigger: 'blur' }],
+            bizType: [{ required: true, message: '请选择业务类型', trigger: 'change' }],
+            channel: [{ required: true, message: '请选择发送渠道', trigger: 'change' }],
+            content: [{ required: true, message: '请输入模板内容', trigger: 'blur' }]
+          }
+        }
+      },
+      created() {
+        this.init(true)
+      },
+      computed: {
+        statsCards: function() {
+          const self = this
+          return [
+            { key: '', icon: 'ri-file-list-3-line', label: '模板总数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: 'enabled', icon: 'ri-checkbox-circle-line', label: '已启用', value: self.stats.enabled || 0, color: 'success', clickable: true, active: self.activeFilter === 'enabled' },
+            { key: 'disabled', icon: 'ri-pause-circle-line', label: '已停用', value: self.stats.disabled || 0, color: 'warning', clickable: true, active: self.activeFilter === 'disabled' },
+            { key: 'sms', icon: 'ri-chat-smile-3-line', label: '短信模板', value: self.stats.sms || 0, color: 'info', clickable: false, active: self.activeFilter === 'sms' }
+          ]
+        }
+      },
+      methods: {
+        /* ========== 数据加载 ========== */
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '消息模板', request: sysApi.templateDelete })
+        },
+        async init(reloadStats = true) {
+          this.loading = true
+          try {
+            const ls = this.lastSearch || {}
+            const params = Object.assign({}, ls, { page: this.page, pageSize: this.pageSize })
+            const requests = [sysApi.templatePage(params)]
+            if (reloadStats) { requests.push(this.loadTemplateStats()) }
+            const results = await Promise.all(requests)
+            const tplRes = results[0]
+            const statsRes = results[1]
+            if (tplRes && tplRes.code === 1) {
+              this.tableData = tplRes.data.records || []
+              this.counts = tplRes.data.total || 0
+            } else {
+              ReggieUI.error((tplRes && tplRes.msg) || '加载模板列表失败')
+            }
+            if (reloadStats && statsRes && statsRes.code === 1) {
+              this.stats = Object.assign({}, this.stats, statsRes.data  || {})
+            }
+          } catch (err) {
+            if (err.message !== 'NOTLOGIN') {
+              ReggieUI.error('加载模板列表失败，请刷新重试')
+            }
+          } finally {
+            this.loading = false
+          }
+        },
+        async loadTemplateStats() {
+          try {
+            // 修改点：改用 pageSize:1 多状态/渠道并发查询取 total，避免 pageSize:1000 拉全量导致统计截断
+            // 修改点：前端 axios 拦截器将 code=0 转为 reject，此处用 try-catch 统一兜底；
+            // 仅当有数据时（r1.data 非空）才返回 stats，否则返回空对象，避免展示错误信息
+            const makeReq = (extra) => sysApi.templatePage(Object.assign({ page: 1, pageSize: 1 }, extra))
+            const [r1, r2, r3, r4, r5] = await Promise.all([
+              makeReq({ status: undefined }),
+              makeReq({ status: 1 }),
+              makeReq({ status: 0 }),
+              makeReq({ channel: 1 }),
+              makeReq({ channel: 3 })
+            ])
+            if (r1 && r1.data) {
+              const sms = (r4.data.total || 0) + (r5.data.total || 0)
+              return { code: 1, data: {
+                total: r1.data.total || 0,
+                enabled: (r2.data && r2.data.total) || 0,
+                disabled: (r3.data && r3.data.total) || 0,
+                sms: sms
+              }}
+            }
+          } catch (err) { console.warn('加载模板统计失败:', err.message) }
+          return { code: 0 }
+        },
+        /* ========== 搜索与筛选 ========== */
+        // 修改点：stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
+        onCardClick: function(payload) {
+          this.activeFilter = payload.activeKey
+          this.lastSearch = this.activeFilter ? this.buildFilterParams(this.activeFilter) : {}
+          this.page = 1
+          this.init(false)
+        },
+        buildFilterParams(key) {
+          if (key === 'enabled') return { status: '1' }
+          if (key === 'disabled') return { status: '0' }
+          return {}
+        },
+        // table-bar 回调
+        onSearch(searchParams) {
+          this.activeFilter = ''
+          this.lastSearch = searchParams
+          this.page = 1
+          this.init(false)
+        },
+        onReset() {
+          this.activeFilter = ''
+          this.lastSearch = {}
+          this.page = 1
+          this.init(false)
+        },
+        onAction(payload) {
+          if (payload.key === 'add') this.openDialog()
+        },
+        /* ========== 分页处理 ========== */
+        onPageChange(payload) {
+          this.page = payload.page
+          this.init(false)
+        },
+        onSizeChange(payload) {
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
+          this.init(false)
+        },
+        /* ========== 工具方法 ========== */
+        // 修改点：bizType 状态列改用 el-tag 渲染（移除手写 span + 内联 color 的 .biz-type-tag 旧写法）
+        // 修改点：'ORDER_NOTICE' 由非法 'primary' 改为 'success'（el-tag 合法 type 仅 success/info/warning/danger）
+        bizTypeTagType(type) {
+          const map = {
+            'ORDER_NOTICE': 'success',
+            'PROMOTION': 'warning',
+            'VERIFY_CODE': 'success',
+            'SYSTEM': 'info',
+            'JOB_NOTICE': 'info'
+          }
+          return map[type] || 'info'
+        },
+        bizTypeName(type) {
+          const map = {
+            'ORDER_NOTICE': '订单通知',
+            'PROMOTION': '营销推送',
+            'VERIFY_CODE': '验证码',
+            'SYSTEM': '系统通知',
+            'JOB_NOTICE': '工作通知'
+          }
+          return map[type] || '未知类型'
+        },
+        bizTypeIcon(type) {
+          const map = {
+            'ORDER_NOTICE': 'ri-file-list-line',
+            'PROMOTION': 'ri-coupon-line',
+            'VERIFY_CODE': 'ri-shield-check-line',
+            'SYSTEM': 'ri-bell-line',
+            'JOB_NOTICE': 'ri-customer-service-line'
+          }
+          return map[type] || 'ri-file-text-line'
+        },
+        channelName(ch) {
+          const map = { 1: '短信', 2: 'APP推送', 3: '短信+APP推送' }
+          return map[ch] || '未知'
+        },
+        channelTagType(ch) {
+          if (ch === 1) return 'warning'
+          if (ch === 2) return 'success'
+          if (ch === 3) return 'info'
+          return 'info'
+        },
+        /* ========== 模板操作（新增/编辑/删除） ========== */
+        openDialog(row) {
+          if (row) {
+            this.formData.title = '编辑模板'
+            this.formData = Object.assign({}, this.formData, { title: '编辑模板', dialogVisible: true }, JSON.parse(JSON.stringify(row)))
+          } else {
+            this.formData.title = '新增模板'
+            this.formData = { title: '新增模板', dialogVisible: true, id: null, templateName: '', bizType: 'ORDER_NOTICE', channel: 1, content: '', status: 1 }
+          }
+        },
+        submitForm() {
+          const self = this
+          if (self.submitting) return // 提交防重
+          self.$refs.templateForm.validate(function(valid) {
+            if (!valid) {
+              ReggieUI.warning('请完善表单必填项')
+              return
+            }
+            self.submitting = true
+          const api = self.formData.id ? sysApi.templateUpdate(self.formData) : sysApi.templateAdd(self.formData)
+          api.then(function(res) {
+            if (res && res.code === 1) {
+              ReggieUI.success(res.msg || '操作成功')
+              self.formData.dialogVisible = false
+              self.init()
+            } else {
+              ReggieUI.error(res ? res.msg : '操作失败')
+            }
+            }).catch(function() { ReggieUI.error('操作失败') })
+              .finally(function() { self.submitting = false })
+          })
+        },
+        toggleStatus(row) {
+          const self = this
+          const newStatus = row.status === 1 ? 0 : 1
+          ReggieUI.confirm('确认' + (newStatus === 0 ? '停用' : '启用') + '该模板吗？', '提示',
+            { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+            .then(function() {
+              sysApi.templateToggle(row.id, newStatus).then(function(res) {
+                if (res && res.code === 1) {
+                  row.status = newStatus
+                  ReggieUI.success(res.msg || '操作成功')
+                  self.init()
+                } else {
+                  ReggieUI.error(res && res.msg ? res.msg : '操作失败')
+                }
+              }).catch(function(err) {
+                ReggieUI.error('请求失败：' + err)
+              })
+            }).catch(function(err) { console.warn('[模板管理] 状态切换取消或失败:', err) })
+        },
+        deleteHandle(id) {
+          const self = this
+          ReggieUI.confirm('确定删除该模板吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+            .then(function() {
+              sysApi.templateDelete(id).then(function(res) {
+                if (res && res.code === 1) {
+                  ReggieUI.success('删除成功')
+                  self.init()
+                }
+              })
+            }).catch(function(err) {
+              // request.js 对业务失败 reject(new Error(msg))，需明确提示；用户点取消 reject('cancel')，静默
+              if (err instanceof Error) { ReggieUI.error(err.message || '删除失败') }
+            })
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+

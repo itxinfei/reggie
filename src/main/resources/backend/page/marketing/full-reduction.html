@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>满减活动管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <style>
+    body { overflow-x: visible; }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
+  <div class="dashboard-container" id="app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">满减活动</h1>
+      <!-- 数据统计卡片 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
+
+      <!-- 搜索 + 操作栏 -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        :show-refresh="true"
+        @search="onSearch"
+        @reset="onReset"
+        @refresh="init()"
+        @action="onAction"
+      ></table-bar>
+
+      <!-- 数据表格 -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :selection="false"
+        :show-actions="true" :viewable="true"
+        :actions-width="180"
+        :actions-fixed="true"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+        aria-label="满减活动列表"
+      >
+        <!-- 优惠类型列 -->
+        <template #col-discountType="{ row }">
+          <el-tag :type="getDiscountTypeTagType(row.discountType)" size="small">
+            {{ getDiscountTypeText(row.discountType) }}
+          </el-tag>
+        </template>
+        <!-- 满减门槛列 -->
+        <template #col-minAmount="{ row }">
+          <span>满¥{{ formatMoney(row.minAmount) }}</span>
+        </template>
+        <!-- 优惠值列 -->
+        <template #col-discountValue="{ row }">
+          <span v-if="row.discountType === 1">减¥{{ formatMoney(row.discountValue) }}</span>
+          <span v-else-if="row.discountType === 2">{{ (row.discountValue * 10).toFixed(1) }}折</span>
+          <span v-else>赠品</span>
+        </template>
+        <!-- 最大优惠列 -->
+        <template #col-maxDiscountAmount="{ row }">
+          <span>{{ row.maxDiscountAmount ? '¥' + formatMoney(row.maxDiscountAmount) : '不限' }}</span>
+        </template>
+        <!-- 每人限用列 -->
+        <template #col-perUserLimit="{ row }">
+          <span>{{ row.perUserLimit || '不限' }}</span>
+        </template>
+        <!-- 状态列 -->
+        <template #col-status="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+            {{ row.status === 1 ? '启用' : '禁用' }}
+          </el-tag>
+        </template>
+        <!-- 操作按钮 -->
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="handleEdit(row)">编辑</el-button>
+          <el-button type="text" size="small" :class="row.status === 1 ? 'btn-warning' : 'btn-success'" @click="handleToggleStatus(row)">
+            {{ row.status === 1 ? '禁用' : '启用' }}
+          </el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- 新增/编辑对话框 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :size="'md'"
+      :title="dialogTitle"
+      :visible.sync="dialogVisible"
+      :close-on-click-modal="false"
+      :submit-loading="submitLoading"
+      @submit="handleSubmit"
+    >
+      <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="100px" size="small">
+        <el-form-item label="活动ID" prop="campaignId">
+          <el-input-number v-model="formData.campaignId" :min="1" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="规则名称" prop="ruleName">
+          <el-input v-model="formData.ruleName" placeholder="请输入规则名称"></el-input>
+        </el-form-item>
+        <el-form-item label="优惠类型" prop="discountType">
+          <el-radio-group v-model="formData.discountType" @change="onDiscountTypeChange">
+            <el-radio :label="1">减固定金额</el-radio>
+            <el-radio :label="2">打折</el-radio>
+            <el-radio :label="3">赠品</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="满减门槛" prop="minAmount">
+          <el-input-number v-model="formData.minAmount" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item v-if="formData.discountType !== 3" :label="formData.discountType === 2 ? '折扣率' : '优惠金额'" prop="discountValue">
+          <el-input-number
+            v-model="formData.discountValue"
+            :precision="formData.discountType === 2 ? 4 : 2"
+            :min="0"
+            :max="formData.discountType === 2 ? 1 : 99999"
+            style="width: 100%;">
+          </el-input-number>
+          <div v-if="formData.discountType === 2" class="form-tip">
+            请输入折扣率，如8折请输入0.8
+          </div>
+        </el-form-item>
+        <el-form-item v-if="formData.discountType === 2" label="最大优惠金额">
+          <el-input-number v-model="formData.maxDiscountAmount" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <!-- 赠品类型：选择赠品菜品与数量（后端 giftDishId/giftQuantity） -->
+        <template v-if="formData.discountType === 3">
+          <el-form-item label="赠品菜品" prop="giftDishId">
+            <el-select v-model="formData.giftDishId" placeholder="请选择赠品菜品" filterable style="width: 100%;">
+              <el-option v-for="d in dishOptions" :key="d.value" :label="d.label" :value="d.value"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="赠品数量">
+            <el-input-number v-model="formData.giftQuantity" :min="1" :precision="0" style="width: 100%;"></el-input-number>
+          </el-form-item>
+        </template>
+        <el-form-item label="每人限用次数">
+          <el-input-number v-model="formData.perUserLimit" :min="0" style="width: 100%;"></el-input-number>
+          <div class="form-tip">0表示不限制</div>
+        </el-form-item>
+        <el-form-item label="排序">
+          <el-input-number v-model="formData.sortOrder" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-switch v-model="formData.status" :active-value="1" :inactive-value="0"></el-switch>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../js/common.js?v=20260926"></script>
+  <script src="../../api/marketing.js?v=20260926"></script>
+  <script src="../../api/food.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data: function() {
+        var data = {
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          loading: false,
+          activeFilter: '',
+          tableData: [],
+          // 修改点：后端返回全量规则，保存全量供本地筛选/切片/统计使用
+          allData: [],
+          // 搜索配置
+          searchConfig: [
+            { type: 'input', field: 'campaignId', placeholder: '请输入活动ID', width: '150px' }
+          ],
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'add', text: '+ 新增满减规则', type: 'primary' }
+          ],
+          // 表格列配置
+          columns: [
+            { prop: 'id', label: 'ID', width: 80, align: 'center' },
+            { prop: 'campaignId', label: '活动ID', width: 100, align: 'center' },
+            { prop: 'ruleName', label: '规则名称', minWidth: 150 },
+            { prop: 'discountType', label: '优惠类型', slot: true, width: 120, align: 'center' },
+            { prop: 'minAmount', label: '满减门槛', slot: true, width: 120, type: 'money' },
+            { prop: 'discountValue', label: '优惠值', slot: true, width: 120, type: 'money' },
+            { prop: 'maxDiscountAmount', label: '最大优惠', slot: true, width: 120, type: 'money' },
+            { prop: 'perUserLimit', label: '每人限用', slot: true, width: 100, align: 'center' },
+            { prop: 'status', label: '状态', slot: true, width: 100, align: 'center' }
+          ],
+          // 统计
+          stats: { total: 0, active: 0, inactive: 0 },
+          // 缓存搜索参数
+          lastSearch: {},
+          dialogVisible: false,
+          dialogTitle: '新增满减规则',
+          submitLoading: false,
+          dishOptions: [],
+          formData: {
+            id: null,
+            campaignId: null,
+            ruleName: '',
+            discountType: 1,
+            minAmount: 0,
+            discountValue: 0,
+            maxDiscountAmount: null,
+            giftDishId: null,
+            giftQuantity: 1,
+            perUserLimit: 0,
+            sortOrder: 0,
+            status: 1
+          },
+          formRules: {
+            campaignId: [{ required: true, message: '请输入活动ID', trigger: 'blur' }],
+            ruleName: [{ required: true, message: '请输入规则名称', trigger: 'blur' }],
+            discountType: [{ required: true, message: '请选择优惠类型', trigger: 'change' }],
+            minAmount: [{ required: true, message: '请输入满减门槛', trigger: 'blur' }],
+            discountValue: [
+              // 业务校验：减固定金额时优惠金额须为正且小于门槛（防「满10减100」亏本规则）；
+              // 打折时折扣率须在 0~1 之间
+              { validator: (rule, value, callback) => {
+                  // 箭头函数词法 this 指向 Vue 实例：必须读当前 this.formData。
+                  // 若用普通函数取 data.formData，闭包捕获的是 data() 首次调用的局部对象（初始值），
+                  // handleAdd/handleEdit 整体替换 this.formData 后校验仍读旧值，导致任何提交都报「优惠金额必须小于门槛」
+                  var fd = this.formData
+                  // 赠品类型不使用优惠值（字段隐藏），直接放行
+                  if (Number(fd.discountType) === 3) {
+                    callback()
+                    return
+                  }
+                  if (Number(fd.discountType) === 1) {
+                    if (value == null || Number(value) <= 0) {
+                      callback(new Error('优惠金额必须大于 0'))
+                    } else if (Number(fd.minAmount) <= 0 || Number(value) >= Number(fd.minAmount)) {
+                      callback(new Error('优惠金额必须小于满减门槛'))
+                    } else {
+                      callback()
+                    }
+                  } else if (Number(fd.discountType) === 2) {
+                    if (value == null || Number(value) <= 0 || Number(value) >= 1) {
+                      callback(new Error('折扣率须在 0 到 1 之间'))
+                    } else {
+                      callback()
+                    }
+                  } else {
+                    callback()
+                  }
+                }, trigger: 'blur' }
+            ],
+            // 赠品菜品仅在类型3必填（其他类型字段隐藏时放行，避免拦截提交）
+            giftDishId: [
+              { validator: (rule, value, callback) => {
+                  var fd = this.formData
+                  if (Number(fd.discountType) !== 3) { callback(); return }
+                  if (value == null) { callback(new Error('请选择赠品菜品')) } else { callback() }
+                }, trigger: 'change' }
+            ]
+          }
+        }
+        return data
+      },
+      computed: {
+        statsCards: function() {
+          const self = this
+          return [
+            { key: '', icon: 'ri-coupon-3-line', label: '全部规则', value: self.stats.total, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: '1', icon: 'ri-checkbox-circle-line', label: '已启用', value: self.stats.active, color: 'success', clickable: true, active: self.activeFilter === '1' },
+            { key: '0', icon: 'ri-pause-circle-line', label: '已禁用', value: self.stats.inactive, color: 'warning', clickable: true, active: self.activeFilter === '0' }
+          ]
+        }
+      },
+      created: function() {
+        this.init()
+        this.loadStats()
+        this.loadDishOptions()
+      },
+      methods: {
+        /* ========== 工具方法 ========== */
+        // 赠品下拉：/dish/list 返回带 id、name 的菜品（/dish/options 无 id 不可用）
+        loadDishOptions: function() {
+          const self = this
+          queryDishList({}).then(function(res) {
+            if (String(res.code) === '1' && Array.isArray(res.data)) {
+              self.dishOptions = res.data.map(function(d) { return { value: d.id, label: d.name } })
+            }
+          }).catch(function(err) {
+            console.warn('加载赠品菜品选项失败:', err)
+          })
+        },
+        formatMoney(value) {
+          if (!value && value !== 0) return '0.00'
+          return Number(value).toFixed(2)
+        },
+        getDiscountTypeTagType(type) {
+          const map = { 1: 'warning', 2: 'success', 3: 'info' }
+          return map[type] || ''
+        },
+        getDiscountTypeText(type) {
+          const map = { 1: '满减', 2: '折扣', 3: '赠品' }
+          return map[type] || '未知'
+        },
+        /* ========== 数据加载 ========== */
+        async init() {
+          this.loading = true
+          const self = this
+          try {
+            // 修改点：后端 /list 仅接收 campaignId、忽略 status 且返回全量不分页，
+            // 改为一次拉取全量，由前端完成过滤与切片（原传 status/pageSize 均被后端丢弃）
+            const res = await getFullReductionRules({})
+            const list = (String(res.code) === '1' && Array.isArray(res.data)) ? res.data : []
+            self.allData = list
+            self.applyFilter()
+            self.loadStats()
+          } catch (err) {
+            ReggieUI.error('获取满减规则列表失败')
+          }
+          self.loading = false
+        },
+        // 修改点：状态筛选 + 活动ID搜索 + 前端切片分页
+        applyFilter: function() {
+          const self = this
+          let list = self.allData || []
+          if (self.lastSearch.campaignId) {
+            const kw = String(self.lastSearch.campaignId)
+            list = list.filter(function(r) { return String(r.campaignId) === kw })
+          }
+          if (self.activeFilter !== '' && self.activeFilter != null) {
+            const st = Number(self.activeFilter)
+            list = list.filter(function(r) { return Number(r.status) === st })
+          }
+          self.counts = list.length
+          const start = (self.page - 1) * self.pageSize
+          self.tableData = list.slice(start, start + self.pageSize)
+        },
+        // 修改点：统计基于全量数据本地计算（原分两次按 status 请求，后端忽略 status 导致两个数字都等于总数）
+        loadStats: function() {
+          const list = this.allData || []
+          this.stats = {
+            total: list.length,
+            active: list.filter(function(r) { return Number(r.status) === 1 }).length,
+            inactive: list.filter(function(r) { return Number(r.status) === 0 }).length
+          }
+        },
+        /* ========== 搜索与筛选 ========== */
+        // stat-cards 点击
+        onCardClick: function(payload) {
+          const self = this
+          self.activeFilter = payload.activeKey
+          self.lastSearch = {}
+          self.page = 1
+          self.init()
+        },
+        // table-bar 回调
+        onSearch: function(searchParams) {
+          this.activeFilter = ''
+          this.lastSearch = searchParams
+          this.page = 1
+          this.init()
+        },
+        onReset: function() {
+          this.activeFilter = ''
+          this.lastSearch = {}
+          this.page = 1
+          this.init()
+        },
+        onAction: function(payload) {
+          switch (payload.key) {
+            case 'add': this.handleAdd(); break
+          }
+        },
+        onPageChange: function(payload) {
+          // 修改点：数据已在本地全量缓存，翻页直接切片，无需重新请求
+          this.page = payload.page
+          this.applyFilter()
+        },
+        onSizeChange: function(payload) {
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
+          this.applyFilter()
+        },
+        /* ========== 满减规则操作（新增/编辑/删除） ========== */
+        handleAdd() {
+          this.dialogTitle = '新增满减规则'
+          this.formData = {
+            id: null,
+            campaignId: null,
+            ruleName: '',
+            discountType: 1,
+            minAmount: 0,
+            discountValue: 0,
+            maxDiscountAmount: null,
+            giftDishId: null,
+            giftQuantity: 1,
+            perUserLimit: 0,
+            sortOrder: 0,
+            status: 1
+          }
+          this.dialogVisible = true
+          this.$nextTick(() => {
+            this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
+          })
+        },
+        handleEdit(row) {
+          this.dialogTitle = '编辑满减规则'
+          this.formData = Object.assign({}, row)
+          this.dialogVisible = true
+          this.$nextTick(() => {
+            this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
+          })
+        },
+        async handleToggleStatus(row) {
+          // 修改点：补二次确认，防止误点状态切换（原直接调用接口无确认）
+          try {
+            const newStatus = row.status === 1 ? 0 : 1
+            await ReggieUI.confirm('确定要' + (newStatus === 1 ? '启用' : '禁用') + '该满减规则吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+            var res = await updateFullReductionRule(Object.assign({}, row, { status: newStatus }))
+            if (res.code === 1) {
+              ReggieUI.success(newStatus === 1 ? '已启用' : '已禁用')
+              this.init()
+              this.loadStats()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          } catch (err) {
+            if (err === 'cancel') return
+            console.warn('[full-reduction] 启用/禁用失败:', err)
+            ReggieUI.error('操作失败')
+          }
+        },
+        async handleDelete(row) {
+          try {
+            await ReggieUI.confirm('确定要删除该满减规则吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+            const res = await deleteFullReductionRule(row.id)
+            if (res.code === 1) {
+              ReggieUI.success('删除成功')
+              this.init()
+              this.loadStats()
+            } else {
+              ReggieUI.error(res.msg || '删除失败')
+            }
+          } catch (err) {
+            if (err === 'cancel') return
+            console.warn('[full-reduction] 删除失败:', err)
+            ReggieUI.error('删除失败')
+          }
+        },
+        // 切换优惠类型：动态校验规则变化，清除优惠值旧错误
+        onDiscountTypeChange() {
+          this.$nextTick(() => { this.$refs.ruleForm && this.$refs.ruleForm.clearValidate(['discountValue', 'giftDishId']) })
+        },
+        async handleSubmit() {
+          const self = this
+          if (self.submitLoading) return // 提交防重：防止连点重复提交
+          const valid = await new Promise(function(resolve) {
+            self.$refs.ruleForm.validate(function(v) { resolve(v) })
+          })
+          if (!valid) { ReggieUI.warning('请完善表单必填项'); return }
+          // 条件字段兜底校验：discountType=2（打折）时最大优惠金额必填
+          if (self.formData.discountType === 2 && (self.formData.maxDiscountAmount === null || self.formData.maxDiscountAmount === undefined)) {
+            ReggieUI.warning('请填写最大优惠金额'); return
+          }
+          // 赠品类型兜底：必选赠品菜品、数量≥1
+          if (self.formData.discountType === 3) {
+            if (self.formData.giftDishId == null) { ReggieUI.warning('请选择赠品菜品'); return }
+            if (Number(self.formData.giftQuantity) < 1) { ReggieUI.warning('赠品数量至少为1'); return }
+          }
+          self.submitLoading = true
+          const apiCall = self.formData.id ? updateFullReductionRule(self.formData) : saveFullReductionRule(self.formData)
+          apiCall.then(function(res) {
+            if (res.code === 1) {
+              ReggieUI.success(self.formData.id ? '更新成功' : '新增成功')
+              self.dialogVisible = false
+              self.init()
+              self.loadStats()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          }).catch(function(err) {
+            ReggieUI.error('操作失败')
+          }).finally(function() {
+            self.submitLoading = false
+          })
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+

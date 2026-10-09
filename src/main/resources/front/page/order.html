@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+        <title>历史订单 - 瑞吉外卖</title>
+        <link rel="icon" href="./../images/favico.ico">
+        <!--不同屏幕尺寸根字体设置-->
+        <script src="./../js/base.js?v=20260930"></script>
+        <!--引入vant样式-->
+        <link rel="stylesheet" href="../styles/vant.min.css"/>
+        <!-- 引入样式  -->
+        <link rel="stylesheet" href="../styles/index.css?v=20260930b" />
+        <link rel="stylesheet" href="../styles/skeleton.css?v=20260930" />
+        <!--本页面内容的样式-->
+        <link rel="stylesheet" href="./../styles/order.css?v=20260930b" />
+        <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
+        <link rel="stylesheet" href="../styles/tabbar.css?v=20260930" />
+        <!-- 修改点：加载 remixicon 图标库（复用 backend 真实字体，front/styles 下 404 占位已删） -->
+        <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+        <script src="./../js/icon-fallback.js?v=20260917"></script>
+        <!-- 修改点(S0 三端状态机统一)：引入跨端状态字典，使 getStatus 走同一真源 -->
+        <script src="/shared/js/order-status.js?v=20260928"></script>
+    </head>
+    <body>
+        <div id="order" class="app">
+            <cend-shell title="历史订单" :show-back="true" :show-tabbar="true" :tab-active="activeTab">
+            <!-- 修改点：美团风格状态Tab筛选栏 -->
+            <div class="status-tabs">
+                <div
+                    v-for="tab in statusTabs"
+                    :key="tab.value"
+                    class="status-tab"
+                    :class="{active: activeStatus === tab.value}"
+                    @click="switchTab(tab.value)"
+                >{{ tab.label }}</div>
+            </div>
+            <!-- 修改点(2026-09-17 UX)：首屏骨架屏移出列表 v-if 容器独立渲染——原放在 v-if="orderList.length > 0"
+                 容器内部，首屏列表为空时整个容器不渲染，骨架屏永不出现（首屏白屏无任何反馈） -->
+            <!-- 修改点(2026-09-25)：切 tab 也会清空列表并置 loading=true，此时 firstLoading 已是 false，
+                 若骨架屏只认 firstLoading 就是切 tab 全程白屏。故骨架屏条件补上 loading，与下方空态的
+                 !loading 条件互斥：加载中空列表显示骨架，加载完仍空才落到空态 -->
+            <div v-if="showListSkeleton" class="has-tabbar skeleton-page">
+                <van-skeleton :row="5" title :avatar="true"></van-skeleton>
+            </div>
+            <div class="divBody has-tabbar" v-if="!firstLoading && orderList.length > 0">
+                <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
+                <van-list
+                    v-model="loading"
+                    :finished="finished"
+                    finished-text="没有更多了"
+                    @load="getList"
+                    >
+                    <van-cell v-for="order in orderList" :key="order.id" class="item" @click="openDetail(order)">
+                        <!-- 卡片头部：主标题（外卖订单·下单时间）+ 次要单号行 + 状态（对标美团） -->
+                        <div class="order-header">
+                            <div class="order-meta">
+                                <span class="order-title">{{order.tableId ? '堂食订单' : (order.source === 'SELF_PICKUP' ? '自提订单' : '外卖订单')}}<span class="title-dot">·</span><span class="order-time">{{order.orderTime}}</span></span>
+                                <div class="order-no-row">
+                                    <span class="order-no">单号 {{order.number || order.id}}</span>
+                                    <!-- 订单号一键复制：售后沟通场景免手抄 -->
+                                    <span class="copy-btn" role="button" tabindex="0" aria-label="复制订单号"
+                                          @click.stop="copyOrderNo(order)" @keydown.enter.stop="copyOrderNo(order)">
+                                        <i class="ri-file-copy-line"></i>
+                                    </span>
+                                </div>
+                            </div>
+                            <span class="order-status" :class="getStatusClass(order.status)">{{ (order.tableId && order.status === 3) ? '制作中' : getStatus(order.status) }}</span>
+                        </div>
+                        <!-- 外卖：待接单(status=2)/配送中(3)迷你进度条。
+                             注意 status=2 是"待接单"，首步只 active 不 done -->
+                        <div class="order-progress" v-if="!order.tableId && order.source !== 'SELF_PICKUP' && (order.status === 2 || order.status === 3)">
+                            <div class="progress-step" :class="{done: order.status >= 3, active: order.status === 2}">商家接单</div>
+                            <div class="progress-line" :class="{done: order.status >= 3}"></div>
+                            <div class="progress-step" :class="{active: order.status === 3}">配送中</div>
+                            <div class="progress-line"></div>
+                            <div class="progress-step">已送达</div>
+                        </div>
+                        <!-- 堂食：显示出餐进度而非配送进度 -->
+                        <div class="order-progress" v-else-if="order.tableId && (order.status === 2 || order.status === 3)">
+                            <div class="progress-step" :class="{done: order.status >= 3, active: order.status === 2}">商家接单</div>
+                            <div class="progress-line" :class="{done: order.status >= 3}"></div>
+                            <div class="progress-step" :class="{active: order.status === 3}">后厨制作</div>
+                            <div class="progress-line"></div>
+                            <div class="progress-step">叫号上菜</div>
+                        </div>
+                        <!-- 修改点(P1-2 自提)：自提出餐进度（商家接单→后厨制作→到店取餐） -->
+                        <div class="order-progress" v-else-if="order.source === 'SELF_PICKUP' && (order.status === 2 || order.status === 3)">
+                            <div class="progress-step" :class="{done: order.status >= 3, active: order.status === 2}">商家接单</div>
+                            <div class="progress-line" :class="{done: order.status >= 3}"></div>
+                            <div class="progress-step" :class="{active: order.status === 3}">后厨制作</div>
+                            <div class="progress-line"></div>
+                            <div class="progress-step">到店取餐</div>
+                        </div>
+                        <!-- 菜品列表：左侧缩略图 + 名称数量 + 右侧价格 -->
+                        <div class="dish-list">
+                            <div v-for="(item,dIdx) in (order.orderDetails || []).slice(0,3)" :key="dIdx" class="dish-item">
+                                <img v-if="item.image || item.dishImage" :src="imgPath(item.image || item.dishImage)" loading="lazy" class="dish-img" :alt="item.name || '菜品图片'" @error="imgFallback($event)"/>
+                                <div v-else class="dish-img dish-img-placeholder"><i class="ri-restaurant-line"></i></div>
+                                <div class="dish-info">
+                                    <span class="dish-name">{{item.name}}</span>
+                                    <span class="dish-qty">x{{item.number}}</span>
+                                </div>
+                                <span class="dish-price">¥{{Number(item.amount || 0).toFixed(2)}}</span>
+                            </div>
+                            <div v-if="(order.orderDetails || []).length > 3" class="dish-more">
+                                等共{{order.orderDetails.length}}种商品
+                            </div>
+                        </div>
+                        <!-- 合计行 -->
+                        <div class="order-total">
+                            <span>共{{order.sumNum}}件商品  实付</span>
+                            <span class="price">¥{{ Number(order.amount || 0).toFixed(2) }}</span>
+                        </div>
+                        <!-- 操作按钮：按订单状态平铺 2~4 个，窄屏自动换行（见 .order-actions） -->
+                        <div class="order-actions" @click.stop>
+                            <!-- 待付款 -->
+                            <template v-if="order.status === 1">
+                                <div class="act-btn act-outline" @click="cancelOrder(order)">取消订单</div>
+                                <div class="act-btn act-primary" @click="goToPay(order)">去支付</div>
+                            </template>
+                            <!-- 待接单 -->
+                            <template v-if="order.status === 2">
+                                <div class="act-btn act-outline" @click="urgeOrder(order)">{{ order.tableId ? '催菜' : '催单' }}</div>
+                                <div class="act-btn act-outline" v-if="canViewTracking(order)" @click="viewTracking(order)">查看配送</div>
+                            </template>
+                            <!-- 配送中：外卖可确认收货；堂食由员工上菜完成并释放桌台，顾客无"确认收货" -->
+                            <template v-if="order.status === 3">
+                                <div class="act-btn act-outline" @click="urgeOrder(order)">{{ order.tableId ? '催菜' : '催单' }}</div>
+                                <div class="act-btn act-outline" v-if="canViewTracking(order)" @click="viewTracking(order)">查看配送</div>
+                                <div class="act-btn act-primary" v-if="!order.tableId && order.source !== 'SELF_PICKUP'" @click="confirmReceipt(order)">确认收货</div>
+                            </template>
+                            <!-- 已完成 -->
+                            <template v-if="order.status === 4">
+                                <div class="act-btn act-outline" @click="applyRefund(order)">申请售后</div>
+                                <div class="act-btn act-outline" v-if="canViewTracking(order)" @click="viewTracking(order)">查看配送</div>
+                                <div class="act-btn act-outline" v-if="canEvaluateOrder(order)" @click="evaluateOrder(order)">去评价</div>
+                                <div class="act-btn act-primary" @click="addOrderAgain(order)">再来一单</div>
+                            </template>
+                            <!-- 已取消/已退款 -->
+                            <template v-if="order.status === 5 || order.status === 6">
+                                <div class="act-btn act-outline" @click="addOrderAgain(order)">再来一单</div>
+                            </template>
+                        </div>
+                    </van-cell>
+                </van-list>
+                </van-pull-refresh>
+            </div>
+            <!-- 修改点(2026-09-22)：空态改用 cend-empty 组件，统一文字+图标风格。
+                 加载/切tab/下拉刷新期间不显示空态，避免内容替换瞬间误闪"暂无订单" -->
+            <cend-empty
+                v-else-if="!firstLoading && !loading && !refreshing"
+                icon="ri-file-list-3-line"
+                text="暂无订单"
+                action-text="去逛逛"
+                @action="goHome">
+            </cend-empty>
+
+            <!-- 申请售后退款弹窗（Vant2 无 Dialog.prompt，自建 popup 收集原因） -->
+            <van-popup v-model="showRefundDialog" position="bottom" round>
+                <div class="refund-pop">
+                    <div class="rp-title">申请售后退款</div>
+                    <div class="rp-tip">请简要描述退款原因（如商品质量问题、漏送、错送等），提交后客服将尽快处理。</div>
+                    <van-field v-model="refundReason" type="textarea" rows="3"
+                               maxlength="200" show-word-limit placeholder="请输入退款原因"></van-field>
+                    <div class="rp-actions">
+                        <van-button block @click="showRefundDialog = false">取消</van-button>
+                        <van-button block type="primary" :loading="refundSubmitting" @click="submitRefund">提交申请</van-button>
+                    </div>
+                </div>
+            </van-popup>
+            </cend-shell>
+        </div>
+        <!-- 开发环境版本，包含了有帮助的命令行警告 -->
+        <script src="../../backend/plugins/vue/vue.js"></script>
+        <!-- 引入vant组件 -->
+        <script src="./../js/vant.min.js"></script>    
+        <!-- 引入axios -->
+        <script src="../../backend/plugins/axios/axios.min.js"></script>
+        <script src="./../js/request.js?v=20260930"></script>
+        <script src="./../api/main.js?v=20260917"></script>
+        <script src="./../js/common.js?v=20260930b"></script>
+        <script src="./../api/order.js?v=20260917"></script>
+        <!-- C 端跨页面复用组件（必须在 new Vue 之前加载） -->
+        <script src="./../js/components-cend.js?v=20260922"></script>
+        <script>
+        new Vue({
+            el:"#order",
+            data(){
+                return {
+                    paging:{
+                        page:1,
+                        pageSize:5
+                    },
+                    orderList:[],
+                    loading:false,
+                    finished:false,
+                    refreshing:false, // 修改点：下拉刷新状态
+                    firstLoading:true, // 修改点：首屏加载骨架屏
+                    submitting:false, // 修改点：再来一单防重复提交
+                    // 修改点：状态筛选
+                    activeStatus: null, // null表示全部
+                    // 修改点（重要 Bug 修复）：原「待派送=3、配送中=2」与后端 OrderStatus 完全相反
+                    // （后端 2=待接单、3=配送中），导致点"待派送"筛出的实际是配送中订单。
+                    // 现严格对齐后端：1=待付款 2=待接单 3=配送中 4=已完成 5=已取消 6=已退款
+                    statusTabs: [
+                        { label: '全部', value: null },
+                        { label: '待付款', value: 1 },
+                        { label: '待接单', value: 2 },
+                        { label: '配送中', value: 3 },
+                        { label: '待评价', value: 'needEval' },
+                        { label: '已完成', value: 4 },
+                        { label: '已取消', value: 5 },
+                        { label: '已退款', value: 6 }
+                    ],
+                    // 修改点：底部 Tab 导航当前项（0=点餐 1=订单 2=我的）
+                    activeTab: 1,
+                    // 我的已评价商品集合（loadEvalKeys 装配），控制卡片「去评价」入口
+                    evalKeys: new Set(),
+                    // 售后退款（Vant2 无 Dialog.prompt，自建 popup 收集原因）
+                    showRefundDialog: false,
+                    refundReason: '',
+                    refundOrder: null,
+                    refundSubmitting: false
+                }
+            },
+            computed:{
+                // 首屏或「切 tab / 下拉刷新」清空列表后正在加载时显示骨架屏。
+                // 必须与空态条件（!firstLoading && !loading && !refreshing）互斥，否则空列表期间两者都不渲染 = 白屏
+                showListSkeleton:function(){ return (this.firstLoading || this.loading || this.refreshing) && this.orderList.length === 0 }
+            },
+            created(){
+                // 非响应式运行态：请求序号（丢弃过期响应）、列表请求在途标志、续拉定时器
+                this._reqSeq = 0
+                this._listInFlight = false
+                this._continueTimer = null
+                // 修改点：先加载后端枚举字典，使列表状态文案与后端保持一致
+                // （字典加载失败时 getStatus 自动回退到 common.js 的兜底常量）
+                var self = this
+                if (typeof loadEnums === 'function') {
+                    loadEnums(function(){ self.initData() })
+                } else {
+                    this.initData()
+                }
+                loadEvalKeys().then(function(keys) {
+                    self.evalKeys = keys
+                })
+            },
+            mounted(){
+                // 修改点(2026-09-17)：状态Tab滚动粘滞阴影
+                // 修改点(2026-09-28)：scroll 处理具名化挂到实例，beforeDestroy 解绑
+                var self = this
+                this.$nextTick(function(){
+                    var tabs = document.querySelector('#order .status-tabs')
+                    var body = document.querySelector('#order .divBody')
+                    if (tabs && body) {
+                        self._tabsEl = tabs
+                        self._scrollBody = body
+                        body.addEventListener('scroll', self.handleTabsScroll, { passive: true })
+                    }
+                })
+            },
+            beforeDestroy(){
+                if(this._scrollBody){
+                    this._scrollBody.removeEventListener('scroll', this.handleTabsScroll)
+                    this._scrollBody = null
+                }
+                if(this._continueTimer){
+                    clearTimeout(this._continueTimer)
+                    this._continueTimer = null
+                }
+            },
+            methods:{
+                // 状态 Tab 粘滞阴影的滚动处理（具名，便于 beforeDestroy 解绑）
+                handleTabsScroll(){
+                    if(!this._tabsEl || !this._scrollBody) return
+                    if(this._scrollBody.scrollTop > 5){
+                        this._tabsEl.classList.add('is-scrolled')
+                    }else{
+                        this._tabsEl.classList.remove('is-scrolled')
+                    }
+                },
+                // 修改点(2026-09-22)：goBack 已统一由 cend-shell 组件处理，页面不再重复定义
+                goHome(){
+                    window.requestAnimationFrame(()=>{
+                        window.location.href = '/front/index.html'
+                    })
+                },
+                // 修改点(2026-09-22)：底部 Tab 切换已统一由 cend-shell 组件处理，页面不再重复定义
+                initData(){
+                    // 修复(2026-09-23 P1-4)：解析个人中心订单快捷入口携带的 ?status=N，
+                    // 否则 activeStatus 恒为 null，所有入口都落到"全部"
+                    var m = location.search.match(/[?&]status=(\d+)/)
+                    if (m){
+                        var s = parseInt(m[1], 10)
+                        if (s >= 1 && s <= 6){ this.activeStatus = s }
+                    }
+                    this.getList()
+                },
+                // 修改点：下拉刷新处理（await getList 后复位，避免固定延时与实际加载不同步）
+                async onRefresh(){
+                    this.beginReload();
+                    try {
+                        await this.getList()
+                    } finally {
+                        this.refreshing = false
+                    }
+                },
+                // 修改点：切换Tab时重置分页并重新加载
+                switchTab(status){
+                    if(this.activeStatus === status) return;
+                    this.activeStatus = status;
+                    this.beginReload();
+                    this.getList();
+                },
+                // 新一轮列表加载：重置分页/列表，并使在途旧请求失效
+                // （旧响应回来后按序号丢弃，修复切 tab 闪显错数据与页码重复自增跳页）
+                beginReload(){
+                    if(this._continueTimer){
+                        clearTimeout(this._continueTimer)
+                        this._continueTimer = null
+                    }
+                    this._listInFlight = false;
+                    this._reqSeq++;
+                    this.paging.page = 1;
+                    this.orderList = [];
+                    this.finished = false;
+                    this.loading = true;
+                },
+                async getList(){
+                    if(this.finished){
+                        this.loading = false;
+                        return
+                    }
+                    // in-flight 守卫：van-list @load 与 needEval 续拉隔着 loading 空窗可能并发，去重
+                    if(this._listInFlight){ return }
+                    this._listInFlight = true
+                    var seq = ++this._reqSeq
+                    // 修改点：仅在有状态筛选时传递status参数
+                    // 「待评价」后端无对应状态：取已完成(status=4)单后前端本地过滤未评价的
+                    const params = { ...this.paging }
+                    var isNeedEval = this.activeStatus === 'needEval'
+                    if(this.activeStatus !== null){
+                        params.status = isNeedEval ? 4 : this.activeStatus
+                    }
+                    try {
+                        const res = await orderPagingApi(params)
+                        // 过期响应（期间已切 tab / 重新加载）：整段结果丢弃，不碰列表与页码
+                        if(seq !== this._reqSeq) return
+                        if(res.code === 1){
+                            // 第一页时重置列表，防止重复累加
+                            if(this.paging.page === 1){
+                                this.orderList = []
+                            }
+                            let records = res.data.records
+                            // 后端本页原始条数：finished 必须按它（而非前端过滤后的条数）判断，
+                            // 否则待评价 tab 第一页全是已评价单时会提前结束，更早页的未评价单再也加载不到
+                            var rawCount = (records && Array.isArray(records)) ? records.length : 0
+                            if(records && Array.isArray(records)){
+                                records.forEach(item=>{
+                                    let number = 0
+                                    // 修改点：订单详情为 null/非数组时跳过，防止页面渲染时报错
+                                    if(item.orderDetails && Array.isArray(item.orderDetails)){
+                                        item.orderDetails.forEach(ele=>{
+                                            number += ele.number
+                                        })
+                                    }
+                                    item.sumNum = number
+                                })
+                                // 待评价：仅保留还有未评价商品的订单
+                                if(isNeedEval){
+                                    var selfRef = this
+                                    records = records.filter(function(r){ return selfRef.canEvaluateOrder(r) })
+                                }
+                                this.orderList.push(...records)
+                            }
+                            // 修改点(2026-09-15)：原 finished 判断依赖 res.data.pages，若后端未返回 pages（undefined）
+                            // 则 finished 永远为 false → van-list 反复触发 @load → 同批订单被重复 push（主键重复 + 控制台告警）。
+                            // 改为：本页无原始数据 或 页数耗尽即结束；pages 缺失时按「本页无数据」兜底，避免无限加载
+                            var finishedPages = (typeof res.data.pages === 'number') ? res.data.pages : 1
+                            if(rawCount === 0 || this.paging.page >= finishedPages){
+                                this.finished = true;
+                            }
+                            this.paging.page = this.paging.page + 1
+                            // 待评价 tab：本页过滤后为空但后端还有页时立即续拉下一页，
+                            // 不空等 van-list 的 check，避免中间露出"暂无订单"空态
+                            if(isNeedEval && this.orderList.length === 0 && !this.finished){
+                                var selfContinue = this
+                                this._continueTimer = setTimeout(function(){
+                                    selfContinue._continueTimer = null
+                                    // 有在途请求（van-list @load 抢先）时不续拉，避免并发重复 push
+                                    if(selfContinue._listInFlight) return
+                                    selfContinue.loading = true
+                                    selfContinue.getList()
+                                }, 0)
+                            }
+                        }else{
+                            vant.Toast.fail(res.msg || '加载订单失败');
+                        }
+                    } catch (err) {
+                        // 过期请求异常静默；其余网络错误/接口异常给出提示，避免永卡加载
+                        if(seq !== this._reqSeq) return
+                        console.error('加载订单列表失败:', err)
+                        vant.Toast.fail('加载订单失败，请稍后重试');
+                    } finally {
+                        // 过期请求不清在途标志（新一轮请求可能已在途），不复位 loading
+                        if(seq === this._reqSeq){
+                            this._listInFlight = false
+                            this.loading = false;
+                            this.firstLoading = false;
+                        }
+                    }
+                },
+                getStatus(status){
+                    return getStatus(status)
+                },
+                getStatusClass(status){
+                    // 修改点(2026-09-14)：6 类状态各归各位（原 1/2 同为 pending、6 误归 cancel）
+                    // 7已分账与4已完成同为成功终态，共用 completed 样式
+                    var map = {1:'status-pending',2:'status-accepted',3:'status-shipped',4:'status-completed',5:'status-cancelled',6:'status-refunding',7:'status-completed'};
+                    return map[status] || '';
+                },
+                async addOrderAgain(order){
+                    if(this.submitting) return;
+                    this.submitting = true
+                    try {
+                        const res = await orderAgainApi({id:order.id})
+                        if(res.code === 1){
+                            // 修改点：先刷新购物车数据，确保首页立即显示正确数量
+                            await cartListApi({})
+                            window.requestAnimationFrame(()=>{
+                                window.location.href = '/front/index.html'
+                            })
+                        }else{
+                            vant.Toast.fail(res.msg || '再来一单失败');
+                        }
+                    } catch (e) {
+                        console.error('再来一单失败:', e);
+                        vant.Toast.fail('网络异常，请稍后重试');
+                    } finally {
+                        this.submitting = false
+                    }
+                },
+                // 修改点：分享订单
+                shareOrder(order){
+                    const shareData = {
+                        title: '我在瑞吉外卖的订单',
+                        text: '我在瑞吉外卖点了一单，你也来试试吧！',
+                        url: window.location.origin + '/front/index.html'
+                    }
+                    if(navigator.share){
+                        navigator.share(shareData).catch((e) => { console.warn('[order.html] 分享订单失败:', e) })
+                    } else {
+                        const ta = document.createElement('textarea')
+                        ta.value = shareData.url
+                        document.body.appendChild(ta)
+                        ta.select()
+                        try {
+                            document.execCommand('copy')
+                            vant.Toast.success('链接已复制')
+                        } catch(e) {
+                            vant.Toast.fail('分享失败')
+                        }
+                        document.body.removeChild(ta)
+                    }
+                },
+                // 修改点(2026-09-24)：订单号一键复制 —— 优先 navigator.clipboard，降级 execCommand（与上方分享复制同款兜底）
+                copyOrderNo(order){
+                    if(!order) return
+                    var no = order.number || order.id
+                    if(!no) return
+                    no = String(no)
+                    var done = () => vant.Toast.success('订单号已复制')
+                    var fail = () => vant.Toast.fail('复制失败')
+                    if(navigator.clipboard && navigator.clipboard.writeText){
+                        navigator.clipboard.writeText(no).then(done).catch(() => { this.copyFallback(no, done, fail) })
+                    } else {
+                        this.copyFallback(no, done, fail)
+                    }
+                },
+                copyFallback(text, done, fail){
+                    try {
+                        var ta = document.createElement('textarea')
+                        ta.value = text
+                        ta.style.position = 'fixed'
+                        ta.style.opacity = '0'
+                        document.body.appendChild(ta)
+                        ta.select()
+                        document.execCommand('copy')
+                        document.body.removeChild(ta)
+                        done()
+                    } catch(e) {
+                        fail()
+                    }
+                },
+                // 修改点：点击订单卡进入订单详情页（完整明细、开票、评价等均在详情页）
+                openDetail(order){
+                    if(order && order.id){
+                        window.requestAnimationFrame(()=>{
+                            window.location.href = '/front/page/order-detail.html?id=' + order.id
+                        })
+                    }
+                },
+                // 修改点：评价订单
+                evaluateOrder(order){
+                    if(order && order.id){
+                        window.requestAnimationFrame(()=>{
+                            window.location.href = '/front/page/my-evaluations.html?orderId=' + order.id
+                        })
+                    }
+                },
+                // 是否可看配送追踪：平台配送单 或 自有骑手配送单（有收货地址、非堂食，待接单/配送中/已完成）
+                canViewTracking(order){
+                    if(!order) return false;
+                    if(order.platformOrderId) return true;
+                    return order.addressBookId != null && order.tableId == null
+                        && (order.status === 2 || order.status === 3 || order.status === 4);
+                },
+                // 配送追踪：平台单传 platformOrderId，自有骑手单传本地订单ID；后端两种入参兼容
+                viewTracking(order){
+                    var trackingId = order && (order.platformOrderId || order.id);
+                    if(trackingId){
+                        window.requestAnimationFrame(()=>{
+                            window.location.href = '/front/page/tracking.html?orderId=' + encodeURIComponent(trackingId)
+                        })
+                    } else {
+                        vant.Toast.fail('该订单暂无配送追踪信息');
+                    }
+                },
+                // 修改点：催单（待接单/配送中可用），按订单维度在飞防重，避免连点刷接口
+                urgeOrder(order){
+                    if(!order || !order.id) return
+                    if(!this._urgeMap) this._urgeMap = {}
+                    if(this._urgeMap[order.id]) return
+                    this._urgeMap[order.id] = true
+                    $axios({ url: '/api/urgency/customer/trigger/' + order.id, method: 'post' }).then((res) => {
+                        if(res && res.code === 1){
+                            var d = res.data || {}
+                            if(d.remainCount !== undefined && d.remainCount !== null){
+                                vant.Toast.success('已通知商家，今日还可催' + d.remainCount + '次')
+                            }else{
+                                vant.Toast.success('已通知商家，请耐心等待')
+                            }
+                        }else{
+                            vant.Toast.fail((res && res.msg) || '催单失败，请稍后重试')
+                        }
+                    }).catch(() => {
+                        vant.Toast.fail('网络异常，请稍后重试')
+                    }).finally(() => {
+                        this._urgeMap[order.id] = false
+                    })
+                },
+                // 修改点：待付款订单去支付——跳结算页重新发起支付流程
+                goToPay(order){
+                    if(!order || !order.id) return
+                    window.requestAnimationFrame(()=>{
+                        window.location.href = '/front/page/add-order.html?reorderId=' + order.id
+                    })
+                },
+                // 修改点：取消订单
+                cancelOrder(order){
+                    if(this.submitting) return;
+                    vant.Dialog.confirm({
+                        title: '取消订单',
+                        message: '确定要取消该订单吗？',
+                        confirmButtonText: '确定',
+                        cancelButtonText: '再看看'
+                    }).then(async () => {
+                        // 修改点：包裹try-catch，防止API异常导致res为undefined
+                        this.submitting = true
+                        try {
+                            const res = await cancelOrderApi({ id: order.id, status: 5 })
+                            if(res && res.code === 1){
+                                // 刷新当前列表
+                                this.paging.page = 1
+                                this.orderList = []
+                                this.finished = false
+                                this.loading = true
+                                this.getList()
+                                vant.Toast.success('订单已取消');
+                            }else{
+                                vant.Toast.fail((res && res.msg) || '取消失败');
+                            }
+                        } catch(e) {
+                            vant.Toast.fail('网络异常，请稍后重试');
+                        } finally {
+                            this.submitting = false
+                        }
+                    }).catch(() => {
+                        // 用户点取消，什么都不做
+                    })
+                },
+                // 修改点：用户确认收货（status=3 → 4）
+                confirmReceipt(order){
+                    if(this.submitting) return;
+                    vant.Dialog.confirm({
+                        title: '确认收货',
+                        message: '确认已收到商品？确认后订单将完成。',
+                        confirmButtonText: '确认收货',
+                        cancelButtonText: '再等等'
+                    }).then(async () => {
+                        this.submitting = true
+                        try {
+                            const res = await confirmReceiptApi({ id: order.id })
+                            if(res && res.code === 1){
+                                vant.Toast.success('已确认收货');
+                                this.paging.page = 1
+                                this.orderList = []
+                                this.finished = false
+                                this.loading = true
+                                this.getList()
+                            }else{
+                                vant.Toast.fail((res && res.msg) || '确认失败');
+                            }
+                        } catch(e) {
+                            vant.Toast.fail('网络异常，请稍后重试');
+                        } finally {
+                            this.submitting = false
+                        }
+                    }).catch((e) => { console.warn('[order.html] 用户取消确认收货:', e) })
+                },
+                // 用户申请售后（整单退款申请，需填写原因）。
+                // Vant2 无 Dialog.prompt：原 confirm+prompt 两层模态合并为单个自建 popup
+                applyRefund(order){
+                    this.refundOrder = order
+                    this.refundReason = ''
+                    this.showRefundDialog = true
+                },
+                async submitRefund(){
+                    if(this.submitting || this.refundSubmitting) return;
+                    const order = this.refundOrder
+                    if(!order) return;
+                    const reason = this.refundReason ? this.refundReason.trim() : ''
+                    if(!reason){ vant.Toast.fail('退款原因不能为空'); return }
+                    if(reason.length > 200){ vant.Toast.fail('退款原因不超过 200 字'); return }
+                    this.refundSubmitting = true
+                    try {
+                        const res = await applyRefundApi({ id: order.id, reason: reason })
+                        if(res && res.code === 1){
+                            const data = res.data || {}
+                            vant.Toast.success('售后申请已提交：' + (data.refundNo || ''))
+                            this.showRefundDialog = false
+                            this.paging.page = 1
+                            this.orderList = []
+                            this.finished = false
+                            this.loading = true
+                            this.getList()
+                        }else{
+                            vant.Toast.fail((res && res.msg) || '申请失败');
+                        }
+                    } catch(e) {
+                        vant.Toast.fail('网络异常，请稍后重试');
+                    } finally {
+                        this.refundSubmitting = false
+                    }
+                },
+            }
+        })
+        </script>
+    </body>
+</html>

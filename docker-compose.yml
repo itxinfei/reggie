@@ -1,0 +1,103 @@
+# Reggie 外卖系统 — 一键部署（MySQL 8 + Redis 7 + 应用）
+# 首次启动：db-init 容器自动建表 + 导入最小种子数据（admin / 123456）
+# 可调参数（.env 或环境变量）：MYSQL_ROOT_PASSWORD / APP_PORT / REGGIE_SERVER_URL
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: reggie-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-reggie123456}
+      MYSQL_DATABASE: reggie
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: reggie-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  # 一次性建库 + 导入 schema（幂等，每次 up 都会跑一遍，不丢数据）
+  db-init:
+    image: mysql:8.0
+    container_name: reggie-db-init
+    restart: "no"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-reggie123456}
+    volumes:
+      - ./docker/db-init.sh:/db-init.sh:ro
+      - ./src/test/resources:/schemas:ro
+      - ./db:/seed:ro
+    entrypoint: ["bash", "/db-init.sh"]
+
+  app:
+    build: .
+    container_name: reggie-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      # application-prod.yml 已外部化的数据源 / Redis
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: reggie
+      DB_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-reggie123456}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      # 上传根目录（图片/发票等落盘到持久卷）
+      REGGIE_PATH: /data/uploads
+      # 堂食二维码等对外链接：手机访问请改成宿主机局域网 IP，如 http://192.168.1.10:8080
+      REGGIE_SERVERURL: ${REGGIE_SERVER_URL:-http://localhost:8080}
+      # 首启无商户密钥，默认 mock 保证可用；接真实微信/支付宝后再关（false 走真实验签，fail-closed）
+      REGGIE_PAYMENT_MOCKMODE: ${REGGIE_PAYMENT_MOCKMODE:-true}
+      # 显式豁免「prod 与支付 mock 互斥」校验，仅限隔离演示 / 单机自部署；
+      # 对公网提供服务的真实生产环境务必在 .env 设为 false（同时把 REGGIE_PAYMENT_MOCKMODE 设为 false）
+      ALLOW_MOCK_IN_PROD: ${ALLOW_MOCK_IN_PROD:-true}
+      # 无短信模板配置，mock 模式验证码只打日志，保证顾客端可登录
+      REGGIE_SMS_MOCKMODE: ${REGGIE_SMS_MOCKMODE:-true}
+      REGGIE_PUSH_MOCKMODE: ${REGGIE_PUSH_MOCKMODE:-true}
+      REGGIE_DELIVERY_MOCKMODE: ${REGGIE_DELIVERY_MOCKMODE:-true}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m -Duser.timezone=Asia/Shanghai}
+    volumes:
+      - app-uploads:/data/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 180s
+
+volumes:
+  mysql-data:
+  redis-data:
+  app-uploads:

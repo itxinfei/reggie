@@ -1,0 +1,126 @@
+/* 修改点：统一品牌色头部 + 移除ElementUI依赖 */
+#no_wifi .divHead {
+  width: 100%;
+  height: var(--header-height);
+  height: calc(var(--header-height) + constant(safe-area-inset-top));
+  height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  background: var(--color-primary-gradient);
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: border-box;
+  position: relative;
+}
+
+#no_wifi .divHead .divTitle {
+  font-size: var(--header-title-font-size);
+  font-family: var(--font-family-title);
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-text-primary);
+  line-height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#no_wifi .divHead .divTitle i {
+  position: absolute;
+  left: var(--spacing-lg);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-primary);
+}
+
+#no_wifi .divContent {
+  height: calc(100vh - var(--header-height));
+  width: 100%;
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  align-items: center;
+  /* 修改点：整块垂直居中替代硬编码 margin-top:104rem —— 小屏下避免按钮溢出视口（2026-09-01 微调） */
+  justify-content: center;
+  padding: 24rem 24rem calc(24rem + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+}
+
+/* 修改点：位图 no_wifi.png → ri-wifi-off-line 图标 */
+#no_wifi .divContent .wifi-icon {
+  display: block;
+  margin-top: 0;
+  margin-bottom: 8rem;
+  font-size: 120rem;
+  line-height: 1;
+  color: var(--color-text-disabled);
+}
+
+#no_wifi .divContent .divDesc {
+  height: auto;
+  font-size: 24rem;
+  font-family: var(--font-family-title);
+  font-weight: 500;
+  text-align: center;
+  color: var(--color-text-primary);
+  line-height: 33rem;
+  margin-top: 16rem;
+  margin-bottom: 8rem;
+}
+
+/* 修改点：补充副文案，明确引导下一步操作（此前仅有主文案 + 按钮，信息密度低） */
+#no_wifi .divContent .divSub {
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-body);
+  text-align: center;
+  color: var(--color-text-hint);
+  line-height: 1.5;
+  margin-bottom: 24rem;
+}
+
+/* 修改点(2026-09-18)：触控高度 36→44rem；探活进行中禁用 */
+#no_wifi .divContent .btnRefresh {
+  width: 160rem;
+  height: var(--btn-h);
+  background: var(--color-primary);
+  border-radius: var(--btn-radius);
+  box-shadow: var(--shadow-cta);
+  font-size: 15rem;
+  font-family: var(--font-family-title);
+  font-weight: 500;
+  text-align: center;
+  color: var(--color-text-primary);
+  line-height: var(--btn-h);
+  cursor: pointer;
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
+}
+
+#no_wifi .divContent .btnRefresh:active {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+
+#no_wifi .divContent .btnRefresh.btnDisabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* 修改点(2026-09-18)：新增次级「回到首页」出口，网络长时间不恢复时不被困在本页 */
+#no_wifi .divContent .btnHome {
+  margin-top: 12rem;
+  width: 160rem;
+  height: 44rem;
+  line-height: 42rem;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--btn-radius);
+  font-size: 15rem;
+  font-family: var(--font-family-title);
+  color: var(--color-primary-text);
+  text-align: center;
+  cursor: pointer;
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
+}
+
+#no_wifi .divContent .btnHome:active {
+  transform: scale(0.95);
+  opacity: 0.8;
+}

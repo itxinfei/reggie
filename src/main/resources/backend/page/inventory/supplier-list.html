@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>供应商管理 - 瑞吉外卖管理端</title>
+  <!-- 引入样式 -->
+
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+</head>
+<body>
+<!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+<a href="#main-content" class="skip-link">跳转到主内容</a>
+<div class="dashboard-container" id="supplier-app">
+  <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+    <h1 class="sr-only" id="page-title">供应商管理</h1>
+    <!-- ============================================================
+     组件1：stat-cards — 统计卡片
+     关联数据：statsCards（计算属性，从 stats 对象实时映射）
+     事件：@card-click → 按供应商状态筛选表格
+    ============================================================ -->
+    <stat-cards
+      :cards="statsCards"
+      :active-key.sync="activeStatus"
+      @card-click="onStatCardClick"
+    ></stat-cards>
+
+    <!-- ============================================================
+     组件2：table-bar — 搜索 + 操作按钮栏
+     搜索项：供应商名称、联系人（两个 input）
+     操作按钮：+ 新增供应商
+     事件：@search（触发分页查询） / @reset（清空并重新加载） / @action（按钮回调）
+    ============================================================ -->
+    <table-bar
+      ref="tableBar"
+      :search-items="searchConfig"
+      :actions="actionConfig"
+      :show-refresh="true"
+      @search="onSearch"
+      @reset="onReset"
+      @action="onAction"
+      @refresh="loadData(false)"
+    ></table-bar>
+
+    <!-- ============================================================
+     组件3：crud-table — 完整 CRUD 数据表格
+     列定义：columns（名称、联系人、电话、地址、状态、操作）
+     分页：page/pageSize/total 双向绑定
+     操作列：修改/删除按钮（通过 #actions 插槽自定义）
+    ============================================================ -->
+    <crud-table
+      ref="crudTable"
+      :data="tableData"
+      :columns="columns"
+      :loading="loading"
+      :page="page"
+      :page-size="pageSize"
+      :total="counts"
+      :show-actions="true" :viewable="true"
+      :actions-width="180"
+      row-key="id"
+      :batch-delete="doBatchDelete"
+      @page-change="onPageChange"
+      @size-change="onSizeChange"
+      @batch-deleted="onBatchDeleted"
+    >
+      <!-- 累计采购额列 -->
+      <template #col-totalPurchaseAmount="{ row }">
+        <span v-if="row.totalPurchaseAmount != null">
+          ¥{{ formatMoney(row.totalPurchaseAmount) }}
+          <span style="color:var(--text-muted);font-size:var(--font-size-xs);margin-left:2px;" v-if="row.purchaseCount">/ {{ row.purchaseCount }} 单</span>
+        </span>
+        <span v-else style="color:var(--text-muted);">-</span>
+      </template>
+      <!-- 资质图片列：有图显示缩略图，点击放大 -->
+      <template #col-license="{ row }">
+        <el-image
+          v-if="firstImage(row.licenseImages)"
+          :src="firstImage(row.licenseImages)"
+          :alt="(row.name ? row.name + ' 的' : '') + '营业执照'"
+          :preview-src-list="imageList(row.licenseImages)"
+          style="width:44px;height:44px;object-fit:cover;border:1px solid var(--border-default);border-radius:var(--radius-sm);cursor:pointer;">
+        </el-image>
+        <span v-else style="color:var(--text-muted);">-</span>
+      </template>
+      <!-- 状态列自定义渲染 -->
+      <template #col-status="{ row }">
+        <el-tag :type="String(row.status) === '1' ? 'success' : 'info'" size="small">
+          {{ String(row.status) === '1' ? '启用' : '禁用' }}
+        </el-tag>
+      </template>
+      <!-- 行操作按钮 -->
+      <template #actions="{ row }">
+        <el-button type="text" size="small" class="btn-view" @click="openPurchases(row)">采购记录</el-button>
+        <el-button type="text" size="small" class="btn-view" @click="openEdit(row)">修改</el-button>
+        <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row.id)">删除</el-button>
+      </template>
+    </crud-table>
+
+  </main>
+
+  <!-- ============================================================
+   组件4：crud-dialog — 新增/编辑弹窗
+   表单内容通过默认插槽传入，底部按钮由组件统一管理
+   ============================================================ -->
+  <crud-dialog :show-submit="true" :show-cancel="true"
+    :title="dialogTitle"
+    :visible.sync="dialogVisible"
+    :submit-loading="submitting"
+    size="lg"
+    @submit="submitForm"
+    @close="resetForm"
+  >
+    <el-form ref="supplierForm" :model="formData" :rules="formRules" label-width="100px">
+      <el-form-item label="供应商名称：" prop="name">
+        <el-input v-model="formData.name" placeholder="请输入供应商名称" maxlength="50" ></el-input>
+      </el-form-item>
+      <el-form-item label="联系人：">
+        <el-input v-model="formData.contact" placeholder="请输入联系人" maxlength="20" ></el-input>
+      </el-form-item>
+      <el-form-item label="联系电话：" prop="phone">
+        <el-input v-model="formData.phone" placeholder="请输入联系电话" maxlength="20" ></el-input>
+      </el-form-item>
+      <el-form-item label="地址：">
+        <el-input v-model="formData.address" placeholder="请输入地址" maxlength="100" ></el-input>
+      </el-form-item>
+      <el-form-item label="资质图片：">
+        <rg-image-uploader v-model="formData.licenseImages" biz-type="supplier" :max="5"></rg-image-uploader>
+      </el-form-item>
+      <el-form-item label="状态：">
+        <el-radio-group v-model="formData.status">
+          <el-radio label="1">启用</el-radio>
+          <el-radio label="0">禁用</el-radio>
+        </el-radio-group>
+      </el-form-item>
+    </el-form>
+  </crud-dialog>
+
+  <!-- ============================================================
+   组件5：crud-dialog — 采购记录弹窗（8.3.3 供应商历史采购，复用 purchaseOrder page 接口；只读，仅有关闭按钮）
+   ============================================================ -->
+  <crud-dialog
+    title="采购记录"
+    :visible.sync="purchaseDialog.visible"
+    size="lg"
+    :show-submit="false"
+    :show-cancel="true"
+    cancel-text="关 闭"
+  >
+    <div v-if="!purchaseLoading && purchaseList.length === 0" class="ds-table-empty">
+      <i class="ri-file-text-line"></i>
+      <p>该供应商暂无采购记录</p>
+    </div>
+    <el-table v-else :data="purchaseList" stripe border size="small" v-loading="purchaseLoading">
+      <el-table-column prop="orderNo" label="采购单号" min-width="160" align="center"></el-table-column>
+      <el-table-column prop="totalAmount" label="金额" width="110" align="center">
+        <template slot-scope="s">¥{{ formatMoney(s.row.totalAmount) }}</template>
+      </el-table-column>
+      <el-table-column prop="status" label="状态" width="110" align="center">
+        <template slot-scope="s">
+          <el-tag :type="purchaseStatusTagType(s.row.status)" size="small">{{ purchaseStatusText(s.row.status) }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="createdTime" label="下单时间" width="160" align="center">
+        <template slot-scope="s">{{ formatDate(s.row.createdTime) }}</template>
+      </el-table-column>
+      <el-table-column prop="remark" label="备注" min-width="120" align="center"></el-table-column>
+    </el-table>
+    <el-pagination
+      v-if="purchaseTotal > 0"
+      layout="total, prev, pager"
+      :total="purchaseTotal"
+      :page-size="purchasePageSize"
+      :current-page.sync="purchasePageNum"
+      @current-change="onPurchasePageChange">
+    </el-pagination>
+  </crud-dialog>
+
+</div>
+  <!-- 引入依赖 -->
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../api/inventory.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#supplier-app',
+      data() {
+        return {
+          // ===== 表格数据 =====
+          loading: false,
+          submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
+          tableData: [],
+          page: 1,
+          pageSize: 10,
+          counts: 0,
+
+          // ===== 搜索条件（由 table-bar 组件管理，此处仅接收） =====
+          searchParams: {},
+
+          // ===== 卡片筛选状态 =====
+          activeStatus: '',
+
+          // ===== 弹窗 =====
+          dialogTitle: '新增供应商',
+          dialogVisible: false,
+          editMode: false,         // false=新增 / true=编辑
+          editId: null,
+          // 修改点：8.3.3 采购记录弹窗
+          purchaseDialog: { title: '采购记录', visible: false },
+          purchaseList: [],
+          purchaseLoading: false,
+          purchaseSupplierId: null,
+          purchasePageNum: 1,
+          purchasePageSize: 10,
+          purchaseTotal: 0,
+
+          // ===== 表单 =====
+          formData: {
+            name: '',
+            contact: '',
+            phone: '',
+            address: '',
+            licenseImages: '',
+            status: '1'
+          },
+          // 名称必填；电话选填，填写则校验手机/座机格式（错误内联显示）
+          formRules: {
+            name: [{ required: true, whitespace: true, message: '请输入供应商名称', trigger: 'blur' }],
+            phone: [{ pattern: /^(1[3-9]\d{9}|0\d{2,3}-?\d{7,8})$/, message: '请输入正确的手机号或座机号', trigger: 'blur' }]
+          },
+
+          // ===== 组件配置 =====
+
+          // 统计卡片配置（差异部分：各页面只需改这个数组）
+          statsData: {
+            totalCount: 0,
+            activeCount: 0,
+            disabledCount: 0,
+            newCount: 0
+          },
+
+          // 搜索栏配置
+          searchConfig: [
+            { type: 'input', field: 'name', placeholder: '供应商名称' },
+            { type: 'input', field: 'contact', placeholder: '联系人', hideSearchIcon: true }
+          ],
+
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'add', text: '+ 新增供应商', type: 'primary' }
+          ],
+
+          // 表格列配置
+          columns: [
+            { prop: 'name', label: '供应商名称', minWidth: 140 },
+            { prop: 'contact', label: '联系人', width: 80, align: 'center' },
+            { prop: 'phone', label: '联系电话', width: 120, align: 'center' },
+            { prop: 'address', label: '地址', minWidth: 120 },
+            { prop: 'license', label: '资质', width: 80, align: 'center', slot: true },
+            // 修改点：8.3.3 采购汇总列（后端按供应商聚合回填 totalPurchaseAmount / purchaseCount）
+            { prop: 'totalPurchaseAmount', label: '累计采购额', width: 110, align: 'center', slot: true, type: 'money' },
+            { prop: 'status', label: '状态', width: 70, align: 'center', slot: true }
+          ]
+        }
+      },
+
+      computed: {
+        /** 将 statsData 映射为 stat-cards 组件所需的 cards 数组 */
+        statsCards() {
+          return [
+            { key: 'all',    label: '供应商总数', value: this.statsData.totalCount,    icon: 'ri-building-line', color: 'primary' },
+            { key: 'active', label: '已启用',     value: this.statsData.activeCount,   icon: 'ri-checkbox-circle-line', color: 'success', clickable: true },
+            { key: 'inactive', label: '已禁用',   value: this.statsData.disabledCount, icon: 'ri-pause-circle-line', color: 'warning', clickable: true },
+            { key: 'new',    label: '本月新增',   value: this.statsData.newCount,       icon: 'ri-user-add-line', color: 'danger' }
+          ]
+        }
+      },
+
+      created() {
+        this.loadData(true)
+      },
+
+      methods: {
+        // ==================== 数据加载 ====================
+
+        /** 主数据加载方法（表格 + 统计）；reloadStats=true 时才重算全局统计 */
+        async loadData(reloadStats = true) {
+          this.loading = true
+
+          // 构造分页查询参数（合并搜索条件与卡片筛选状态）
+          const params = { page: this.page, pageSize: this.pageSize }
+          Object.assign(params, this.searchParams)
+          if (this.activeStatus === 'active') params.status = '1'
+          else if (this.activeStatus === 'inactive') params.status = '0'
+
+          try {
+            // 修改点：F9 性能 — 全局统计（总数/启用/禁用/本月新增）与分页无关，仅 reloadStats 时重算
+            // 本月新增：按本月起止时间区间查询真实 total，避免写死为 0 的假数据
+            const now = new Date()
+            const y = now.getFullYear()
+            const m = String(now.getMonth() + 1).padStart(2, '0')
+            const lastDay = new Date(y, now.getMonth() + 1, 0).getDate()
+            const monthStart = y + '-' + m + '-01 00:00:00'
+            const monthEnd = y + '-' + m + '-' + String(lastDay).padStart(2, '0') + ' 23:59:59'
+            const requests = [supplierPage(params)]
+            if (reloadStats) {
+              requests.push(supplierPage({ page: 1, pageSize: 1 }))
+              requests.push(supplierPage({ page: 1, pageSize: 1, status: '1' }))
+              requests.push(supplierPage({ page: 1, pageSize: 1, status: '0' }))
+              requests.push(supplierPage({ page: 1, pageSize: 1, beginTime: monthStart, endTime: monthEnd }))
+            }
+            const results = await Promise.all(requests)
+            const pageRes = results[0]
+            if (String(pageRes.code) === '1') {
+              this.tableData = pageRes.data.records || []
+              this.counts = Number(pageRes.data.total)
+            } else {
+              ReggieUI.error(pageRes.msg || '加载数据失败')
+            }
+
+            // 从 total 字段直接获取统计数量，无需拉取全量数据再前端过滤
+            if (reloadStats) {
+              const totalRes = results[1], activeRes = results[2], disabledRes = results[3], newRes = results[4]
+              this.statsData = {
+                totalCount: (String(totalRes.code) === '1' && totalRes.data) ? String(totalRes.data.total || 0) : '0',
+                activeCount: (String(activeRes.code) === '1' && activeRes.data) ? String(activeRes.data.total || 0) : '0',
+                disabledCount: (String(disabledRes.code) === '1' && disabledRes.data) ? String(disabledRes.data.total || 0) : '0',
+                newCount: (String(newRes.code) === '1' && newRes.data) ? String(newRes.data.total || 0) : '0'
+              }
+            }
+          } catch (err) {
+            ReggieUI.error('请求失败：' + err)
+          }
+
+          this.loading = false
+        },
+
+        // ==================== table-bar 事件 ====================
+
+        /** 搜索回调：重置页码后查询 */
+        onSearch(searchParams) {
+          this.searchParams = searchParams || {}
+          // 搜索时取消卡片高亮
+          this.activeStatus = ''
+          this.page = 1
+          this.loadData(false)
+        },
+
+        /** 重置回调：清除搜索条件并重新加载 */
+        onReset() {
+          this.searchParams = {}
+          this.activeStatus = ''
+          this.page = 1
+          this.loadData(false)
+        },
+
+        /** 操作按钮回调 */
+        onAction({ key }) {
+          if (key === 'add') {
+            this.openAdd()
+          }
+        },
+
+        // ==================== stat-cards 事件 ====================
+
+        /** 卡片点击筛选 */
+        onStatCardClick({ activeKey }) {
+          // 设置卡片状态作为本次筛选条件
+          this.activeStatus = activeKey || ''
+          // 仅重置搜索栏输入显示（不走 clearSearch：其 doReset 会 emit reset→onReset，
+          // 既会清空 activeStatus 又会额外 loadData，造成同参数并发两次且有竞态）
+          const tb = this.$refs.tableBar
+          if (tb) {
+            tb.searchItems.forEach(item => {
+              this.$set(tb.searchValues, item.field, item.type === 'date' || item.type === 'daterange' ? [] : '')
+            })
+          }
+          this.searchParams = {}
+          this.page = 1
+          this.loadData(false)
+        },
+
+        // ==================== crud-table 事件 ====================
+
+        /** 分页回调 */
+        onPageChange({ page, pageSize }) {
+          this.page = page
+          this.pageSize = pageSize
+          this.loadData(false)
+        },
+
+        onSizeChange(val) {
+          this.pageSize = val
+          this.page = 1
+          this.loadData(false)
+        },
+
+        // ==================== 采购记录弹窗（8.3.3） ====================
+
+        // 资质图片逗号串 → 可访问下载 URL 列表
+        imageList(images) {
+          if (!images) return []
+          return images.split(',').filter(function(x) { return !!x }).map(function(x) { return imgPath(x) })
+        },
+        firstImage(images) {
+          const list = this.imageList(images)
+          return list.length ? list[0] : ''
+        },
+        openPurchases(row) {
+          const self = this
+          self.purchaseDialog.title = '采购记录 - ' + (row.name || '供应商')
+          self.purchaseDialog.visible = true
+          self.purchaseSupplierId = row.id
+          self.purchasePageNum = 1
+          self.loadPurchases()
+        },
+        // 分页拉取供应商采购记录，避免固定只拉一页造成数据被静默截断
+        loadPurchases() {
+          const self = this
+          self.purchaseLoading = true
+          purchasePage({
+            supplierId: self.purchaseSupplierId,
+            page: self.purchasePageNum,
+            pageSize: self.purchasePageSize
+          }).then(function(res) {
+            if (String(res.code) === '1') {
+              self.purchaseList = res.data.records || []
+              self.purchaseTotal = Number(res.data.total) || 0
+            } else {
+              ReggieUI.error(res.msg || '加载采购记录失败')
+            }
+          }).catch(function() {
+            ReggieUI.error('加载采购记录失败')
+          }).finally(function() {
+            self.purchaseLoading = false
+          })
+        },
+        onPurchasePageChange(p) {
+          this.purchasePageNum = p
+          this.loadPurchases()
+        },
+
+        purchaseStatusText(status) {
+          const m = { DRAFT: '草稿', ORDERED: '已下单', PARTIAL: '部分收货', RECEIVED: '已收货', CANCELLED: '已取消' }
+          return m[status] || status || '-'
+        },
+        purchaseStatusTagType(status) {
+          const m = { DRAFT: 'info', ORDERED: 'warning', PARTIAL: 'warning', RECEIVED: 'success', CANCELLED: 'danger' }
+          return m[status] || ''
+        },
+
+        formatDate(d) {
+          if (!d) return '-'
+          return String(d).replace('T', ' ').substring(0, 19)
+        },
+
+        // ==================== 新增/编辑弹窗 ====================
+
+        openAdd() {
+          this.editMode = false
+          this.editId = null
+          this.dialogTitle = '新增供应商'
+          this.formData = { name: '', contact: '', phone: '', address: '', licenseImages: '', status: '1' }
+          this.dialogVisible = true
+        },
+
+        openEdit(row) {
+          this.editMode = true
+          this.editId = row.id
+          this.dialogTitle = '修改供应商'
+          this.formData = {
+            name: row.name || '',
+            contact: row.contact || '',
+            phone: row.phone || '',
+            address: row.address || '',
+            licenseImages: row.licenseImages || '',
+            status: String(row.status || '1')
+          }
+          this.dialogVisible = true
+        },
+
+        /** 表单提交（校验通过后执行保存） */
+        async submitForm() {
+          if (this.submitting) return // 提交防重
+          const self = this
+          try {
+            await new Promise(function(resolve, reject) {
+              self.$refs.supplierForm.validate(function (valid) { valid ? resolve() : reject() })
+            })
+          } catch (e) {
+            return // 校验错误已在字段下方内联提示，不再 toast
+          }
+          self.doSave()
+        },
+
+        /** 执行新增/修改保存 */
+        doSave() {
+          const fd = this.formData
+          const apiCall = this.editMode
+            ? updateSupplier({ id: this.editId, name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, licenseImages: fd.licenseImages, status: fd.status })
+            : addSupplier({ name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, licenseImages: fd.licenseImages, status: fd.status })
+
+          const self = this
+          self.submitting = true
+          apiCall.then(function (res) {
+            self.submitting = false
+            if (res.code === 1) {
+              ReggieUI.success(self.editMode ? '修改成功！' : '添加成功！')
+              self.dialogVisible = false
+              self.loadData()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          }).catch(function (err) {
+            self.submitting = false
+            ReggieUI.error('请求失败：' + err)
+          })
+        },
+
+        resetForm() {
+          if (this.$refs.supplierForm) {
+            this.$refs.supplierForm.resetFields()
+          }
+        },
+
+        // ==================== 删除 ====================
+
+        handleDelete(id) {
+          const self = this
+          ReggieUI.confirm('此操作将永久删除该供应商, 是否继续?', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(function () {
+            deleteSupplier(id).then(function (res) {
+              if (res.code === 1) {
+                ReggieUI.success('删除成功！')
+                // 如果当前页删除后为空，回退一页
+                if (self.tableData.length === 1 && self.page > 1) {
+                  self.page--
+                }
+                self.loadData()
+              } else {
+                ReggieUI.error(res.msg || '操作失败')
+              }
+            }).catch(function (err) {
+              ReggieUI.error('请求失败：' + err)
+            })
+          })
+        },
+        // 批量删除：顺序循环单删（后端仅 DELETE /api/inventory/supplier/{id}）
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '供应商', request: deleteSupplier })
+        },
+        onBatchDeleted() {
+          this.loadData(true)
+        }
+      }
+    })
+  </script>
+</body>
+</html>

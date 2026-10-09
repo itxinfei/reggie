@@ -1,0 +1,111 @@
+package com.reggie.module.auth.model;
+
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.reggie.common.SecurityConstants;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+/**
+ * 员工实体
+ */
+@Data
+@TableName("employee")
+@Schema(description = "员工")
+public class Employee implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    @Schema(description = "员工ID", example = "1")
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
+
+    @Schema(description = "用户名", example = "admin", required = true)
+    @Size(min = 4, max = 20, message = "用户名长度4-20位")
+    private String username;
+
+    @Schema(description = "姓名", example = "张三", required = true)
+    @NotBlank(message = "姓名不能为空")
+    @Size(max = 50, message = "姓名不能超过50位")
+    private String name;
+
+    @JsonIgnore
+    @Schema(description = "密码", example = "123456", required = true)
+    private String password;
+
+    // 修改点：password/passwordType 加 @JsonIgnore，防止 MyBatis-Plus 返回 employee 实体时
+    // 密码明文落日志或被前端序列化泄露。@JsonIgnore 仅影响 Jackson 序列化，
+    // 不影响 MyBatis-Plus 的 insert/updateById（这些操作走列名映射，不走 Jackson）。
+    @JsonIgnore
+    @Schema(description = "密码加密类型", example = "BCRYPT")
+    private String passwordType = SecurityConstants.PASSWORD_TYPE_BCRYPT;
+
+    @Schema(description = "手机号", example = "13800138000")
+    @Pattern(regexp = SecurityConstants.PHONE_PATTERN, message = "手机号格式不正确")
+    @Size(max = 11, message = "手机号不能超过11个字符")
+    private String phone;
+
+    @Schema(description = "性别", example = "1")
+    private String sex = "1";
+
+    @Schema(description = "身份证号码", example = "110101199001011234")
+    private String idNumber = "";
+
+    @Schema(description = "头像图片相对路径", example = "images/avatar/xxx.png")
+    @Size(max = 255, message = "头像路径不能超过255个字符")
+    private String avatar;
+
+    @Schema(description = "工号（租户内唯一）", example = "EMP0001")
+    @Size(max = 32, message = "工号不能超过32个字符")
+    private String jobNumber;
+
+    @Schema(description = "岗位", example = "收银员")
+    @Size(max = 32, message = "岗位不能超过32个字符")
+    private String position;
+
+    @Schema(description = "账号状态：0=禁用，1=正常", example = "1")
+    private Integer status;
+
+    @Schema(description = "角色：1=超级管理员，2=普通员工", example = "2")
+    private Integer role = 2;
+
+    @Schema(description = "部门ID（企业组织架构，可选）", example = "1")
+    private Long departmentId;
+
+    @Schema(description = "租户ID", example = "1")
+    @TableField(fill = FieldFill.INSERT)
+    private Long tenantId;
+
+    @Schema(description = "创建时间", example = "2024-01-01 12:00:00")
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createTime;
+
+    @Schema(description = "更新时间", example = "2024-01-01 12:00:00")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
+
+    // 修改点(P1-1)：RBAC 角色名称（非数据库字段）。employee.role 旧数字字段在 RBAC 改造后
+    // 已不表达管理员身份（全员为 2），直接展示会误导；角色改由 employee_role 关联查询回填。
+    @TableField(exist = false)
+    @Schema(description = "RBAC 角色名称列表（非持久化字段，员工列表展示用）")
+    private java.util.List<String> roleNames;
+
+    @Schema(description = "创建人ID", example = "1")
+    @TableField(fill = FieldFill.INSERT)
+    private Long createUser;
+
+    @Schema(description = "修改人ID", example = "1")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private Long updateUser;
+
+}
+

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>团餐预订 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <style>
+    .gmb-item-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="gmb-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">团餐预订</h1>
+
+      <!-- 搜索 + 操作栏 -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+        :show-refresh="true"
+        @refresh="loadData()"
+      >
+        <template slot="search-extra">
+          <el-select v-model="departmentId" placeholder="按部门筛选" clearable filterable size="small" class="el-select--narrow-xs" @change="loadData()">
+            <el-option v-for="d in departments" :key="d.id" :label="d.name" :value="d.id"></el-option>
+          </el-select>
+        </template>
+      </table-bar>
+
+      <!-- 数据表格 -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :show-actions="true"
+        :actions-width="200"
+        row-key="id"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-departmentName="{ row }">
+          <el-tag v-if="row.departmentName" size="small" type="info">{{ row.departmentName }}</el-tag>
+          <span v-else>全公司</span>
+        </template>
+        <template #col-mealType="{ row }">
+          {{ row.mealType === 'DINNER' ? '晚餐' : '午餐' }}
+        </template>
+        <template #col-totalAmount="{ row }">
+          <span style="font-weight:600;">¥{{ Number(row.totalAmount || 0).toFixed(2) }}</span>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="openDetail(row)">明细</el-button>
+          <el-button v-if="row.status === 0" type="text" size="small" class="btn-view" @click="doStatus(row, 'confirm')">确认</el-button>
+          <el-button v-if="row.status === 1" type="text" size="small" class="btn-view" @click="doStatus(row, 'complete')">完成</el-button>
+          <el-button v-if="row.status === 0 || row.status === 1" type="text" size="small" class="btn-delete" @click="doStatus(row, 'cancel')">取消</el-button>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- 下单弹窗 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      title="团餐下单"
+      :visible.sync="form.visible"
+      :submit-loading="submitting"
+      size="lg"
+      @submit="submitForm"
+      @close="form.visible = false"
+    >
+      <el-form ref="gmbFormRef" :model="form" :rules="rules" label-width="100px" size="small">
+        <el-form-item label="部门" prop="departmentId">
+          <el-select v-model="form.departmentId" placeholder="全公司（可选指定部门）" clearable filterable style="width:100%">
+            <el-option v-for="d in departments" :key="d.id" :label="d.name" :value="d.id"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="联系人" prop="contactName">
+          <el-input v-model="form.contactName" placeholder="请输入联系人" maxlength="50"></el-input>
+        </el-form-item>
+        <el-form-item label="联系电话" prop="contactPhone">
+          <el-input v-model="form.contactPhone" placeholder="请输入联系电话" maxlength="20"></el-input>
+        </el-form-item>
+        <el-form-item label="用餐日期" prop="mealDate">
+          <el-date-picker v-model="form.mealDate" type="date" value-format="yyyy-MM-dd"
+            :picker-options="{ disabledDate(d) { return d.getTime() < Date.now() - 86400000 } }"
+            placeholder="选择用餐日期"></el-date-picker>
+        </el-form-item>
+        <el-form-item label="餐段" prop="mealType">
+          <el-radio-group v-model="form.mealType">
+            <el-radio label="LUNCH">午餐</el-radio>
+            <el-radio label="DINNER">晚餐</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="菜单" prop="items">
+          <div v-for="(it, idx) in form.items" :key="idx" class="gmb-item-row">
+            <el-select v-model="it.itemType" size="small" style="width:100px" @change="it.itemId = null">
+              <el-option label="菜品" value="DISH"></el-option>
+              <el-option label="套餐" value="SETMEAL"></el-option>
+            </el-select>
+            <el-select v-model="it.itemId" size="small" filterable style="flex:1" placeholder="选择条目">
+              <el-option v-for="o in itemOptions(it.itemType)" :key="o.id" :label="o.label" :value="o.id"></el-option>
+            </el-select>
+            <el-input-number v-model="it.quantity" size="small" :min="1" :max="9999" style="width:110px"></el-input-number>
+            <el-button size="small" type="text" class="btn-delete" @click="form.items.splice(idx, 1)"
+              :disabled="form.items.length <= 1">删除</el-button>
+          </div>
+          <el-button size="small" type="text" @click="form.items.push({ itemType: 'DISH', itemId: null, quantity: 10 })">
+            <i class="ri-add-line"></i> 加一条
+          </el-button>
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="选填" maxlength="200"></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- 明细弹窗 -->
+    <crud-dialog
+      title="预订明细"
+      :visible.sync="detailDialog.visible"
+      size="lg"
+      :show-submit="false"
+      @close="detailDialog.visible = false"
+    >
+      <el-descriptions v-if="detailDialog.booking" :column="3" size="small" border style="margin-bottom:12px;">
+        <el-descriptions-item label="部门">{{ detailDialog.booking.departmentName || '全公司' }}</el-descriptions-item>
+        <el-table-column label="用餐日期">{{ detailDialog.booking.mealDate }}</el-table-column>
+        <el-descriptions-item label="餐段">{{ detailDialog.booking.mealType === 'DINNER' ? '晚餐' : '午餐' }}</el-descriptions-item>
+        <el-descriptions-item label="联系人">{{ detailDialog.booking.contactName }}</el-descriptions-item>
+        <el-descriptions-item label="电话">{{ detailDialog.booking.contactPhone }}</el-descriptions-item>
+        <el-descriptions-item label="总金额">¥{{ Number(detailDialog.booking.totalAmount || 0).toFixed(2) }}</el-descriptions-item>
+      </el-descriptions>
+      <el-table :data="detailDialog.items" size="small" max-height="320" v-loading="detailDialog.loading">
+        <el-table-column prop="itemType" label="类型" width="80" align="center">
+          <template slot-scope="{ row }">{{ row.itemType === 'SETMEAL' ? '套餐' : '菜品' }}</template>
+        </el-table-column>
+        <el-table-column prop="itemName" label="名称" min-width="140"></el-table-column>
+        <el-table-column label="单价快照" width="100" align="center">
+          <template slot-scope="{ row }">¥{{ Number(row.price || 0).toFixed(2) }}</template>
+        </el-table-column>
+        <el-table-column prop="quantity" label="份数" width="80" align="center"></el-table-column>
+        <el-table-column label="小计" width="100" align="center">
+          <template slot-scope="{ row }">¥{{ (Number(row.price || 0) * Number(row.quantity || 0)).toFixed(2) }}</template>
+        </el-table-column>
+      </el-table>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../api/dining.js?v=20261006"></script>
+  <script src="../../api/sys.js?v=20261006"></script>
+  <script src="../../api/food.js?v=20260926"></script>
+  <script src="../../api/combo.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#gmb-app',
+      data() {
+        return {
+          loading: false,
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          tableData: [],
+          lastSearch: {},
+          departmentId: null,
+          departments: [],
+          dishOptions: [],
+          setmealOptions: [],
+          searchConfig: [
+            { type: 'select', field: 'status', placeholder: '状态', width: '140px', clearable: true,
+              options: [
+                { label: '待确认', value: 0 },
+                { label: '已确认', value: 1 },
+                { label: '已完成', value: 2 },
+                { label: '已取消', value: 3 }
+              ] }
+          ],
+          actionConfig: [
+            { key: 'create', text: '+ 团餐下单', type: 'primary' }
+          ],
+          columns: [
+            { prop: 'departmentName', label: '部门', width: 110, slot: true },
+            { prop: 'mealDate', label: '用餐日期', width: 110 },
+            { prop: 'mealType', label: '餐段', width: 80, slot: true },
+            { prop: 'contactName', label: '联系人', width: 90 },
+            { prop: 'contactPhone', label: '电话', width: 120 },
+            { prop: 'totalAmount', label: '总金额', width: 100, slot: true },
+            { prop: 'status', label: '状态', width: 90, slot: true },
+            { prop: 'remark', label: '备注', minWidth: 110 }
+          ],
+          form: {
+            visible: false,
+            departmentId: null,
+            contactName: '',
+            contactPhone: '',
+            mealDate: '',
+            mealType: 'LUNCH',
+            remark: '',
+            items: [{ itemType: 'DISH', itemId: null, quantity: 10 }]
+          },
+          submitting: false,
+          rules: {
+            contactName: [{ required: true, whitespace: true, message: '请输入联系人', trigger: 'blur' }],
+            contactPhone: [{ required: true, whitespace: true, message: '请输入联系电话', trigger: 'blur' }],
+            mealDate: [{ required: true, message: '请选择用餐日期', trigger: 'change' }]
+          },
+          detailDialog: { visible: false, loading: false, booking: null, items: [] }
+        }
+      },
+      created() {
+        this.loadData()
+        this.loadDepartments()
+        this.loadItems()
+      },
+      methods: {
+        loadData() {
+          this.loading = true
+          const params = Object.assign({}, this.lastSearch || {}, {
+            page: this.page, pageSize: this.pageSize,
+            departmentId: this.departmentId || undefined
+          })
+          groupMealApi.page(params).then((res) => {
+            if (res && res.code === 1) {
+              this.tableData = (res.data.records || [])
+              this.counts = res.data.total || 0
+            } else {
+              ReggieUI.error((res && res.msg) || '加载团餐预订失败')
+            }
+          }).catch((err) => {
+            if (err.message !== 'NOTLOGIN') ReggieUI.error('加载团餐预订失败，请刷新重试')
+          }).finally(() => { this.loading = false })
+        },
+        loadDepartments() {
+          sysApi.departmentList().then((res) => {
+            if (res && res.code === 1) this.departments = res.data || []
+          }).catch(function () {})
+        },
+        loadItems() {
+          // 菜品/套餐下拉（/dish/list 默认仅返回在售；/setmeal/list 传 status=1）
+          if (typeof queryDishList === 'function') {
+            queryDishList().then((res) => {
+              if (res && res.code === 1) this.dishOptions = (res.data || [])
+            }).catch(function () {})
+          }
+          if (typeof setmealList === 'function') {
+            setmealList().then((res) => {
+              if (res && res.code === 1) this.setmealOptions = (res.data || [])
+            }).catch(function () {})
+          }
+        },
+        itemOptions(type) {
+          const src = type === 'SETMEAL' ? this.setmealOptions : this.dishOptions
+          return (src || []).map(function (x) { return { id: x.id, label: x.name || ('#' + x.id) } })
+        },
+        onSearch(params) {
+          this.lastSearch = params || {}
+          this.page = 1
+          this.loadData()
+        },
+        onReset() {
+          this.lastSearch = {}
+          this.departmentId = null
+          this.page = 1
+          this.loadData()
+        },
+        onAction(key) {
+          if (key === 'create') {
+            this.form.visible = true
+            this.form.mealDate = ''
+            this.form.items = [{ itemType: 'DISH', itemId: null, quantity: 10 }]
+          }
+        },
+        onPageChange(page) {
+          this.page = page
+          this.loadData()
+        },
+        onSizeChange(size) {
+          this.pageSize = size
+          this.page = 1
+          this.loadData()
+        },
+        submitForm() {
+          const self = this
+          this.$refs.gmbFormRef.validate((valid) => {
+            if (!valid) return
+            const items = (self.form.items || []).filter(function (it) { return it.itemId })
+            if (!items.length) {
+              ReggieUI.error('请至少选择一个菜品或套餐')
+              return
+            }
+            self.submitting = true
+            groupMealApi.create({
+              departmentId: self.form.departmentId || null,
+              contactName: self.form.contactName,
+              contactPhone: self.form.contactPhone,
+              mealDate: self.form.mealDate,
+              mealType: self.form.mealType,
+              remark: self.form.remark || null,
+              items: items
+            }).then((res) => {
+              self.submitting = false
+              if (res && res.code === 1) {
+                ReggieUI.success('团餐预订已创建')
+                self.form.visible = false
+                self.loadData()
+              } else {
+                ReggieUI.error((res && res.msg) || '创建失败')
+              }
+            }).catch((err) => {
+              self.submitting = false
+              if (err.message !== 'NOTLOGIN') ReggieUI.error(err.message || '创建失败，请重试')
+            })
+          })
+        },
+        openDetail(row) {
+          this.detailDialog.visible = true
+          this.detailDialog.loading = true
+          this.detailDialog.booking = null
+          this.detailDialog.items = []
+          groupMealApi.detail(row.id).then((res) => {
+            this.detailDialog.loading = false
+            if (res && res.code === 1 && res.data) {
+              this.detailDialog.booking = res.data.booking
+              this.detailDialog.items = res.data.items || []
+            } else {
+              ReggieUI.error((res && res.msg) || '明细加载失败')
+            }
+          }).catch(() => { this.detailDialog.loading = false })
+        },
+        doStatus(row, action) {
+          const tips = { confirm: '确认该团餐预订？', complete: '标记该预订为已完成？', cancel: '取消该团餐预订？' }
+          ReggieUI.confirm(tips[action], '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+            .then(() => {
+              groupMealApi[action](row.id).then((res) => {
+                if (res && res.code === 1) {
+                  ReggieUI.success(res.data || '操作成功')
+                  this.loadData()
+                } else {
+                  ReggieUI.error((res && res.msg) || '操作失败')
+                }
+              })
+            }).catch(function (err) {
+              if (err instanceof Error) ReggieUI.error(err.message || '操作失败')
+            })
+        },
+        statusLabel(s) {
+          return { 0: '待确认', 1: '已确认', 2: '已完成', 3: '已取消' }[s] || s
+        },
+        statusTagType(s) {
+          return { 0: 'warning', 1: 'success', 2: 'info', 3: 'danger' }[s] || 'info'
+        }
+      }
+    })
+  </script>
+</body>
+</html>

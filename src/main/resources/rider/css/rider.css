@@ -1,0 +1,480 @@
+/* ================================================================
+   骑手端样式（消费 shared/styles/tokens.css 跨端令牌）
+
+   - 配色 / 字号阶 / 圆角 / 阴影 全面对齐 C端，保证跨端视觉统一、易维护；
+   - 保留骑手工作台的布局骨架：全宽主按钮、大触控高度、卡片外边距不改动；
+   - 新增按钮按压态与过渡，户外操作反馈更明确。
+   ================================================================ */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-page);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-base);
+}
+
+.rider-page {
+  min-height: 100%;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+}
+
+/* ---- 卡片 ---- */
+.rider-card {
+  background: var(--bg-card);
+  margin: 10px;
+  border-radius: var(--radius-md);
+  padding: 14px 12px;
+  box-shadow: var(--shadow-card);
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+
+.card-title .bar {
+  display: inline-block;
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--color-primary);
+  margin-right: 8px;
+}
+
+.card-title.deliver .bar { background: var(--color-text-primary); }
+
+/* ---- 信息行 ---- */
+.info-row {
+  display: flex;
+  align-items: flex-start;
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.info-row .label {
+  flex: 0 0 64px;
+  color: var(--color-text-secondary);
+}
+
+.info-row .val {
+  flex: 1;
+  word-break: break-all;
+}
+
+.info-row .val.strong {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+.row-tools {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tool-btn {
+  flex: 1;
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-md);
+  padding: 0;
+  text-decoration: none;
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
+}
+
+.tool-btn.primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary-gradient);
+  color: var(--color-primary-text);
+  font-weight: 600;
+  box-shadow: 0 2px 8px var(--color-primary-shadow);
+}
+
+/* ---- 全宽主操作 ---- */
+.rider-actions {
+  margin: 10px;
+}
+
+.rider-actions .rider-btn {
+  width: 100%;
+  height: 50px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
+}
+
+.rider-btn.primary {
+  background: var(--color-primary-gradient);
+  color: var(--color-primary-text);
+  box-shadow: 0 4px 12px var(--color-primary-shadow);
+}
+
+.rider-btn.ghost {
+  background: var(--bg-card);
+  color: var(--color-text-primary);
+  border: 1px solid var(--border-light);
+}
+
+.rider-btn + .rider-btn { margin-top: 10px; }
+
+/* 按压反馈 + 禁用态：户外戴手套也能感知是否点中 */
+.rider-btn:active,
+.tool-btn:active { transform: scale(0.97); }
+
+.rider-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- 列表卡片 ---- */
+.task-card {
+  background: var(--bg-card);
+  margin: 10px;
+  border-radius: var(--radius-md);
+  padding: 12px;
+  box-shadow: var(--shadow-card);
+}
+
+.task-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.task-number { font-weight: 700; font-size: var(--font-size-lg); }
+
+.task-amount {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.task-line {
+  color: var(--color-text-secondary);
+  margin: 4px 0;
+  line-height: 1.5;
+}
+
+.task-line .addr { color: var(--color-text-primary); }
+
+.task-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  border-top: 1px solid var(--border-light);
+  padding-top: 10px;
+}
+
+.task-time { color: var(--color-text-hint); font-size: var(--font-size-sm); }
+
+/* ---- 空态 ---- */
+.rider-empty {
+  text-align: center;
+  color: var(--color-text-hint);
+  padding: 60px 20px;
+}
+
+/* ---- 登录页 ---- */
+.login-wrap {
+  padding: 24px 20px;
+}
+
+.login-title {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  margin: 10px 0 4px;
+}
+
+.login-sub {
+  color: var(--color-text-secondary);
+  margin-bottom: 24px;
+}
+
+.login-tip {
+  margin-top: 16px;
+  color: var(--color-text-hint);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+/* 登录辅助行：记住我 + 忘记密码（功能布局，默认字色与品牌主色） */
+.login-extra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 14px 10px 0;
+  font-size: var(--font-size-sm);
+}
+
+.forgot-link,
+.code-link {
+  color: var(--color-primary-text-strong);
+}
+
+.code-link.disabled {
+  color: var(--color-text-hint);
+}
+
+/* 顶部状态条：当前骑手与上下线 */
+.rider-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.rider-statusbar .who { font-weight: 600; }
+.rider-statusbar .who small { color: var(--color-text-secondary); font-weight: 400; margin-left: 6px; }
+
+/* 底部固定「抢单大厅」入口 */
+/* 底部操作条：4 个次级入口一行 + 主 CTA（进入抢单大厅）固定底部 */
+.rider-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-light);
+  box-shadow: var(--shadow-bar-top);
+}
+.income-entries {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.income-entry { flex: 1; min-width: 0; }
+.income-entry .rider-btn { width: 100%; font-size: var(--font-size-sm); padding: 0 4px; }
+.hall-entry .rider-btn { width: 100%; }
+
+/* 底部固定条为双行（4 入口 + 主 CTA，约 108px），预留高度须随之放大，
+   否则最后一张任务卡的「确认接单」会被条子压住 */
+.rider-page.has-bar { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
+
+/* 列表卡片内的小按钮 */
+.mini-btn {
+  min-width: 104px;
+  height: 36px;
+  line-height: 36px;
+  text-align: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background: var(--bg-card);
+  font-size: var(--font-size-sm);
+  padding: 0 12px;
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
+}
+
+.mini-btn.primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary-gradient);
+  color: var(--color-primary-text);
+  font-weight: 600;
+  box-shadow: 0 2px 8px var(--color-primary-shadow);
+}
+
+.mini-btn:active { transform: scale(0.97); }
+
+/* 联系门店/顾客的 RemixIcon 与文字对齐 */
+.tool-btn .ri-phone-line,
+.tool-btn i {
+  vertical-align: -1px;
+  margin-right: 2px;
+}
+
+/* ================================================================
+   内联 style 收口（由各 HTML 的 style 属性迁入，视觉保持不变）
+   ================================================================ */
+/* 订单概览卡：紧凑任务头 */
+.rider-card .task-head { margin-bottom: 4px; }
+/* 金额行右对齐加粗 + 内含配送费说明 */
+.amount-val { text-align: right; font-weight: 700; }
+.amount-val small { color: var(--color-text-secondary); font-weight: 400; }
+/* 卡片内操作按钮区：仅顶间距 */
+.rider-card .rider-actions { margin: 12px 0 0; }
+/* 已送达时间提示 */
+.delivered-note { margin-top: 12px; color: var(--color-text-secondary); text-align: center; }
+/* 抢单卡片内按钮区 */
+.task-card .rider-actions { margin: 10px 0 0; }
+/* 空态次级提示 */
+.empty-sub { font-size: var(--font-size-sm); margin-top: 8px; }
+/* 导航/状态条文字 */
+.nav-logout { font-size: var(--font-size-md); }
+.online-label { margin-right: 8px; font-size: var(--font-size-md); }
+.history-status { font-size: var(--font-size-sm); color: var(--color-text-hint); }
+
+/* ================================================================
+   骑手异常上报 / 转单弹窗（P0-3，2026-09-28）
+   ================================================================ */
+.exc-pop { padding: 18px 16px 24px; }
+.exc-pop .exc-title { font-size: var(--font-size-lg); font-weight: 600; color: var(--color-text-primary); margin-bottom: 14px; }
+.exc-pop .exc-types { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.exc-pop .exc-type {
+  padding: 6px 12px; border-radius: 16px; font-size: var(--font-size-sm);
+  background: var(--bg-hover); color: var(--color-text-secondary); cursor: pointer;
+}
+.exc-pop .exc-type.on { background: var(--color-primary-tint); color: var(--color-primary-text-strong); }
+.exc-pop .exc-actions { display: flex; gap: 12px; margin-top: 16px; }
+.exc-pop .tr-list { max-height: 40vh; overflow-y: auto; margin-bottom: 8px; }
+.exc-pop .tr-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px; border-radius: 10px; margin-bottom: 8px; cursor: pointer;
+  background: var(--bg-hover); color: var(--color-text-primary);
+}
+.exc-pop .tr-item.on { background: var(--color-primary-tint); color: var(--color-primary-text-strong); }
+
+/* 取餐核销提示（P0-6） */
+.pickup-code-tip {
+  margin-top: 8px; text-align: center;
+  font-size: var(--font-size-sm); color: var(--color-text-hint);
+}
+
+/* 消息中心未读角标（P0-4） */
+.msg-badge {
+  display: inline-block; min-width: 18px; height: 18px; line-height: 18px;
+  margin-left: 6px; padding: 0 5px; border-radius: 9px;
+  background: var(--color-danger); color: var(--color-text-white);
+  font-size: var(--font-size-sm); text-align: center; vertical-align: middle;
+}
+.exc-pop .tr-item small { color: var(--color-text-hint); }
+/* 登录页：主按钮贴左右、无侧间距 */
+.login-wrap .rider-actions { margin-left: 0; margin-right: 0; }
+
+/* 尊重系统“减少动态”设置：关闭按压缩放 */
+@media (prefers-reduced-motion: reduce) {
+  .rider-btn, .tool-btn, .mini-btn { transition: none; }
+  .rider-btn:active, .tool-btn:active, .mini-btn:active { transform: none; }
+}
+
+/* a11y：统一键盘焦点环（P0 修复：骑手端原无任何焦点样式，键盘/读屏用户无法定位焦点）
+   文字链接型控件（忘记密码/获取验证码/退出）改为 <button> 后去除默认外观，保留文字链接观感 */
+:focus-visible {
+  outline: 2px solid var(--color-primary-text-strong);
+  outline-offset: 2px;
+}
+
+/* a11y：顶部安全区（P2 修复：刘海/状态栏机型 nav-bar 不再被遮挡，viewport-fit=cover 已启用） */
+.van-nav-bar {
+  padding-top: env(safe-area-inset-top);
+}
+/* a11y：屏幕阅读器专用（视觉隐藏但保留语义），用于 landmark 隐藏标题层级 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 视觉一致性：Vant 主按钮统一为品牌深金（决策：深金过 AA），消除蓝/金混用（P2）
+   深金 #955f00（--color-primary-text-strong）配白字 5.38:1，过 WCAG AA 正文 4.5:1；
+   选项举例的 #b8860b 仅 3.26:1（只过大字号），故取更深金确保正文也达标。
+   排除 plain 变体（否则实心金会盖掉描边样式）；plain 改为深金描边 + 深金字。 */
+.van-button--primary:not(.van-button--plain) {
+  background-color: var(--color-primary-text-strong, #955f00);
+  border-color: var(--color-primary-text-strong, #955f00);
+  color: #fff;
+}
+.van-button--primary:not(.van-button--plain):active {
+  background-color: #7a4f00;
+  border-color: #7a4f00;
+}
+.van-button--primary.van-button--plain {
+  color: var(--color-primary-text-strong, #955f00);
+  border-color: var(--color-primary-text-strong, #955f00);
+  background-color: transparent;
+}
+button.forgot-link, button.code-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--color-primary-text-strong);
+  cursor: pointer;
+}
+button.code-link.disabled { color: var(--color-text-hint, #999); cursor: not-allowed; }
+button.nav-logout {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ================================================================
+   品牌金主题与卡片层次（渐变/阴影已合并回各组件主定义，此处只保留
+   无法归入组件的主题覆盖与交互装饰）
+   ================================================================ */
+
+/* Vant Tabs：选中下划线与文字由默认红改为品牌金 */
+.van-tabs__line { background: var(--color-primary); }
+.van-tab.van-tab--active { color: var(--color-primary-text-strong); font-weight: 600; }
+
+/* 任务卡左侧状态竖条（绝对定位装饰，不占内容、不引起位移）：
+   待接单/配送中金色，已完成灰色，已取消/已退款不显示 */
+.task-card { position: relative; }
+.task-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 12px; bottom: 12px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--color-primary-gradient);
+}
+.task-card.task-st-4::before { background: var(--color-text-hint); }
+.task-card.task-st-5::before,
+.task-card.task-st-6::before { display: none; }
+
+/* 桌面端 hover：卡片轻微抬升（移动端无 hover，不影响） */
+@media (hover: hover) {
+  .rider-card, .task-card { transition: box-shadow 0.2s ease, transform 0.2s ease; }
+  .rider-card:hover, .task-card:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-1px);
+  }
+}
+
+/* 导航标题更明确 */
+.van-nav-bar__title { font-weight: 600; }
+/* 蓝金族补漏(2026-09-30 实测)：骑手端走 van-nav-bar/van-switch，Vant 默认蓝 #1989fa
+   与品牌冲突——返回箭头/右侧操作文字改深棕金，接单开关开启态改品牌金 */
+.van-nav-bar .van-icon,
+.van-nav-bar__text { color: var(--color-primary-text-strong); }
+.van-switch--on { background-color: var(--color-primary); border-color: var(--color-primary); }
+.hall-entry .rider-btn { border-radius: var(--radius-md); }
+
+/* 错误态重试按钮：居中等宽，不使用列表全宽规格 */
+.retry-btn {
+  width: 180px;
+  height: 40px;
+  margin: 16px auto 0;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+}

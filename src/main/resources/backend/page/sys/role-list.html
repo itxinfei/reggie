@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>角色管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <style>
+    /* 权限树弹窗 */
+    .perm-tree-dialog .el-tree { max-height: 400px; overflow-y: auto; border: 1px solid var(--el-border-light); border-radius: var(--radius-sm); padding: 10px; }
+    .perm-tree-dialog .el-tree-node__content { height: 32px; }
+    .perm-tree-dialog .el-tree-node__label { font-size:var(--font-size-sm); }
+    .perm-header { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .perm-header:hover .perm-header__name { color: var(--el-color-primary); }
+    .perm-header .el-tag { margin: 0; }
+    .perm-header__icon--module { color: var(--el-color-primary); }
+    .perm-header__icon--menu { color: var(--color-info); }
+    .perm-header__icon--btn { color: var(--el-color-warning); }
+    /* 权限树工具栏：搜索 + 类型筛选 + 快捷勾选 + 展开切换 */
+    .perm-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .perm-toolbar__info { flex: none; font-size: var(--font-size-sm); color: var(--el-text-regular); white-space: nowrap; }
+    .perm-toolbar__info strong { margin-left: 2px; }
+    .perm-toolbar__count { margin-left: 8px; }
+    .perm-toolbar__search { flex: 1; }
+    .perm-toolbar__types { flex: none; }
+    /* 权限树底部摘要 */
+    .perm-footer { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--el-border-light); }
+    .perm-footer__summary { font-size: var(--font-size-sm); color: var(--el-text-regular); }
+    .perm-footer__summary b { color: var(--el-color-primary); font-weight: 600; }
+    .perm-footer__tip { margin-top: 4px; font-size: var(--font-size-xs); color: var(--text-secondary); }
+    /* 分配用户弹窗：transfer 自适应拉宽 */
+    .perm-user-dialog .el-transfer { display: flex; align-items: stretch; }
+    .perm-user-dialog .el-transfer-panel { width: 42%; }
+    .perm-user-dialog .el-transfer-panel__list { min-height: 320px; }
+    .perm-user-dialog .el-transfer__buttons { padding: 0 8px; }
+    .perm-user-tip { margin-bottom: 12px; font-size: var(--font-size-sm); color: var(--text-secondary); }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <div class="dashboard-container" id="role-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">角色管理</h1>
+      
+      
+      <!-- 数据统计卡片 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
+
+      <!-- 搜索 + 操作栏 -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+        :show-refresh="true"
+        @refresh="loadData()"
+      ></table-bar>
+
+      <!-- 数据表格 -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :show-actions="true"
+        :actions-width="240"
+        row-key="id"
+        :batch-delete="doBatchDelete"
+        @batch-deleted="init(true)"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-roleKey="{ row }">
+          <el-tag size="small" type="info">{{ row.roleKey }}</el-tag>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="row.status == 1 ? 'success' : 'danger'" size="small">
+            {{ row.status == 1 ? '启用' : '禁用' }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="openPermDialog(row)">权限分配</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="openUserDialog(row)">分配用户</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="openDialog(row)">编辑</el-button>
+          <el-dropdown trigger="click" @command="(cmd) => cmd === 'delete' && deleteHandle(row.id)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- 新增/编辑弹窗 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :title="formData.title"
+      :visible.sync="formData.dialogVisible"
+      :submit-loading="submitting"
+      size="md"
+      @submit="submitForm"
+      @close="formData.dialogVisible = false"
+    >
+      <!-- 修改点：补全 ref/:model/:rules，启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
+      <el-form ref="roleForm" :model="formData" :rules="roleRules" label-width="100px" size="small">
+        <el-form-item label="角色名称" prop="roleName">
+          <el-input v-model="formData.roleName" placeholder="如：店长"></el-input>
+        </el-form-item>
+        <el-form-item label="角色标识" prop="roleKey">
+          <el-input v-model="formData.roleKey" placeholder="如：manager（英文）"></el-input>
+        </el-form-item>
+        <el-form-item label="描述">
+          <el-input v-model="formData.description" type="textarea" :rows="2"></el-input>
+        </el-form-item>
+        <el-form-item label="排序">
+          <el-input-number v-model="formData.sort" :min="0" :max="999"></el-input-number>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-radio-group v-model="formData.status">
+            <el-radio :label="1">启用</el-radio>
+            <el-radio :label="0">禁用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- 权限分配弹窗（专注权限树：搜索 + 类型筛选 + 快捷勾选 + 半选计数） -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :title="permDialogTitle"
+      :visible.sync="permDialogVisible"
+      size="lg"
+      :submit-loading="permSubmitting"
+      custom-class="perm-tree-dialog"
+      :close-on-click-modal="false"
+      @submit="submitPerms"
+      @close="closePermDialog"
+    >
+      <div class="perm-toolbar">
+        <div class="perm-toolbar__info">
+          当前角色：<strong>{{ currentRole ? currentRole.roleName : '' }}</strong>
+          <span class="perm-toolbar__count">已选 <el-tag type="success" size="small">{{ checkedCount }}</el-tag> 项</span>
+        </div>
+        <el-radio-group v-model="permTypeFilter" size="small" class="perm-toolbar__types">
+          <el-radio-button label="">全部</el-radio-button>
+          <el-radio-button label="1">仅菜单</el-radio-button>
+          <el-radio-button label="2">仅按钮</el-radio-button>
+        </el-radio-group>
+      </div>
+      <div class="perm-toolbar">
+        <el-input
+          ref="permSearch"
+          class="perm-toolbar__search"
+          v-model="permFilterText"
+          size="small"
+          clearable
+          prefix-icon="ri-search-line"
+          placeholder="搜索权限名称或标识"
+        ></el-input>
+        <el-button size="small" @click="toggleExpand">{{ expanded ? '折叠全部' : '展开全部' }}</el-button>
+        <el-button size="small" type="primary" plain @click="quickSelect('all')">全选</el-button>
+        <el-button type="text" size="small" @click="quickSelect('clear')">清空已选</el-button>
+      </div>
+      <el-tree
+        ref="permTree"
+        :data="permTreeData"
+        show-checkbox
+        node-key="id"
+        :default-expand-all="expanded"
+        :default-checked-keys="checkedPerms"
+        :filter-node-method="filterPermNode"
+        :props="{ children: 'children', label: 'permissionName' }"
+        @check="handleCheck">
+        <template slot-scope="{ data }">
+          <span class="perm-header" @click.stop="toggleNodeCheck(data)">
+            <i :class="nodeIcon(data)" class="perm-header__icon"></i>
+            <span class="perm-header__name">{{ data.permissionName }}</span>
+            <el-tag v-if="data.permissionType == 2" type="warning" size="small" effect="plain">{{ data.permissionKey || '按钮' }}</el-tag>
+            <el-tag v-else-if="data.permissionKey" type="info" size="small" effect="plain">{{ data.permissionKey }}</el-tag>
+          </span>
+        </template>
+      </el-tree>
+      <div class="perm-footer">
+        <div class="perm-footer__summary">
+          已勾选：菜单 <b>{{ checkedMenuCount }}</b> 项 · 按钮 <b>{{ checkedBtnCount }}</b> 项
+          <template v-if="halfCheckedCount > 0">（另有 <b>{{ halfCheckedCount }}</b> 个模块部分选中）</template>
+        </div>
+        <div class="perm-footer__tip">点击页面/按钮权限名称可直接勾选，点击模块名称展开/收起；勾选模块 = 授予其下所有权限，父级部分勾选时以子项为准。</div>
+      </div>
+      <div slot="footer" class="dialog-footer">
+        <el-button size="medium" @click="closePermDialog">取 消</el-button>
+        <el-button type="primary" size="medium" :loading="permSubmitting" :disabled="!permsReady" @click="submitPerms">确 定</el-button>
+      </div>
+    </crud-dialog>
+
+    <!-- 分配用户弹窗（独立：专注 员工↔角色 穿梭框） -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :title="userDialogTitle"
+      :visible.sync="userDialogVisible"
+      size="md"
+      :submit-loading="userSubmitting"
+      custom-class="perm-user-dialog"
+      :close-on-click-modal="false"
+      @submit="submitUsers"
+      @close="closeUserDialog"
+    >
+      <div class="perm-user-tip">
+        当前角色：<strong>{{ currentRole ? currentRole.roleName : '' }}</strong> · 已分配 <b>{{ checkedUserIds.length }}</b> 人（一个员工可分配多个角色，左→右添加）
+      </div>
+      <el-transfer
+        filterable
+        :filter-method="filterEmployee"
+        filter-placeholder="搜索员工姓名"
+        v-model="checkedUserIds"
+        :data="userTransferData"
+        :titles="['未分配', '已分配']"
+        :button-texts="['移除', '添加']"
+        target-order="push">
+      </el-transfer>
+      <div slot="footer" class="dialog-footer">
+        <el-button size="medium" @click="closeUserDialog">取 消</el-button>
+        <el-button type="primary" size="medium" :loading="userSubmitting" :disabled="!usersLoaded" @click="submitUsers">确 定</el-button>
+      </div>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../api/sys.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#role-app',
+      data() {
+        return {
+          loading: false,
+          counts: 0,
+          page: 1,
+          pageSize: 10,
+          tableData: [],
+          // 统计数据
+          stats: { total: 0, enabled: 0, disabled: 0, withPerms: 0 },
+          activeFilter: '',
+          lastSearch: {},
+          submitting: false,
+          // 搜索配置
+          searchConfig: [
+            { type: 'select', field: 'roleName', placeholder: '角色名称', width: '180px',
+              options: [],
+              loading: false,
+              filterable: true,
+              dynamicOptions: true }
+          ],
+          // 操作按钮配置
+          actionConfig: [
+            { key: 'add', text: '+ 新增角色', type: 'primary' }
+          ],
+          // 表格列配置
+          columns: [
+            { prop: 'roleName', label: '角色名称', width: 120, align: 'center' },
+            { prop: 'roleKey', label: '角色标识', width: 100, align: 'center', slot: true },
+            { prop: 'description', label: '描述', minWidth: 120 },
+            { prop: 'sort', label: '排序', width: 60, align: 'center' },
+            { prop: 'status', label: '状态', width: 70, align: 'center', slot: true }
+          ],
+          // 弹窗表单
+          formData: {
+            title: '新增角色',
+            dialogVisible: false,
+            id: null, roleName: '', roleKey: '', description: '', sort: 0, status: 1
+          },
+          // 修改点：角色表单校验规则（配合 el-form :rules + validate()）
+          roleRules: {
+            roleName: [{ required: true, whitespace: true, message: '请输入角色名称', trigger: 'blur' }],
+            roleKey: [{ required: true, whitespace: true, message: '请输入角色标识', trigger: 'blur' }]
+          },
+          // 权限分配
+          permDialogVisible: false,
+          permSubmitting: false,
+          currentRole: null,
+          permTreeData: [],
+          checkedPerms: [],
+          checkedCount: 0,
+          checkedMenuCount: 0,
+          checkedBtnCount: 0,
+          halfCheckedCount: 0,
+          permFilterText: '',
+          permTypeFilter: '',
+          expanded: true,
+          // 数据加载成功标志：未加载成功前禁用「确定」，防止用空权限/空成员覆盖
+          permTreeLoaded: false,
+          rolePermsLoaded: false,
+          // 分配用户（独立弹窗：el-transfer 用户↔角色）
+          userDialogVisible: false,
+          userSubmitting: false,
+          userTransferData: [],
+          checkedUserIds: [],
+          usersLoaded: false
+        }
+      },
+      created() {
+        this.loadData()
+        this.loadRoleOptions()
+      },
+      computed: {
+        statsCards: function() {
+          const self = this
+          return [
+            { key: '', icon: 'ri-group-line', label: '角色总数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+            { key: 'enabled', icon: 'ri-checkbox-circle-line', label: '已启用', value: self.stats.enabled || 0, color: 'success', clickable: true, active: self.activeFilter === 'enabled' },
+            { key: 'disabled', icon: 'ri-pause-circle-line', label: '已禁用', value: self.stats.disabled || 0, color: 'warning', clickable: true, active: self.activeFilter === 'disabled' },
+            { key: 'withPerms', icon: 'ri-lock-2-line', label: '已分配权限', value: self.stats.withPerms || 0, color: 'info', clickable: false, active: self.activeFilter === 'withPerms' }
+          ]
+        },
+        // 弹窗标题带角色名，便于多弹窗区分
+        permDialogTitle: function() {
+          return '权限分配' + (this.currentRole ? ' · ' + this.currentRole.roleName : '')
+        },
+        userDialogTitle: function() {
+          return '分配用户' + (this.currentRole ? ' · ' + this.currentRole.roleName : '')
+        },
+        // 权限树与角色已有权限均加载成功，才允许提交权限分配
+        permsReady: function() {
+          return this.permTreeLoaded && this.rolePermsLoaded
+        }
+      },
+      watch: {
+        permFilterText: function() {
+          this.filterTree()
+        },
+        permTypeFilter: function() {
+          this.filterTree()
+        }
+      },
+      methods: {
+        // 修改点：F9 性能 — 全局角色统计不随翻页重算，仅 reloadStats 时纳入 Promise.all
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '角色', request: sysApi.roleDelete })
+        },
+        async init(reloadStats = true) {
+          this.loading = true
+          try {
+            const ls = this.lastSearch || {}
+            const params = Object.assign({}, ls, { page: this.page, pageSize: this.pageSize })
+            const requests = [sysApi.rolePage(params)]
+            if (reloadStats) { requests.push(this.loadRoleStats()) }
+            const results = await Promise.all(requests)
+            const roleRes = results[0]
+            if (roleRes && roleRes.code === 1) {
+              this.tableData = roleRes.data.records || []
+              this.counts = roleRes.data.total || 0
+            } else {
+              // 修改点：接口失败兜底提示（原无 else 分支静默）
+              ReggieUI.error((roleRes && roleRes.msg) || '加载角色列表失败')
+            }
+            if (reloadStats) {
+              const statsRes = results[1]
+              if (statsRes && statsRes.code === 1) {
+                this.stats = Object.assign({}, this.stats, statsRes.data  || {})
+              }
+            }
+          } catch (err) {
+            if (err.message !== 'NOTLOGIN') {
+              ReggieUI.error('加载角色列表失败，请刷新重试')
+            }
+          } finally {
+            this.loading = false
+          }
+        },
+        async loadRoleStats() {
+          try {
+            // 修改点：改为调用后端 /sys/role/stats SQL 聚合接口，避免 pageSize:999 拉全量遍历 withPerms
+            const res = await sysApi.roleStats()
+            if (String(res.code) === '1' && res.data) {
+              const d = res.data
+              return {
+                code: 1,
+                data: {
+                  total: Number(d.total) || 0,
+                  enabled: Number(d.enabled) || 0,
+                  disabled: Number(d.disabled) || 0,
+                  withPerms: Number(d.withPerms) || 0
+                }
+              }
+            }
+          } catch (err) { console.warn('加载角色统计失败:', err) }
+          return { code: 0 }
+        },
+        async loadRoleOptions() {
+          const self = this
+          var searchItem = self.searchConfig.find(function(s) { return s.field === 'roleName' })
+          if (searchItem) searchItem.loading = true
+          try {
+            const res = await sysApi.roleOptions()
+            if (String(res.code) === '1' && res.data) {
+              var options = (res.data.names || []).map(function(n) {
+                return { label: n, value: n }
+              })
+              if (searchItem) searchItem.options = options
+            }
+          } catch (err) {
+            if (err.message !== 'NOTLOGIN') ReggieUI.error('加载角色选项失败')
+          } finally {
+            if (searchItem) searchItem.loading = false
+          }
+        },
+        loadData() {
+          this.init(true)
+        },
+        // stat-cards 点击
+        onCardClick: function(payload) {
+          const self = this
+          if (payload.key === '') {
+            self.activeFilter = ''
+          } else {
+            self.activeFilter = payload.activeKey
+          }
+          self.lastSearch = self.activeFilter ? this.buildFilterParams(self.activeFilter) : {}
+          self.page = 1
+          this.init(false)
+        },
+        buildFilterParams(key) {
+          if (key === 'enabled') return { status: '1' }
+          if (key === 'disabled') return { status: '0' }
+          return {}
+        },
+        // table-bar 回调
+        onSearch(searchParams) {
+          this.activeFilter = ''
+          this.lastSearch = searchParams
+          this.page = 1
+          this.init(false)
+        },
+        onReset() {
+          this.activeFilter = ''
+          this.lastSearch = {}
+          this.page = 1
+          this.init(false)
+        },
+        onAction(payload) {
+          if (payload.key === 'add') this.openDialog()
+        },
+        onPageChange(payload) {
+          this.page = payload.page
+          this.init(false)
+        },
+        onSizeChange(payload) {
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
+          this.init(false)
+        },
+        openDialog(row) {
+          if (row) {
+            this.formData.title = '编辑角色'
+            this.formData = Object.assign({}, this.formData, JSON.parse(JSON.stringify(row)))
+          } else {
+            this.formData.title = '新增角色'
+            this.formData = { title: '新增角色', dialogVisible: true, id: null, roleName: '', roleKey: '', description: '', sort: 0, status: 1 }
+          }
+          this.formData.dialogVisible = true
+        },
+        submitForm() {
+          const self = this
+          self.$refs.roleForm.validate(function(valid) {
+            if (!valid) {
+              ReggieUI.warning('请填写角色名称和标识')
+              return
+            }
+            self.submitting = true
+            const api = self.formData.id ? sysApi.roleUpdate(self.formData) : sysApi.roleAdd(self.formData)
+            api.then(function(res) {
+              if (res && res.code === 1) {
+                ReggieUI.success(res.msg || '操作成功')
+                self.formData.dialogVisible = false
+                self.init()
+              } else {
+                ReggieUI.error(res ? res.msg : '操作失败')
+              }
+            }).catch(function() { ReggieUI.error('操作失败') })
+              .finally(function() { self.submitting = false })
+          })
+        },
+        deleteHandle(id) {
+          const self = this
+          ReggieUI.confirm('确定删除该角色吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+            .then(function() {
+              sysApi.roleDelete(id).then(function(res) {
+                if (res && res.code === 1) {
+                  ReggieUI.success('删除成功')
+                  self.init()
+                }
+              })
+            }).catch(function(err) {
+              // request.js 对业务失败 reject(new Error(msg))，需明确提示；用户点取消 reject('cancel')，静默
+              if (err instanceof Error) { ReggieUI.error(err.message || '删除失败') }
+            })
+        },
+        // ========== 权限分配（权限树） ==========
+        openPermDialog(row) {
+          this.currentRole = row
+          this.permDialogVisible = true
+          this.permFilterText = ''
+          this.permTypeFilter = ''
+          this.expanded = true
+          this.checkedCount = 0
+          this.checkedMenuCount = 0
+          this.checkedBtnCount = 0
+          this.halfCheckedCount = 0
+          this.permTreeLoaded = false
+          this.rolePermsLoaded = false
+          this.permTreeData = []
+          this.checkedPerms = []
+          this.loadPermTree()
+          this.loadRolePerms(row.id)
+          const self = this
+          this.$nextTick(function() {
+            if (self.$refs.permSearch) { self.$refs.permSearch.focus() }
+          })
+        },
+        closePermDialog() {
+          this.permDialogVisible = false
+          this.permFilterText = ''
+        },
+        // ========== 分配用户（员工↔角色） ==========
+        openUserDialog(row) {
+          this.currentRole = row
+          this.userDialogVisible = true
+          this.usersLoaded = false
+          this.userTransferData = []
+          this.checkedUserIds = []
+          this.loadRoleUsers(row.id)
+        },
+        closeUserDialog() {
+          this.userDialogVisible = false
+        },
+        loadPermTree() {
+          const self = this
+          sysApi.permissionTree().then(function(res) {
+            if (res && res.code === 1) {
+              self.permTreeData = self.buildTree(res.data || [])
+              self.permTreeLoaded = true
+            } else {
+              ReggieUI.error((res && res.msg) || '加载权限树失败')
+            }
+          }).catch(function() {
+            ReggieUI.error('加载权限树失败')
+          })
+        },
+        buildTree(flatList) {
+          const map = new Map()
+          const roots = []
+          flatList.forEach(function(item) {
+            map.set(item.id, Object.assign({}, item, { children: [] }))
+          })
+          flatList.forEach(function(item) {
+            if (item.parentId == 0) {
+              roots.push(map.get(item.id))
+            } else {
+              const parent = map.get(item.parentId)
+              if (parent) {
+                parent.children.push(map.get(item.id))
+              }
+            }
+          })
+          return roots
+        },
+        loadRolePerms(roleId) {
+          const self = this
+          sysApi.rolePermissions(roleId).then(function(res) {
+            if (res && res.code === 1) {
+              self.checkedPerms = res.data || []
+              self.rolePermsLoaded = true
+              self.$nextTick(function() {
+                if (self.$refs.permTree) {
+                  self.$refs.permTree.setCheckedKeys(self.checkedPerms)
+                  // setCheckedKeys 不触发 @check，手动刷新计数（含半选父级）
+                  self.handleCheck()
+                }
+              })
+            } else {
+              ReggieUI.error((res && res.msg) || '加载角色权限失败')
+            }
+          }).catch(function() {
+            ReggieUI.error('加载角色权限失败')
+          })
+        },
+        loadRoleUsers(roleId) {
+          const self = this
+          sysApi.roleUsers(roleId).then(function(res) {
+            if (res && res.code === 1) {
+              const data = res.data || {}
+              const employees = data.employees || []
+              // el-transfer data 格式：{ key, label, disabled }
+              self.userTransferData = employees.map(function(e) {
+                return { key: e.id, label: e.name, disabled: false }
+              })
+              // 右栏初始值：已分配员工ID
+              self.checkedUserIds = (data.assignedUserIds || []).slice()
+              self.usersLoaded = true
+            } else {
+              ReggieUI.error((res && res.msg) || '加载角色成员失败')
+            }
+          }).catch(function() {
+            ReggieUI.error('加载角色成员失败')
+          })
+        },
+        filterEmployee(query, item) {
+          return item.label.indexOf(query) > -1
+        },
+        // 权限树过滤：名称/标识关键词 + 类型筛选（匹配节点的父级由 Element 自动向上传播显示）
+        filterPermNode(value, data) {
+          var kw = (value || '').trim()
+          var typeOk = this.permTypeFilter === '' || String(data.permissionType) === String(this.permTypeFilter)
+          if (!typeOk) { return false }
+          if (!kw) { return true }
+          return data.permissionName.indexOf(kw) > -1 || (data.permissionKey || '').indexOf(kw) > -1
+        },
+        // 过滤条件变化后刷新树，并保证匹配项可见
+        filterTree() {
+          var tree = this.$refs.permTree
+          if (!tree) { return }
+          tree.filter(this.permFilterText || '')
+          var self = this
+          this.$nextTick(function() {
+            // 搜索/类型筛选生效时展开全部保证可见；清除后按用户展开状态恢复
+            if (self.permFilterText || self.permTypeFilter) {
+              self.setAllNodeExpanded(true)
+            } else {
+              self.setAllNodeExpanded(self.expanded)
+            }
+          })
+        },
+        // 展开/折叠全部（统一走 this.expanded 状态）
+        toggleExpand() {
+          this.expanded = !this.expanded
+          this.setAllNodeExpanded(this.expanded)
+        },
+        setAllNodeExpanded(expanded) {
+          var tree = this.$refs.permTree
+          if (!tree) { return }
+          var nodesMap = tree.store.nodesMap
+          Object.keys(nodesMap).forEach(function(key) {
+            var node = nodesMap[key]
+            if (!node) { return }
+            if (expanded) { node.expand() } else { node.collapse() }
+          })
+        },
+        // 点击节点名称：叶子=切换勾选，父级=展开/收起（setChecked 不触发 @check，须手动刷新计数）
+        toggleNodeCheck(data) {
+          var tree = this.$refs.permTree
+          if (!tree) { return }
+          var node = tree.store.nodesMap[data.id]
+          if (!node) { return }
+          if (data.children && data.children.length) {
+            if (node.expanded) { node.collapse() } else { node.expand() }
+            return
+          }
+          tree.setChecked(data.id, !node.checked, false)
+          this.handleCheck()
+        },
+        // 节点图标：模块 / 菜单页 / 按钮
+        nodeIcon(data) {
+          if (data.permissionType == 2) { return 'ri-more-line perm-header__icon--btn' }
+          if (data.children && data.children.length) { return 'ri-folder-line perm-header__icon--module' }
+          return 'ri-file-text-line perm-header__icon--menu'
+        },
+        // 拍平权限树为数组
+        flatNodes(nodes) {
+          var out = []
+          var walk = function(list) {
+            list.forEach(function(n) {
+              out.push(n)
+              if (n.children && n.children.length) { walk(n.children) }
+            })
+          }
+          walk(nodes)
+          return out
+        },
+        // 快捷勾选：all=一键授满全部权限 / clear=清空已选
+        // 说明：父子联动模式下"仅选菜单不含按钮"无法表达（父级 checked 必级联子项），
+        // 按模块勾选请用模块前的复选框（天然级联其下所有页面与按钮），避免误导性半选丢权限。
+        quickSelect(mode) {
+          var tree = this.$refs.permTree
+          if (!tree) { return }
+          if (mode === 'clear') {
+            tree.setCheckedKeys([])
+            this.handleCheck()
+            return
+          }
+          var all = this.flatNodes(this.permTreeData)
+          // setCheckedKeys 勾选父节点会级联其全部子节点，一次授满
+          tree.setCheckedKeys(all.map(function(n) { return n.id }))
+          this.handleCheck()
+        },
+        // 勾选变化：全选节点落库，半选父级仅计数展示；按菜单/按钮拆分明细
+        handleCheck() {
+          var tree = this.$refs.permTree
+          if (!tree) { return }
+          var checkedKeys = tree.getCheckedKeys()
+          var halfKeys = tree.getHalfCheckedKeys()
+          this.checkedPerms = checkedKeys.slice()
+          this.checkedCount = checkedKeys.length + halfKeys.length
+          this.halfCheckedCount = halfKeys.length
+          var ids = {}
+          checkedKeys.concat(halfKeys).forEach(function(id) { ids[id] = true })
+          var menu = 0
+          var btn = 0
+          this.flatNodes(this.permTreeData).forEach(function(n) {
+            if (!ids[n.id]) { return }
+            if (n.permissionType == 1) { menu++ } else if (n.permissionType == 2) { btn++ }
+          })
+          this.checkedMenuCount = menu
+          this.checkedBtnCount = btn
+        },
+        submitPerms() {
+          if (!this.permsReady) { ReggieUI.error('权限数据尚未加载完成，请稍后重试') ; return }
+          const keys = this.$refs.permTree ? this.$refs.permTree.getCheckedKeys() : this.checkedPerms
+          this.permSubmitting = true
+          const self = this
+          sysApi.assignPermissions(this.currentRole.id, keys).then(function(res) {
+            if (res && res.code === 1) {
+              ReggieUI.success('权限分配成功')
+              self.permDialogVisible = false
+              self.permFilterText = ''
+            } else {
+              ReggieUI.error(res ? res.msg : '操作失败')
+            }
+          }).catch(function() { ReggieUI.error('操作失败') })
+            .finally(function() { self.permSubmitting = false })
+        },
+        // 用户分配提交
+        submitUsers() {
+          if (!this.currentRole) { return }
+          if (!this.usersLoaded) { ReggieUI.error('成员数据尚未加载完成，请稍后重试') ; return }
+          this.userSubmitting = true
+          const self = this
+          sysApi.assignRoleUsers(this.currentRole.id, this.checkedUserIds.slice()).then(function(res) {
+            if (res && res.code === 1) {
+              ReggieUI.success('用户分配成功')
+              self.userDialogVisible = false
+            } else {
+              ReggieUI.error(res ? res.msg : '操作失败')
+            }
+          }).catch(function() { ReggieUI.error('操作失败') })
+            .finally(function() { self.userSubmitting = false })
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

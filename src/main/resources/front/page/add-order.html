@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+        <title>确认订单 - 瑞吉外卖</title>
+        <link rel="icon" href="./../images/favico.ico">
+        <!--不同屏幕尺寸根字体设置-->
+        <script src="./../js/base.js?v=20260930"></script>
+        <!--引入vant样式-->
+        <link rel="stylesheet" href="../styles/vant.min.css"/>
+        <!-- 引入样式  -->
+        <link rel="stylesheet" href="../styles/index.css?v=20260930b" />
+        <link rel="stylesheet" href="../styles/skeleton.css?v=20260930" />
+        <!--本页面内容的样式-->
+        <!-- 修改点：加载 RemixIcon 真字体（emoji 兜底改由 js/icon-fallback.js 按需注入） -->
+        <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+        <script src="../js/icon-fallback.js?v=20260917"></script>
+        <link rel="stylesheet" href="./../styles/add-order.css?v=20260930b" />
+        <link rel="stylesheet" href="./../styles/add-order-pay.css?v=20260930b" />
+    </head>
+    <body>
+        <!-- 修改点：移除ElementUI v-loading，改用CSS加载遮罩 -->
+        <div id="add_order" class="app relative">
+            <div v-if="loading" class="loading-overlay">
+                <!-- 修改点：全局 .loading-overlay 为 absolute 定位，需定位父级限定作用范围 -->
+                <div class="loading-spinner"></div>
+            </div>
+            <cend-shell title="确认订单">
+            <div class="divContent">
+                <!-- 修改点(P1-2 自提)：履约方式切换（配送 / 到店自提），复用 mode-tabs 样式 -->
+                <div class="mode-tabs fulfillment-tabs" v-if="!reorderId">
+                    <div class="mode-tab" :class="{active: fulfillmentMode === 0}" @click="fulfillmentMode = 0">
+                        <i class="ri-bike-line"></i> 配送上门
+                    </div>
+                    <div class="mode-tab" :class="{active: fulfillmentMode === 1}" @click="fulfillmentMode = 1">
+                        <i class="ri-shopping-bag-3-line"></i> 到店自提
+                    </div>
+                </div>
+                <div class="divAddress" v-if="fulfillmentMode === 0">
+                    <div @click="toAddressPage">                    
+                        <div class="address">{{ addressFull }}</div>
+                        <div class="name">
+                            <!-- 后端 sex 返回数字 1/0，用宽松比较兼容数字与字符串（严格 === '1' 会把先生误判成女士） -->
+                            <span>{{address.consignee}}{{address.sex == 1 ? '先生':'女士'}}</span>
+                            <span>{{address.phone}}</span>
+                        </div>
+                        <i class="ri-arrow-right-s-line"></i>
+                    </div>
+                    <div class="divSplit"></div>
+                    <!-- 修改点：配送方式选择（立即/预约） -->
+                    <div class="delivery-mode" v-if="fulfillmentMode === 0">
+                        <div class="mode-tabs">
+                            <div class="mode-tab" :class="{active: deliveryMode === 0}" @click="deliveryMode = 0">
+                                <i class="ri-run-line"></i> 立即配送
+                            </div>
+                            <div class="mode-tab" :class="{active: deliveryMode === 1}" @click="deliveryMode = 1">
+                                <i class="ri-calendar-line"></i> 预约配送
+                            </div>
+                        </div>
+                        <!-- 不可下单（超配送范围/未达起送价/无地址）：就地明示原因，不再承诺无法兑现的送达时间 -->
+                        <div class="divFinishTime finish-time--blocked" v-if="blockedReason">
+                            <i class="ri-error-warning-line"></i>
+                            <span>{{ blockedReason }}</span>
+                        </div>
+                        <!-- 立即配送：选择时段 -->
+                        <div class="divFinishTime" v-else-if="deliveryMode === 0" @click="showTimePicker = true">
+                            <!-- "预计"由 selectedTimeLabel 自带，模板不再重复拼接（曾出现"预计预计"） -->
+                            {{ selectedTimeLabel }}
+                            <i class="ri-arrow-right-s-line finish-time-arrow"></i>
+                        </div>
+                        <!-- 预约配送：选择日期时间 -->
+                        <div class="divFinishTime" v-else-if="deliveryMode === 1" @click="showSchedulePicker = true">
+                            {{ scheduleLabel }}
+                            <i class="ri-arrow-right-s-line finish-time-arrow"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 修改点(P1-2 自提)：自提提示须放在 divAddress 外，
+                     否则外层 v-if mode===0 会把它一起隐藏，自提页什么提示都没有 -->
+                <div class="self-pickup-tip" v-if="fulfillmentMode === 1" style="display:flex;align-items:center;gap:10px;padding:14px;background:var(--selfpickup-tip-bg);border:1px solid var(--selfpickup-tip-border);border-radius:10px;margin:10px 0;">
+                    <i class="ri-map-pin-line" style="font-size:22px;color:var(--color-success);"></i>
+                    <div>
+                        <div class="spt-title" style="font-weight:600;color:var(--color-success);">到店自提</div>
+                        <div class="spt-desc" style="font-size:12px;color:var(--color-text-secondary);">下单后到店向店员出示取餐码即可取餐，无需配送</div>
+                    </div>
+                </div>
+
+                <!-- 送达时间选择弹窗（立即配送） -->
+                <van-popup v-model="showTimePicker" position="bottom" :style="{ height: '40%' }" :close-on-click-overlay="true" class="time-picker-popup">
+                    <div class="time-picker-title">
+                        <span>选择送达时段</span>
+                        <span class="time-picker-close" @click="showTimePicker = false">✕</span>
+                    </div>
+                    <div class="time-picker-list">
+                        <div
+                            v-for="(t, idx) in timeOptions"
+                            :key="idx"
+                            class="time-picker-item"
+                            :class="{active: selectedTimeIdx === idx}"
+                            @click="selectTime(idx)">
+                            <div class="tm-label">{{ t.label }}</div>
+                            <div class="tm-time">{{ t.time }}</div>
+                            <i class="tm-check" v-if="selectedTimeIdx === idx">✓</i>
+                        </div>
+                    </div>
+                </van-popup>
+
+                <!-- 预约配送：日期时间选择弹窗 -->
+                <van-popup v-model="showSchedulePicker" position="bottom" :style="{ height: '50%' }" :close-on-click-overlay="true" class="schedule-picker-popup">
+                    <div class="time-picker-title">
+                        <span>选择预约送达时间</span>
+                        <span class="time-picker-close" @click="showSchedulePicker = false">✕</span>
+                    </div>
+                    <div class="schedule-picker-body">
+                        <div class="schedule-date-row">
+                            <span class="schedule-label">日期</span>
+                            <van-datetime-picker
+                                v-model="scheduleDate"
+                                type="date"
+                                :min-date="minScheduleDate()"
+                                :max-date="maxScheduleDate()"
+                                :formatter="dateFormatter"
+                                @confirm="onScheduleDateConfirm"
+                                @cancel="showSchedulePicker = false"
+                            />
+                        </div>
+                        <div class="schedule-time-row">
+                            <span class="schedule-label">时段</span>
+                            <div class="schedule-time-list">
+                                <div class="schedule-time-item"
+                                     v-for="slot in scheduleTimeSlots"
+                                     :key="slot.value"
+                                     :class="{active: selectedScheduleSlot === slot.value}"
+                                     @click="selectedScheduleSlot = slot.value">
+                                    <div class="slot-label">{{ slot.label }}</div>
+                                    <div class="slot-time">{{ slot.time }}</div>
+                                    <i class="tm-check" v-if="selectedScheduleSlot === slot.value">✓</i>
+                                </div>
+                            </div>
+                        </div>
+                        <van-button type="primary" block round class="schedule-confirm-btn" @click="confirmSchedule">确定</van-button>
+                    </div>
+                </van-popup>
+                <div class="order">
+                    <div class="title">订单明细</div>
+                    <div class="divSplit"></div>
+                    <div class="itemList">
+                        <div class="item" v-for="item in visibleItems" :key="cartItemKey(item)">
+                            <!-- 修改点：el-image替换为原生img，错误时显示占位图 -->
+                            <img :src="imgPath(item.image)" @error="imgError" class="dish-image" :alt="item.name || '菜品'" loading="lazy" />
+                            <div class="desc">
+                                <div class="name">{{item.name}}<span class="flash-tag" v-if="item.flashSaleId">秒杀</span></div>
+                                <div class="numPrice">
+                                    <span class="num">x{{item.number}}</span>
+                                    <div class="price">
+                                        <span class="spanMoney">¥</span>{{ (Number(item.amount) || 0).toFixed(2) }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                    </div>
+                    <!-- 明细按商品种类计行，单位用"种"；"件"专指数量合计 -->
+                    <div class="items-toggle" v-if="detailView.length > 3" @click="itemsExpanded = !itemsExpanded">
+                        {{ itemsExpanded ? '收起' : ('展开全部 ' + detailView.length + ' 种') }}
+                        <i :class="itemsExpanded ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                    </div>
+                    <!-- 赠品明细（0 元，买赠活动命中） -->
+                    <div class="gift-item" v-for="(g,i) in (pricing ? pricing.gifts : [])" :key="'gift'+i">
+                        <span class="gift-name">{{g.name}}<span class="gift-tag">赠</span></span>
+                        <span class="gift-num">x{{g.quantity}}</span>
+                    </div>
+                </div>
+                <div class="note" v-if="!reorderId">
+                    <div class="title">备注</div>
+                    <van-field
+                        v-model="note"
+                        rows="2"
+                        autosize
+                        type="textarea"
+                        maxlength="50"
+                        placeholder="请输入您需要备注的信息"
+                        show-word-limit
+                    />
+                </div>
+
+                <!-- 支付方式 -->
+                <div class="pay-method">
+                    <div class="title">支付方式</div>
+                    <div class="pay-options">
+                        <!-- 支付方式值对齐权威枚举：2=微信支付，3=支付宝，6=货到付款 -->
+                        <div class="pay-option" :class="{active: payMethod === 2}" @click="payMethod = 2">
+                            <span class="pay-icon pay-wechat-icon"><i class="ri-wechat-fill"></i></span>
+                            <span class="pay-text">微信支付</span>
+                            <i class="pay-check" v-if="payMethod === 2">✓</i>
+                        </div>
+                        <div class="pay-option" :class="{active: payMethod === 3}" @click="payMethod = 3">
+                            <span class="pay-icon pay-alipay-icon"><i class="ri-alipay-fill"></i></span>
+                            <span class="pay-text">支付宝</span>
+                            <i class="pay-check" v-if="payMethod === 3">✓</i>
+                        </div>
+                        <div class="pay-option" v-if="!reorderId" :class="{active: payMethod === 6}" @click="payMethod = 6">
+                            <span class="pay-icon pay-cod-icon"><i class="ri-wallet-line"></i></span>
+                            <span class="pay-text">货到付款</span>
+                            <i class="pay-check" v-if="payMethod === 6">✓</i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 餐具选择（对齐美团环保提示） -->
+                <div class="utensils-section" v-if="!reorderId">
+                    <div class="title">餐具数量</div>
+                    <div class="utensils-options">
+                        <div class="utensils-btn" :class="{active: utensils === 0}" @click="utensils = 0">无需餐具</div>
+                        <div class="utensils-btn" :class="{active: utensils === n}" v-for="n in 4" :key="n" @click="utensils = n">{{n}}餐具</div>
+                    </div>
+                    <div class="utensils-tip" v-if="utensils === 0">
+                        <i class="ri-leaf-line"></i> 感谢您为环保做出的贡献
+                    </div>
+                </div>
+
+                <!-- 价格明细（对齐美团独立区块） -->
+                <div class="price-breakdown">
+                    <div class="title">价格明细</div>
+                    <div class="price-row">
+                        <span>商品小计</span>
+                        <span>¥{{Number(goodsPrice || 0).toFixed(2)}}</span>
+                    </div>
+                    <div class="price-row">
+                        <span>配送费</span>
+                        <span>¥{{Number(deliveryFee || 0).toFixed(2)}}</span>
+                    </div>
+                    <div class="price-row discount" v-if="frDiscount > 0">
+                        <span>满减优惠</span>
+                        <span>-¥{{Number(frDiscount || 0).toFixed(2)}}</span>
+                    </div>
+                    <div class="price-row discount" v-if="ncDiscount > 0">
+                        <span>新客立减</span>
+                        <span>-¥{{Number(ncDiscount || 0).toFixed(2)}}</span>
+                    </div>
+                    <div class="price-row discount" v-if="couponDiscount > 0">
+                        <span>优惠券</span>
+                        <span>-¥{{Number(couponDiscount || 0).toFixed(2)}}</span>
+                    </div>
+                    <!-- 修改点(2026-09-17)：新增实付合计行 —— 最终金额不再只藏在底部栏小字 -->
+                    <div class="price-row total">
+                        <span>实付</span>
+                        <span>¥{{Number(finalPrice || 0).toFixed(2)}}</span>
+                    </div>
+                </div>
+
+                <!-- 优惠券：由平铺改为入口行，点击底部弹层选择 -->
+                <div class="coupon-section" v-if="!reorderId" @click="couponPopupVisible = true">
+                    <span class="coupon-entry-label">优惠券</span>
+                    <span class="coupon-entry-state" :class="{active: selectedCoupon}">{{ couponEntryText }}</span>
+                    <i class="ri-arrow-right-s-line coupon-entry-arrow"></i>
+                </div>
+
+            <!-- 优惠券选择弹层 -->
+            <van-popup v-model="couponPopupVisible" position="bottom" round :style="{ maxHeight: '75vh' }"
+                       role="dialog" aria-modal="true" aria-label="选择优惠券">
+              <div class="coupon-popup">
+                <div class="coupon-popup-header">
+                  <span class="coupon-popup-title">选择优惠券</span>
+                  <i class="ri-close-line coupon-popup-close" @click="couponPopupVisible = false"></i>
+                </div>
+                <div class="coupon-list">
+                  <div class="coupon-loading" v-if="couponLoading || !couponsLoaded">加载中…</div>
+                  <div class="coupon-empty" v-else-if="couponList.length === 0">
+                    暂无可用优惠券，去 <a href="javascript:void(0)" @click="goMemberCenter">领券</a>
+                  </div>
+                  <div class="coupon-card"
+                       v-for="coupon in couponList"
+                       :key="coupon.id"
+                       :class="{active: selectedCoupon && selectedCoupon.id === coupon.id}"
+                       @click="selectCoupon(coupon); couponPopupVisible = false">
+                    <div class="coupon-left">
+                      <span class="coupon-amount">¥{{ Number(coupon.discountAmount || 0).toFixed(2) }}</span>
+                      <span class="coupon-condition">满¥{{ Number(coupon.conditionAmount || 0).toFixed(2) }}可用</span>
+                    </div>
+                    <div class="coupon-right">
+                      <div class="coupon-name">{{ coupon.templateName }}</div>
+                      <div class="coupon-desc">过期：{{ coupon.expireTime }}</div>
+                    </div>
+                    <i class="coupon-check" v-if="selectedCoupon && selectedCoupon.id === coupon.id">✓</i>
+                  </div>
+                </div>
+                <div class="coupon-no-use" @click="selectCoupon(null); couponPopupVisible = false" v-if="selectedCoupon">
+                  不使用优惠券
+                </div>
+              </div>
+            </van-popup>
+
+            <!-- 已选商品清单弹层（点击底部购物车图标展开） -->
+            <van-popup v-model="itemsPopupVisible" position="bottom" round :style="{ maxHeight: '70vh' }"
+                       role="dialog" aria-modal="true" aria-label="已选商品">
+              <div class="items-popup">
+                <div class="items-popup-header">
+                  <span class="items-popup-title">已选商品</span>
+                  <i class="ri-close-line items-popup-close" @click="itemsPopupVisible = false"></i>
+                </div>
+                <div class="items-popup-list">
+                  <div class="items-popup-item" v-for="(item,index) in cartData" :key="'pi'+index">
+                    <img :src="imgPath(item.image)" @error="imgError" class="pi-thumb" :alt="item.name || '菜品'" loading="lazy" />
+                    <div class="pi-info">
+                      <div class="pi-name">{{ item.name }}<span class="flash-tag" v-if="item.flashSaleId">秒杀</span></div>
+                      <div class="pi-meta" v-if="item.dishFlavor">{{ item.dishFlavor }}</div>
+                    </div>
+                    <span class="pi-num">x{{ item.number }}</span>
+                    <span class="pi-amount"><span class="spanMoney">¥</span>{{ (Number(item.amount) || 0).toFixed(2) }}</span>
+                  </div>
+                </div>
+              </div>
+            </van-popup>
+            </div>
+            <div class="divCart">
+                <div class="cart-entry" :class="{active: cartData && cartData.length > 0}" @click="openItemsPopup">
+                  <i class="ri-shopping-cart-2-fill"></i>
+                  <div class="divGoodsNum" :class="{moreGoods: goodsNum === '99+'}" v-if="cartData && cartData.length > 0">{{ goodsNum }}</div>
+                </div>
+                <div class="divNum">
+                    <span class="num-symbol">¥</span>
+                    <span class="num-main">{{ finalPrice.toFixed(2) }}</span>
+                    <span class="divDiscount" v-if="deliveryFee > 0">含配送费¥{{ Number(deliveryFee).toFixed(2) }}</span>
+                    <span class="divDiscount" v-if="discountAmount > 0">已优惠¥{{ Number(discountAmount).toFixed(2) }}</span>
+                </div>
+                <div class="divPrice"></div>
+                <!-- 修改点(2026-09-17 UX)：提交中按钮文案变为"支付中…"，配合 isLoading 样式给出明确提交反馈 -->
+                <div :class="{btnSubmitActive: !feeBlocked && (reorderId || (cartData && cartData.length > 0)), btnSubmit: feeBlocked || (!reorderId && (!cartData || cartData.length < 1)), isLoading: loading}" @click="goToPaySuccess">{{ submitBtnText }}</div>
+              </div>
+        </div>
+            </cend-shell>
+        <!-- 开发环境版本，包含了有帮助的命令行警告 -->
+        <script src="../../backend/plugins/vue/vue.js"></script>
+        <!-- 引入vant -->
+        <script src="./../js/vant.min.js"></script>
+        <script src="./../js/components-cend.js?v=20260922"></script>      
+        <script src="./../api/address.js?v=20260917"></script>
+        <!-- 引入axios -->
+        <script src="../../backend/plugins/axios/axios.min.js"></script>
+        <script src="./../js/request.js?v=20260930"></script>
+        <script src="./../js/common.js?v=20260930b"></script>
+        <script src="./../api/main.js?v=20260917"></script>
+        <script src="./../api/order.js?v=20260925"></script>
+        <script src="./../api/coupon.js?v=20260917"></script>
+        <script src="./../api/payment.js?v=20260917"></script>
+        <script src="./../api/marketing.js?v=20260921"></script>
+        <script>
+            new Vue({
+                el:"#add_order",
+                data(){
+                    return {
+                        address:{
+                            phone:'',//手机号
+                            consignee:'',//姓名
+                            detail:'',//详细地址
+                            provinceName:'',// 修改点：省
+                            cityName:'',// 修改点：市
+                            districtName:'',// 修改点：区
+                            sex:'1',
+                            id:undefined
+                        },
+                        finishTime:'',//送达时间
+                        cartData:[],
+                        note:'',//备注信息
+                        loading:false,
+                        // 修改点(2026-09-17 UX)：下单幂等键——每次进入结算页生成一次，网络失败重试/快速双击
+                        // 复用同一键交由后端幂等去重；原实现每次点击 Date.now() 生成新键，幂等机制完全失效
+                        idempotencyKey:'',
+                        // 支付方式 — 权威枚举：2=微信，3=支付宝，6=货到付款
+                        // 修改点(2026-09-17)：默认值 6(货到付款) → 2(微信)，对齐美团/饿了么「默认在线支付」
+                        // 的行业惯例——货到付款会让新客在未付款状态下直接提交订单，影响支付转化与履约。
+                        // 若支付渠道未配置导致下单失败，可将其改回 6 或改为 3(支付宝)。
+                        payMethod: 2,
+                        // 餐具数量（0=无需餐具，1-4=对应数量）
+                        utensils: 1,
+                        // 修改点（P2-11）：订单列表「去支付」跳转携带的待付款订单 ID（reorderId）
+                        reorderId: null,
+                        // 修改点（P1-1）：续付订单的真实应付金额（取自订单，不前端重算）
+                        orderAmount: null,
+                        // 优惠券列表及选中项
+                        couponList:[],
+                        selectedCoupon:null,
+                        couponLoading:false,
+                        // 修改点：是否已完成过一次可用券加载——区分「冷启动尚未加载」与「加载完确实无券」
+                        couponsLoaded:false,
+                        // 配送方式：0=立即配送，1=预约配送
+                        deliveryMode: 0,
+                        // 修改点(P1-2 自提)：履约方式：0=配送上门，1=到店自提
+                        fulfillmentMode: 0,
+                        // 结算预览（/api/order/preview）：确认页价格/赠品/配送范围的唯一数据源
+                        pricing: null,
+                        previewLoading: false,
+                        // 修改点：预览请求序号——并发预览时只采纳最新一次响应，丢弃过期结果（防快速切配送/自提显错价）
+                        previewSeq: 0,
+                        // 上次预览签名（地址|券|总件数），签名不变不重复请求
+                        lastPreviewSig: '',
+                        // 已按某商品金额加载过可用券（金额不变不重复拉券）
+                        couponsLoadedForAmount: '',
+                        // 送达时间选择（立即配送）
+                        showTimePicker: false,
+                        selectedTimeIdx: 0,
+                        timeOptions: [
+                            { label: '尽快送达', time: '' },
+                            { label: '约30分钟', time: '' },
+                            { label: '约40分钟', time: '' },
+                            { label: '约50分钟', time: '' },
+                            { label: '约60分钟', time: '' }
+                        ],
+                        // 预约配送
+                        showSchedulePicker: false,
+                        scheduleDate: null,
+                        selectedScheduleSlot: 'LUNCH',
+                        // 修改点(2026-09-17 UX)：时段按一天时间顺序排列（原 午餐→晚餐→下午茶→早餐 乱序）
+                        scheduleTimeSlots: [
+                            { value: 'MORNING', label: '早餐', time: '07:30-09:00' },
+                            { value: 'LUNCH', label: '午餐', time: '11:30-12:30' },
+                            { value: 'AFTERNOON', label: '下午茶', time: '14:00-16:00' },
+                            { value: 'DINNER', label: '晚餐', time: '17:30-19:00' }
+                        ],
+                        // 优惠券选择弹层 / 已选商品清单弹层 / 订单明细是否展开全部
+                        couponPopupVisible: false,
+                        itemsPopupVisible: false,
+                        itemsExpanded: false
+                    }
+                },
+                watch:{
+                    // 切换配送/自提：履约方式影响配送费与 source，需重算结算预览
+                    fulfillmentMode(){
+                        this.maybeLoadPreview()
+                    }
+                },
+                computed:{
+                    goodsNum(){
+                        let num = 0
+                        this.cartData.forEach(item=>{
+                            num += item.number 
+                        })
+                        if(num <99){
+                            return num
+                        }else{
+                            return '99+'
+                        }
+                    },
+                    goodsPrice(){
+                        // 预览就绪以服务端核价（含秒杀替换）为唯一基数；未就绪用购物车本地合计兜底
+                        if(this.pricing){
+                            return Number(this.pricing.goodsAmount) || 0
+                        }
+                        let price = 0
+                        this.cartData.forEach(item=>{
+                            price += (item.number * item.amount)
+                        })
+                        return Math.round(price * 100) / 100
+                    },
+                    // 订单明细渲染数据：优先用预览（带秒杀价/秒杀标记），否则直接用购物车
+                    detailView(){
+                        if(this.pricing && Array.isArray(this.pricing.details) && this.pricing.details.length){
+                            return this.pricing.details.map(function(d){
+                                return {
+                                    name: d.name,
+                                    image: d.image,
+                                    number: d.quantity,
+                                    amount: d.lineAmount,
+                                    flashSaleId: d.flashSaleId,
+                                    flashSaleName: d.flashSaleName,
+                                    lineSavings: d.lineSavings
+                                }
+                            })
+                        }
+                        return this.cartData
+                    },
+                    // 折叠时仅显示前 3 件，展开后显示全部
+                    visibleItems(){
+                        return this.itemsExpanded ? this.detailView : this.detailView.slice(0, 3)
+                    },
+                    // 优惠券入口行右侧状态文案
+                    couponEntryText(){
+                        if(this.couponLoading){ return '加载中…' }
+                        if(!this.couponList.length){ return '暂无可用优惠券' }
+                        if(this.selectedCoupon){ return '已选 ¥' + Number(this.selectedCoupon.discountAmount || 0).toFixed(2) + ' 优惠券' }
+                        return this.couponList.length + ' 张优惠券可用'
+                    },
+                    // 配送费（服务端按地址+距离核价）
+                    deliveryFee(){
+                        return this.pricing ? (Number(this.pricing.deliveryFee) || 0) : 0
+                    },
+                    // 满减优惠
+                    frDiscount(){
+                        return (this.pricing && this.pricing.fullReduction)
+                                ? (Number(this.pricing.fullReduction.amount) || 0) : 0
+                    },
+                    // 新客立减
+                    ncDiscount(){
+                        return (this.pricing && this.pricing.newCustomer)
+                                ? (Number(this.pricing.newCustomer.amount) || 0) : 0
+                    },
+                    // 优惠券实际抵扣
+                    couponDiscount(){
+                        return (this.pricing && this.pricing.coupon)
+                                ? (Number(this.pricing.coupon.amount) || 0) : 0
+                    },
+                    // 起送差价（服务端同源：minOrderAmount - goodsAmount，与首页购物车条"还差¥X起送"一致）
+                    minOrderGap(){
+                        if(!this.pricing){ return 0 }
+                        const min = Number(this.pricing.minOrderAmount) || 0
+                        if(min <= 0) return 0
+                        const gap = min - (Number(this.goodsPrice) || 0)
+                        return gap > 0 ? gap : 0
+                    },
+                    // 是否阻断下单（不可用原因/未达起送价/超出配送范围）
+                    feeBlocked(){
+                        if(this.reorderId){ return false }
+                        // 服务端核价未就绪时先阻断：避免起送价/配送范围/优惠未算清时抢跑提交
+                        if(this.previewLoading || !this.pricing){ return true }
+                        const p = this.pricing
+                        if(p.unavailableReason){ return true }
+                        if(p.belowMinOrder){ return true }
+                        if(p.rangeChecked && !p.inRange){ return true }
+                        return false
+                    },
+                    feeMessage(){
+                        if(this.reorderId){ return '' }
+                        if(this.previewLoading || !this.pricing){ return '金额核算中，请稍候' }
+                        const p = this.pricing
+                        if(p.unavailableReason){ return p.unavailableReason }
+                        if(p.belowMinOrder){
+                            return this.minOrderGap > 0 ? '还差 ¥' + this.minOrderGap.toFixed(2) + ' 起送' : '未达到起送价'
+                        }
+                        if(p.rangeChecked && !p.inRange){ return '收货地址不在配送范围内' }
+                        return ''
+                    },
+                    // 阻断下单的常驻可见原因（与 feeBlocked 同源但不含"核算中"瞬态，
+                    // 供页面就地展示——避免只在点击置灰按钮时才 toast、且仍展示无法兑现的送达时间）
+                    blockedReason(){
+                        if(this.reorderId){ return '' }
+                        // 修改点(P1-2 自提)：自提无需收货地址，去除地址必填校验
+                        if(this.fulfillmentMode !== 1 && (!this.address || !this.address.id)) return '请先选择收货地址'
+                        if(this.previewLoading || !this.pricing){ return '' }
+                        const p = this.pricing
+                        if(p.unavailableReason){ return p.unavailableReason }
+                        if(p.belowMinOrder){
+                            return this.minOrderGap > 0 ? '还差 ¥' + this.minOrderGap.toFixed(2) + ' 起送' : '未达到起送价'
+                        }
+                        if(p.rangeChecked && !p.inRange){ return '收货地址不在配送范围内' }
+                        return ''
+                    },
+                    // 提交按钮文案：阻断时直接透出原因（如"还差¥X起送"），不再只显示"暂不可下单"；
+                    // 长文案压缩为按钮可容纳的短形式，完整原因由页面 blockedReason 常驻展示
+                    submitBtnText(){
+                        if(this.loading){ return '支付中…' }
+                        if(this.previewLoading && !this.reorderId){ return '金额核算中…' }
+                        if(this.reorderId){ return '继续支付' }
+                        if(!this.feeBlocked){ return '去支付' }
+                        const r = this.blockedReason
+                        if(!r) return '暂不可下单'
+                        if(r.indexOf('还差') === 0) return r.replace(/\s/g, '')
+                        if(r.indexOf('配送范围') > -1) return '不在配送范围'
+                        return r.length > 8 ? r.substring(0, 8) + '…' : r
+                    },
+                    // 预计送达时间
+                    expectDeliveryTime(){
+                        if(this.deliveryMode === 1 && this.scheduleDate){
+                            const d = new Date(this.scheduleDate)
+                            const yyyy = d.getFullYear()
+                            const mm = String(d.getMonth() + 1).padStart(2, '0')
+                            const dd = String(d.getDate()).padStart(2, '0')
+                            const slot = this.scheduleTimeSlots.find(s => s.value === this.selectedScheduleSlot)
+                            const timeRange = slot ? slot.time : ''
+                            return yyyy + '-' + mm + '-' + dd + ' ' + timeRange
+                        }
+                        return this.finishTime + ' ' + (this.selectedTimeIdx === 0 ? '尽快送达' : this.timeOptions[this.selectedTimeIdx].label)
+                    },
+                    // 已优惠合计（秒杀差价 + 满减 + 新客 + 券），底部栏「已优惠」口径
+                    discountAmount(){
+                        return this.pricing ? (Number(this.pricing.totalDiscount) || 0) : 0
+                    },
+                    // 实付金额：续付取订单落库应付；否则取服务端预览应付（含配送费），前端绝不另算
+                    finalPrice(){
+                        // 修改点（P1-1）：续付直接显示该待付款订单的真实应付（已含落库的配送费/优惠），不前端重算
+                        if(this.reorderId){
+                            return this.orderAmount == null ? 0 : Math.round(this.orderAmount * 100) / 100
+                        }
+                        if(this.pricing){
+                            return Number(this.pricing.payAmount) || 0
+                        }
+                        // 预览未就绪（极短窗口）：提交按钮此时已置灰，该金额仅展示且不参与交易
+                        // （后端提交时全量重算）。原前端兜底漏减新客优惠、配送费还会退化为0反而误导，直接显示0
+                        return 0
+                    },
+                    // 修改点：送达时间显示标签
+                    // 修改点(2026-09-17 UX)：只展示预计送达时刻，去掉「18:30 约30分钟」时间+相对时长的重复文案
+                    selectedTimeLabel(){
+                        if(this.deliveryMode === 1) return this.scheduleLabel
+                        const option = this.timeOptions[this.selectedTimeIdx]
+                        if(option && option.time){
+                            return '预计 ' + option.time + ' 送达'
+                        }
+                        return this.finishTime
+                    },
+                    // 预约配送：格式化显示标签
+                    scheduleLabel(){
+                        if(this.deliveryMode !== 1 || !this.scheduleDate) return '请选择预约时间'
+                        const d = new Date(this.scheduleDate)
+                        const month = d.getMonth() + 1
+                        const day = d.getDate()
+                        const slot = this.scheduleTimeSlots.find(s => s.value === this.selectedScheduleSlot)
+                        const slotText = slot ? slot.label : ''
+                        return month + '月' + day + '日 ' + slotText
+                    },
+                    // 修改点：完整地址拼接（统一走 composeAddressText，去重存量 detail 前缀）
+                    addressFull(){
+                        const a = this.address
+                        return composeAddressText(a) || a.detail || '请选择收货地址'
+                    }
+                },
+                created(){
+                    // 修改点：未登录重定向到登录页
+                    // 修复：新标签页 sessionStorage 丢失但 cookie 会话可能仍有效，先静默恢复
+                    var self = this
+                    restoreUserSession().then(function(ok){
+                        if(!ok){ goLogin(); return }
+                        self.startAfterLogin()
+                    })
+                },
+                beforeDestroy(){
+                    window.removeEventListener('pageshow', this.onPageShow)
+                },
+                methods:{
+                    // 会话确认有效后再启动：原 created 主体（reorderId 续付分支 / 常规初始化）
+                    startAfterLogin(){
+                        // 修改点（P2-11）：解析订单列表「去支付」跳转携带的 reorderId（待付款订单 ID）
+                        const reorderId = this.getUrlParam('reorderId')
+                        if(reorderId){
+                            // 修改点（P1-1）：续付回填该订单真实明细/金额（不再依赖已清空的购物车，
+                            // 避免明细空白、金额显 ¥0），支付方式由订单回填，地址仅作展示
+                            this.reorderId = reorderId
+                            this.loadReorderDetail()
+                            this.defaultAddress()
+                            return
+                        }
+                        this.initData()
+                        // bfcache 兜底：从地址页用浏览器"返回"恢复时，重新加载地址并重试配送费
+                        // 修改点(2026-09-28)：具名函数挂实例，beforeDestroy 解绑
+                        window.addEventListener('pageshow', this.onPageShow)
+                    },
+                    // bfcache 恢复（pageshow）处理
+                    onPageShow(e){
+                        if(e.persisted){ this.defaultAddress() }
+                    },
+                    // 修改点：图片加载失败兜底
+                    imgError(e){
+                        e.target.src = './../images/noImg.png'
+                    },
+                    // 购物车行唯一键：区分菜品/套餐，并把口味纳入（原 :key="index" 在列表重排时会复用错 DOM）
+                    cartItemKey(item){
+                        if(item.dishId != null){
+                            return 'd_' + item.dishId + '_' + (item.dishFlavor || '')
+                        }
+                        if(item.setmealId != null){
+                            return 's_' + item.setmealId
+                        }
+                        // 兜底：dishId/setmealId 均缺失时用记录主键，避免异常数据产生重复 key
+                        return 'x_' + (item.id != null ? item.id : item.name)
+                    },
+                    // 修改点（P2-11）：解析 URL 查询参数（my-evaluations.html 权威写法）
+                    getUrlParam(name){
+                        var match = location.search.match(new RegExp('[?&]' + name + '=([^&]+)'))
+                        return match ? decodeURIComponent(match[1]) : ''
+                    },
+                    // 修改点（P1-1）：续付拉取待付款订单，回填真实明细与金额（只读）
+                    async loadReorderDetail(){
+                        try {
+                            const res = await getOrderDetailApi(this.reorderId)
+                            if(res.code === 1 && res.data){
+                                const d = res.data
+                                // 订单明细与购物车 item 同构，直接回填渲染（续付页无加减入口，只读）
+                                this.cartData = (d.orderDetails || []).map(function(it){
+                                    return {
+                                        name: it.name,
+                                        image: it.image,
+                                        number: it.number || 1,
+                                        amount: it.amount
+                                    }
+                                })
+                                this.orderAmount = Number(d.amount != null ? d.amount : d.actualAmount) || 0
+                                // 沿用订单原在线支付方式（2微信/3支付宝），其余兜底微信
+                                const pm = Number(d.payMethod)
+                                this.payMethod = (pm === 2 || pm === 3) ? pm : 2
+                            }else{
+                                vant.Toast.fail(res.msg || '订单加载失败，请返回订单列表重试')
+                            }
+                        }catch(e){
+                            console.error('续付订单加载失败:', e)
+                            vant.Toast.fail('订单加载失败，请返回订单列表重试')
+                        }
+                    },
+                    // 返回导航已统一由 cend-shell 处理（2026-09-22）
+                    initData(){
+                        //获取默认的地址
+                        this.defaultAddress()
+                        //获取购物车的商品（异步，回调中加载优惠券确保 goodsPrice 就绪）
+                        this.getCartData()
+                    },
+                    //获取默认地址
+                    async defaultAddress(){
+                        // 本单在地址页临时选择的地址优先（只影响本单，未改动用户默认地址）
+                        const selectedId = sessionStorage.getItem('selectedAddressId')
+                        let res = null
+                        if(selectedId){
+                            const picked = await addressFindOneApi(selectedId)
+                            if(picked && picked.code === 1 && picked.data){ res = picked }
+                        }
+                        if(!res){
+                            res = await getDefaultAddressApi()
+                        }
+                        if(res.code === 1){
+                           // 修改点：防御 res.data 为 null，避免 addressFull computed 访问空对象属性抛错
+                           this.address = res.data || {}
+                           this.finishTime = getFinishTime()
+                           // 新建订单：地址就绪后触发同源结算预览（续付走订单落库金额，不预览）
+                           if(!this.reorderId){ this.maybeLoadPreview() }
+                           // 修改点：动态计算各送达时间选项的预计时刻
+                           const base = new Date()
+                           const h = base.getHours()
+                           const m = base.getMinutes()
+                           const add = (mins) => {
+                               const d = new Date(base.getTime() + mins * 60000)
+                               return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0')
+                           }
+                           this.timeOptions = [
+                               { label: '尽快送达', time: add(20) },
+                               { label: '约30分钟', time: add(30) },
+                               { label: '约40分钟', time: add(40) },
+                               { label: '约50分钟', time: add(50) },
+                               { label: '约60分钟', time: add(60) }
+                           ]
+                        }else{
+                            // 无地址不再强制跳地址编辑：停在结算页，用户可切「到店自提」直接下单，
+                            // 或点地址区去新增地址；若坚持配送，提交时由 goToPay 校验拦截并提示选地址。
+                            // （续付 reorderId 场景地址仅作展示，同样不应打断支付）
+                            this.address = {}
+                            this.finishTime = getFinishTime()
+                            if(!this.reorderId){ this.maybeLoadPreview() }
+                        }
+                    },
+                    toAddressPage(){
+                        // 修改点：设置sessionStorage标志位，替代不可靠的document.referrer
+                        sessionStorage.setItem('addressFromCheckout', '1')
+                        window.requestAnimationFrame(()=>{
+                            window.location.href = '/front/page/address.html'
+                        })
+                    },
+                    // 地址 + 购物车就绪后触发同源结算预览；签名（地址|券|总件数）不变则跳过
+                    maybeLoadPreview(){
+                        if(this.reorderId){ return }
+                        const isPickup = this.fulfillmentMode === 1
+                        // 自提无需收货地址；配送才校验地址
+                        if(!isPickup && (!this.address || !this.address.id)){ return }
+                        if(!this.cartData || this.cartData.length === 0){ return }
+                        let qty = 0
+                        this.cartData.forEach(function(it){ qty += it.number || 0 })
+                        const couponId = this.selectedCoupon ? this.selectedCoupon.id : ''
+                        // 签名纳入履约方式，切换配送/自提才会触发重新预览
+                        const addrKey = isPickup ? 'PICKUP' : this.address.id
+                        const sig = this.fulfillmentMode + '|' + addrKey + '|' + couponId + '|' + qty
+                        if(sig === this.lastPreviewSig){ return }
+                        this.lastPreviewSig = sig
+                        this.loadCheckoutPreview(couponId || null)
+                    },
+                    // 调只读结算预览，回填 pricing；并按权威商品金额加载可用券列表
+                    async loadCheckoutPreview(couponId){
+                        const seq = ++this.previewSeq
+                        this.previewLoading = true
+                        try{
+                            const res = await previewCheckoutApi({
+                                // 修改点(P1-2 自提)：自提无需地址，传 null，并标记 source
+                                addressBookId: this.fulfillmentMode === 1 ? null : this.address.id,
+                                source: this.fulfillmentMode === 1 ? 'SELF_PICKUP' : 'TAKEOUT',
+                                usedCouponId: couponId
+                            })
+                            // 修改点：已有更新的预览请求发出，丢弃本次过期响应，避免旧结果覆盖新价格
+                            if(seq !== this.previewSeq){ return }
+                            if(res.code === 1 && res.data){
+                                this.pricing = res.data
+                                const resolvedId = res.data.coupon ? res.data.coupon.campaignId : null
+                                if(!resolvedId && this.selectedCoupon){
+                                    // 服务端判定该券不可用：对齐本地选中态并重预览
+                                    this.selectedCoupon = null
+                                    this.maybeLoadPreview()
+                                }
+                                // 商品金额变化才重拉可用券
+                                const amt = String(res.data.goodsAmount)
+                                if(this.couponsLoadedForAmount !== amt){
+                                    this.couponsLoadedForAmount = amt
+                                    this.loadUsableCoupons()
+                                }
+                            }
+                        }catch(e){
+                            // 过期请求的失败无需提示（已有更新请求在进行）
+                            if(seq === this.previewSeq){
+                                console.warn('[add-order] 结算预览失败:', e)
+                            }
+                        }finally{
+                            // 仅最新一次请求才能复位 loading，防止过期响应提前结束"核算中"态
+                            if(seq === this.previewSeq){
+                                this.previewLoading = false
+                            }
+                        }
+                    },
+                    //获取购物车数据
+                    async getCartData(){
+                        // 修改点(2026-09-18)：包裹 try/catch/finally——原实现无容错，网络错误/拦截器抛错时
+                        // 产生未捕获 Promise rejection，且其后 loadUsableCoupons 不会执行
+                        try {
+                            const res = await cartListApi({})
+                            if(res.code === 1){
+                                // 修改点：防御 res.data 为 null（异常返回）导致模板 toFixed 报错
+                                this.cartData = res.data || []
+                            }else{
+                                this.cartData = []
+                                vant.Toast.fail(res.msg || '加载购物车失败');
+                            }
+                        } catch(e){
+                            console.error('加载购物车失败:', e)
+                            this.cartData = []
+                            vant.Toast.fail('加载购物车失败，请稍后重试')
+                        } finally {
+                            // 购物车就绪后触发同源结算预览（预览内部再按金额拉可用券）
+                            this.maybeLoadPreview()
+                        }
+                    },
+                    // 修改点：选择优惠券（传入券对象，再次点击相同券取消选中）；选中后重新同源预览
+                    selectCoupon(coupon){
+                        if(!coupon){
+                            this.selectedCoupon = null
+                        }else{
+                            this.selectedCoupon = (this.selectedCoupon && this.selectedCoupon.id === coupon.id)
+                                    ? null : coupon
+                        }
+                        this.maybeLoadPreview()
+                    },
+                    // 点击底部购物车图标：有已选商品才展开清单弹层，空车轻提示
+                    openItemsPopup(){
+                        if(this.cartData && this.cartData.length > 0){
+                            this.itemsPopupVisible = true
+                        }else{
+                            // 修改点：空车点击给轻提示，与注释口径一致
+                            vant.Toast('购物车还是空的')
+                        }
+                    },
+                    // 修改点：加载当前订单金额对应的可用券列表
+                    async loadUsableCoupons(){
+                        // 仅在服务端预览给出权威商品金额后加载（金额为预览 goodsAmount）
+                        const baseAmount = this.pricing ? (Number(this.pricing.goodsAmount) || 0) : 0
+                        if(baseAmount <= 0){
+                            // 金额为 0（如空购物车）：确定无可用券，标记已加载以免弹层一直转圈
+                            this.couponList = []
+                            this.couponsLoaded = true
+                            return
+                        }
+                        if(this.couponLoading) return
+                        this.couponLoading = true
+                        try{
+                            var amount = baseAmount.toFixed(2)
+                            const res = await getUsableCoupons(amount)
+                            let couponChanged = false
+                            if(res.code === 1 && Array.isArray(res.data)){
+                                this.couponList = res.data
+                                // 若当前选中的券不在新列表里（金额变化导致不可用），清空
+                                if(this.selectedCoupon){
+                                    var found = false
+                                    for(var i=0;i<this.couponList.length;i++){
+                                        if(this.couponList[i].id === this.selectedCoupon.id){ found = true; break }
+                                    }
+                                    if(!found){ this.selectedCoupon = null; couponChanged = true }
+                                }
+                                // 新建订单且用户尚未手动选券：自动选面额最大的可用券（用户仍可手动改）
+                                if(!this.reorderId && !this.selectedCoupon && this.couponList.length){
+                                    var best = this.couponList[0]
+                                    for(var j=1;j<this.couponList.length;j++){
+                                        if(Number(this.couponList[j].discountAmount) > Number(best.discountAmount)){
+                                            best = this.couponList[j]
+                                        }
+                                    }
+                                    this.selectedCoupon = best
+                                    couponChanged = true
+                                }
+                            }else{
+                                this.couponList = []
+                            }
+                            // 选中/清空券后用带券口径重预览（金额不变不会再重拉券，无循环）
+                            if(couponChanged){ this.maybeLoadPreview() }
+                        }catch(e){
+                            this.couponList = []
+                        }finally{
+                            this.couponLoading = false
+                            // 修改点：无论成功失败，发起过请求即视为"已加载"，弹层才能在真无券时显示空态
+                            this.couponsLoaded = true
+                        }
+                    },
+                    // 修改点：跳转到会员中心领券
+                    goMemberCenter(){
+                        window.location.href = '/front/page/member-center.html'
+                    },
+                    // 选择送达时间
+                    selectTime(idx){
+                        this.selectedTimeIdx = idx
+                        this.showTimePicker = false
+                    },
+                    // 修改点：预约配送相关方法
+                    minScheduleDate(){
+                        const now = new Date()
+                        return new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1)
+                    },
+                    maxScheduleDate(){
+                        const now = new Date()
+                        return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7)
+                    },
+                    dateFormatter(type, val){
+                        if(type === 'year') return val + '年'
+                        if(type === 'month') return val + '月'
+                        if(type === 'day') return val + '日'
+                        return val
+                    },
+                    onScheduleDateConfirm(val){
+                        this.scheduleDate = val
+                    },
+                    confirmSchedule(){
+                        if(!this.scheduleDate){
+                            vant.Toast.fail('请选择预约日期')
+                            return
+                        }
+                        if(!this.selectedScheduleSlot){
+                            vant.Toast.fail('请选择时段')
+                            return
+                        }
+                        // 验证预约时间不能早于当前时间
+                        // 修改点：datetime-picker type="date" 只返回日期（00:00），getHours() 恒 0
+                        // 原逻辑导致「选今天任何时段都被拦、明天时段误判」，改为按选中时段开始时刻比较（含分钟）
+                        const selected = new Date(this.scheduleDate)
+                        const today = new Date()
+                        if(selected.toDateString() === today.toDateString()){
+                            const slot = this.scheduleTimeSlots.find(s => s.value === this.selectedScheduleSlot)
+                            const startTime = slot ? slot.time.split('-')[0] : ''
+                            if(startTime){
+                                const parts = startTime.split(':')
+                                const slotStart = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate(), Number(parts[0]), Number(parts[1]))
+                                if(slotStart.getTime() <= today.getTime()){
+                                    vant.Toast.fail('预约时间不能早于当前时间')
+                                    return
+                                }
+                            }
+                        }
+                        this.showSchedulePicker = false
+                        vant.Toast.success('预约时间已设置')
+                    },
+                    // 修改点(2026-09-17 UX)：生成/复用下单幂等键——同一次下单意图（含网络失败重试、快速双击）
+                    // 复用同一键由后端幂等去重；重新进入页面（新的下单意图）才生成新键
+                    ensureIdempotencyKey(){
+                        if(!this.idempotencyKey){
+                            var rand = Math.random().toString(36).slice(2, 10)
+                            this.idempotencyKey = (sessionStorage.getItem("userPhone") || 'anon') + '_' + Date.now() + '_' + rand
+                        }
+                        return this.idempotencyKey
+                    },
+                    // 后端下单拒绝且原因为"商品失效"（库存不足/已下架等）
+                    isItemInvalidMsg(msg){
+                        return /库存不足|库存为空|已下架|已售罄|售罄|商品不存在|已停售|停售|已失效/.test(msg || '')
+                    },
+                    async goToPaySuccess(){
+                        // 修改点（P2-11）：reorderId 表示为已有待付款订单发起支付，
+                        // 跳过 addOrderApi 直接调用支付，避免创建重复订单
+                        if(this.reorderId){
+                            if(this.loading) return;
+                            this.loading = true
+                            try {
+                                if(this.payMethod === 2 || this.payMethod === 3){
+                                    const payRes = await paymentCreateApi({
+                                        orderId: this.reorderId,
+                                        channel: this.payMethod === 2 ? 'WECHAT' : 'ALIPAY'
+                                    })
+                                    if(!this.redirectAfterPayCreate(payRes, this.reorderId)){
+                                        vant.Toast.fail('支付发起失败，请重试')
+                                    }
+                                }else{
+                                    // 货到付款的待付款订单不应走到这里，兜底跳转
+                                    window.location.replace('/front/page/pay-success.html?reorderId=' + this.reorderId)
+                                }
+                            }catch(e){
+                                console.error('支付发起失败:', e)
+                                vant.Toast.fail('支付发起失败，请重试')
+                            }finally{
+                                this.loading = false
+                            }
+                            return
+                        }
+                        if(!this.cartData || this.cartData.length === 0){
+                            vant.Toast.fail('购物车为空，请先添加商品');
+                            return
+                        }
+                        // 自提无需收货地址；仅配送模式校验地址（否则无地址用户切自提永远提交不了）
+                        if(this.fulfillmentMode === 0 && !this.address.id){
+                            vant.Toast.fail('请先添加收货地址');
+                            return
+                        }
+                        if(this.feeBlocked){
+                            vant.Toast.fail(this.feeMessage || '当前地址暂不可下单');
+                            return
+                        }
+                        // 预约配送必须先选预约时段；否则 expectDeliveryTime 会静默退化为"尽快送达"
+                        if(this.deliveryMode === 1 && !this.scheduleDate){
+                            vant.Toast.fail('请选择预约配送时间');
+                            return
+                        }
+                        if(this.loading) return;
+                        this.loading = true
+                        // 修改点(2026-09-18)：餐具选择原先仅 UI 绑定、从未提交。并入备注随订单落库，
+                        // 后端复用 orders.remark 字段，无需加表字段；后厨/小票可见
+                        var remarkParts = []
+                        if(this.note){ remarkParts.push(this.note) }
+                        remarkParts.push(this.utensils === 0 ? '无需餐具' : this.utensils + '份餐具')
+                        const params = {
+                            remark: remarkParts.join('，'),
+                            payMethod:this.payMethod,
+                            // 修改点(P1-2 自提)：自提无需地址，传 null 并标记 source=SELF_PICKUP
+                            addressBookId: this.fulfillmentMode === 1 ? null : this.address.id,
+                            source: this.fulfillmentMode === 1 ? 'SELF_PICKUP' : 'TAKEOUT',
+                            // 不传 amount：金额一律由后端 computeCheckout 重算，杜绝前端值被篡改/与服务端口径不一致
+                            expectDeliveryTime: this.expectDeliveryTime,
+                            usedCouponId: (this.pricing && this.pricing.coupon) ? this.pricing.coupon.campaignId : null,
+                            // 修改点(2026-09-17)：this.userId 未定义导致幂等键拼接出 "undefined_xxx"，改用 sessionStorage 手机号；
+                            // 修改点(2026-09-17 UX)：键改为页面会话级生成、失败重试复用（见 ensureIdempotencyKey）
+                            idempotencyKey: this.ensureIdempotencyKey()
+                        }
+                        try {
+                            // —— 阶段1：提交订单。此阶段失败 = 订单未生成，可安全重试 ——
+                            var orderId = null
+                            try {
+                                const res = await addOrderApi(params)
+                                if(res.code !== 1){
+                                    var failMsg = res.msg || '提交订单失败'
+                                    if(this.isItemInvalidMsg(failMsg)){
+                                        // 失效商品：重新拉购物车，并用持续可见的对话框给出路，
+                                        // 替代一闪而过的 Toast（用户曾因此以为页面"卡死"）
+                                        this.getCartData()
+                                        vant.Dialog.alert({
+                                            title: '商品已失效',
+                                            message: failMsg + '，请调整后重新下单',
+                                            confirmButtonText: '去购物车'
+                                        }).then(function(){
+                                            window.location.href = '/front/index.html'
+                                        }).catch(function(){})
+                                    }else{
+                                        vant.Toast.fail(failMsg)
+                                    }
+                                    return
+                                }
+                                orderId = res.data && res.data.id
+                                // 订单已生成，本单临时地址选择使命完成，清除以免影响后续下单
+                                sessionStorage.removeItem('selectedAddressId')
+                            } catch (err) {
+                                console.error('提交订单失败:', err)
+                                vant.Toast.fail('提交订单失败，请稍后重试');
+                                return
+                            }
+                            // 货到付款(6)：下单即完成，直接跳下单成功页
+                            if(this.payMethod !== 2 && this.payMethod !== 3){
+                                window.requestAnimationFrame(()=>{
+                                    window.location.replace('/front/page/pay-success.html')
+                                })
+                                return
+                            }
+                            // —— 阶段2：拉起线上支付。订单已创建，任何失败都不能误报"下单失败"，
+                            //    否则用户以为没下成会重复下单 ——
+                            if(!orderId){
+                                this.payCreateFailed();
+                                return
+                            }
+                            try {
+                                const payRes = await paymentCreateApi({
+                                    orderId: orderId,
+                                    channel: this.payMethod === 2 ? 'WECHAT' : 'ALIPAY'
+                                })
+                                if(!this.redirectAfterPayCreate(payRes, orderId)){
+                                    this.payCreateFailed();
+                                }
+                            } catch (err) {
+                                console.error('支付发起失败:', err)
+                                this.payCreateFailed();
+                            }
+                        } finally {
+                            this.loading = false
+                        }
+                    },
+                    // /pay 创建成功后分流：0元订单后端已自动完成支付（无 tradeNo）→ 直接进结果页；
+                    // 正常待支付订单（返回商户单号 tradeNo）→ 进沙箱收银台完成模拟付款。
+                    // loading 由调用方 finally 复位，此处只负责跳转/提示。
+                    // 返回 true=已跳转收银台/结果页；false=支付未拉起，由调用方决定提示方式
+                    redirectAfterPayCreate(payRes, orderId){
+                        if(payRes && payRes.code === 1 && payRes.data){
+                            var d = payRes.data
+                            if(d.tradeNo){
+                                var channel = this.payMethod === 2 ? 'WECHAT' : 'ALIPAY'
+                                window.location.replace('/front/page/pay-cashier.html?orderId=' + orderId
+                                    + '&channel=' + channel + '&tradeNo=' + encodeURIComponent(d.tradeNo))
+                                return true
+                            }else{
+                                window.location.replace('/front/page/pay-success.html?reorderId=' + orderId)
+                                return true
+                            }
+                        }
+                        return false
+                    },
+                    // 订单已创建但支付未拉起：明确告知"订单已提交"，引导去订单列表续付，杜绝误重复下单
+                    payCreateFailed(){
+                        vant.Dialog.alert({
+                            title: '支付未完成',
+                            message: '订单已提交成功，您可稍后在订单列表中找到该订单继续支付。'
+                        }).then(()=>{
+                            window.location.replace('/front/page/order.html')
+                        }).catch(()=>{
+                            window.location.replace('/front/page/order.html')
+                        })
+                    },
+                }
+            })
+            </script>
+        </body>
+    </html>

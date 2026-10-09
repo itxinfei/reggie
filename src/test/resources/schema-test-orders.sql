@@ -1,0 +1,23 @@
+-- Test orders data (MySQL compatible)
+-- 只插入数据，不创建表（生产 schema 已存在）
+
+-- 同时按主键 id 清理：本地真实库可能存在 id=1/2 但 order_id 不在 (1,2,3) 的明细，
+-- 只按 order_id 删会漏，导致下面 INSERT 主键冲突
+-- 单库隔离（2026-10-06）：仅清理测试租户 999 的残留，禁止无条件全表 DELETE（会清掉租户 1 演示数据）
+DELETE FROM order_detail WHERE tenant_id = 999 AND (id IN (1, 2) OR order_id IN (1, 2, 3));
+DELETE FROM orders WHERE id IN (1, 2, 3) AND tenant_id = 999;
+
+INSERT INTO orders (id, number, status, user_id, address_book_id, order_time, checkout_time, pay_method, amount, remark, phone, address, user_name, consignee, dining_type, create_time, update_time, create_user, update_user, is_deleted, tenant_id)
+VALUES (1, 'TEST001', 5, 1, 1, '2026-07-01 08:00:00', '2026-07-01 08:30:00', 1, 100.00, NULL, '13900139001', '测试地址', '测试用户', '测试用户', 'OUTSIDE', '2026-07-01 08:00:00', '2026-07-01 08:30:00', 1, 1, 0, 999);
+
+INSERT INTO orders (id, number, status, user_id, address_book_id, order_time, checkout_time, pay_method, amount, remark, phone, address, user_name, consignee, dining_type, create_time, update_time, create_user, update_user, is_deleted, tenant_id)
+VALUES (2, 'TEST002', 5, 1, 1, '2026-07-01 12:00:00', '2026-07-01 12:30:00', 2, 200.00, NULL, '13900139001', '测试地址', '测试用户', '测试用户', 'OUTSIDE', '2026-07-01 12:00:00', '2026-07-01 12:30:00', 1, 1, 0, 999);
+
+INSERT INTO orders (id, number, status, user_id, address_book_id, order_time, checkout_time, pay_method, amount, remark, phone, address, user_name, consignee, dining_type, create_time, update_time, create_user, update_user, is_deleted, tenant_id)
+VALUES (3, 'TEST003', 6, 1, 1, '2026-07-01 18:00:00', NULL, 1, 50.00, '测试取消', '13900139001', '测试地址', '测试用户', '测试用户', 'OUTSIDE', '2026-07-01 18:00:00', '2026-07-01 18:00:00', 1, 1, 0, 999);
+
+INSERT INTO order_detail (id, name, order_id, dish_id, setmeal_id, dish_flavor, number, amount, image, tenant_id, create_time, update_time, create_user, update_user, is_deleted)
+VALUES (1, '测试菜品1', 1, 1, NULL, NULL, 2, 50.00, 'test.jpg', 999, '2026-07-01 08:00:00', '2026-07-01 08:00:00', 1, 1, 0);
+
+INSERT INTO order_detail (id, name, order_id, dish_id, setmeal_id, dish_flavor, number, amount, image, tenant_id, create_time, update_time, create_user, update_user, is_deleted)
+VALUES (2, '测试菜品2', 2, 2, NULL, NULL, 1, 200.00, 'test2.jpg', 999, '2026-07-01 12:00:00', '2026-07-01 12:00:00', 1, 1, 0);

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>日结管理 - 瑞吉外卖管理端</title>
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260926" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: var(--el-bg-subtle);
+    }
+    /* 防抖动（2026-09-20）：滚动统一由 body 承担；若 html 也产生滚动条，append-to-body 的
+       下拉浮层超出视口底部时会撑高 html、闪现第二滚动条挤占宽度，表格随之左右横跳 */
+    html {
+      overflow: hidden;
+    }
+    body {
+      overflow-y: auto;
+    }
+    .container {
+      padding: 24px 32px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    /* 工具栏统一走 table-bar 组件 + page.css 的 .container .tableBar 纯 flex 栏规则，
+       不再私有卡片化覆盖；toolbar-label/spacer 旧类 DOM 已无引用，一并移除。 */
+    .table-card {
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    /* 详情字段网格（替代本构建未注册的 el-descriptions） */
+    .settle-detail {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border: 1px solid var(--el-border-light);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .settle-detail .dt-item {
+      display: flex;
+      align-items: center;
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--el-border-light);
+      border-right: 1px solid var(--el-border-light);
+    }
+    .settle-detail .dt-item:nth-child(2n) { border-right: none; }
+    .settle-detail .dt-item.full { grid-column: 1 / -1; border-right: none; }
+    .settle-detail .dt-item:nth-last-child(-n+2):not(.full) { border-bottom: none; }
+    .settle-detail .dt-label { flex: 0 0 84px; color: var(--el-text-secondary); font-size: var(--font-size-sm); }
+    .settle-detail .dt-value { flex: 1; color: var(--el-text-primary); font-size: var(--font-size-sm); word-break: break-all; }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <main class="container" id="main-content" role="main" aria-labelledby="page-title">
+    <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
+    <h1 class="sr-only" id="page-title">日结管理</h1>
+    <!-- 统计卡片 - 使用统一的 stat-cards 组件 -->
+    <stat-cards :cards="statsCards"></stat-cards>
+
+    <!-- 修改点：搜索栏使用 table-bar 统一组件 -->
+    <table-bar
+      :search-items="searchItems"
+      :actions="searchActions"
+      :loading="loading"
+      :show-refresh="true"
+      @search="handleSearch"
+      @reset="handleReset"
+      @action="handleAction"
+      @refresh="fetchData()">
+    </table-bar>
+
+    <!-- 表格 -->
+    <div class="table-card">
+      <crud-table aria-label="数据表格"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :total="tableData.length"
+        :show-pagination="false"
+        :show-actions="true"
+        :actions-width="180"
+        :batch-delete="doBatchDelete"
+        @batch-deleted="fetchData()"
+        border stripe size="small">
+        <template #col-refundAmount="{ row }">
+          <span style="color: var(--el-color-danger);">¥{{ formatMoney(row.refundAmount) }}</span>
+        </template>
+        <template #col-netIncome="{ row }">
+          <strong>¥{{ formatMoney(row.netIncome) }}</strong>
+        </template>
+        <template #col-grossProfit="{ row }">
+          <span :style="{ color: row.grossProfit >= 0 ? 'var(--el-color-success)' : 'var(--el-color-danger)' }">
+            ¥{{ formatMoney(row.grossProfit) }}
+          </span>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag size="small" :type="row.status === 1 ? 'success' : 'warning'">
+            {{ row.status === 1 ? '已结算' : '未结算' }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="handleViewDetail(row)">查看</el-button>
+          <el-button type="text" size="small" class="btn-warning" @click="handleCancelSettlement(row)" v-if="row.status === 1">取消</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)" v-if="row.status !== 1">删除</el-button>
+        </template>
+      </crud-table>
+    </div>
+
+    <!-- 详情弹窗 -->
+    <crud-dialog title="日结详情" :visible.sync="detailVisible" size="md" :show-submit="false" :show-cancel="true" cancel-text="关 闭">
+      <div v-if="currentDetail" class="settle-detail">
+        <div class="dt-item">
+          <span class="dt-label">结算日期</span>
+          <span class="dt-value">{{ currentDetail.settlementDate }}</span>
+        </div>
+        <div class="dt-item">
+          <span class="dt-label">订单数</span>
+          <span class="dt-value">{{ currentDetail.orderCount }}</span>
+        </div>
+        <div class="dt-item">
+          <span class="dt-label">营业额</span>
+          <span class="dt-value">¥{{ formatMoney(currentDetail.totalRevenue) }}</span>
+        </div>
+        <div class="dt-item">
+          <span class="dt-label">退款金额</span>
+          <span class="dt-value">¥{{ formatMoney(currentDetail.refundAmount) }}</span>
+        </div>
+        <div class="dt-item">
+          <span class="dt-label">净收入</span>
+          <span class="dt-value">¥{{ formatMoney(currentDetail.netIncome) }}</span>
+        </div>
+        <div class="dt-item">
+          <span class="dt-label">总成本</span>
+          <span class="dt-value">¥{{ formatMoney(currentDetail.totalCost) }}</span>
+        </div>
+        <div class="dt-item">
+          <span class="dt-label">毛利润</span>
+          <span class="dt-value">¥{{ formatMoney(currentDetail.grossProfit) }}</span>
+        </div>
+        <div class="dt-item">
+          <span class="dt-label">状态</span>
+          <span class="dt-value">
+            <el-tag size="small" :type="currentDetail.status === 1 ? 'success' : 'warning'">
+              {{ currentDetail.status === 1 ? '已结算' : '未结算' }}
+            </el-tag>
+          </span>
+        </div>
+      </div>
+    </crud-dialog>
+ </main>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/common.js?v=20260926"></script>
+  <script src="../../api/cashier.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#main-content',
+      data() {
+        return {
+          loading: false,
+          submitting: false, // 日结防重复提交守卫
+          dateRange: [],
+          // 修改点：table-bar 统一组件配置
+          searchItems: [{ type: 'daterange', field: 'dateRange', placeholder: '日期范围', width: '300px' }],
+          searchActions: [{ key: 'settle', text: '今日日结', type: 'warning', icon: 'ri-calendar-line' }],
+          tableData: [],
+          columns: [
+            { prop: 'settlementDate', label: '结算日期', width: 150, align: 'center' },
+            { prop: 'totalRevenue', label: '营业额', width: 120, align: 'center', type: 'money' },
+            { prop: 'orderCount', label: '订单数', width: 100, align: 'center' },
+            { prop: 'refundAmount', label: '退款金额', width: 120, align: 'center', type: 'money', slot: 'col-refundAmount' },
+            { prop: 'netIncome', label: '净收入', width: 120, align: 'center', type: 'money', slot: 'col-netIncome' },
+            { prop: 'totalCost', label: '总成本', width: 120, align: 'center', type: 'money' },
+            { prop: 'grossProfit', label: '毛利润', width: 120, align: 'center', slot: 'col-grossProfit' },
+            { prop: 'status', label: '状态', width: 100, align: 'center', slot: 'col-status' }
+          ],
+          summary: {
+            totalRevenue: 0,
+            totalNetIncome: 0,
+            totalCost: 0,
+            totalGrossProfit: 0
+          },
+          detailVisible: false,
+          currentDetail: null
+        }
+      },
+      computed: {
+        // 统计卡片配置 - 使用统一的 stat-cards 组件
+        statsCards() {
+          return [
+            {
+              key: 'revenue',
+              icon: 'ri-money-cny-circle-line',
+              label: '总营业额',
+              value: '¥' + this.formatMoney(this.summary.totalRevenue),
+              color: 'primary',
+              unit: ''
+            },
+            {
+              key: 'netIncome',
+              icon: 'ri-wallet-line',
+              label: '净收入',
+              value: '¥' + this.formatMoney(this.summary.totalNetIncome),
+              color: 'success',
+              unit: ''
+            },
+            {
+              key: 'cost',
+              icon: 'ri-shopping-bag-line',
+              label: '总成本',
+              value: '¥' + this.formatMoney(this.summary.totalCost),
+              color: 'warning',
+              unit: ''
+            },
+            {
+              key: 'profit',
+              icon: 'ri-line-chart-line',
+              label: '毛利润',
+              value: '¥' + this.formatMoney(this.summary.totalGrossProfit),
+              color: this.summary.totalGrossProfit >= 0 ? 'success' : 'danger',
+              unit: ''
+            }
+          ]
+        }
+      },
+      created() {
+        // 默认查询最近30天
+        const end = new Date()
+        const start = new Date()
+        start.setTime(start.getTime() - 30 * 24 * 3600 * 1000)
+        this.dateRange = [
+          this.formatDate(start),
+          this.formatDate(end)
+        ]
+        this.fetchData()
+      },
+      methods: {
+        formatDate(date) {
+          const year = date.getFullYear()
+          const month = String(date.getMonth() + 1).padStart(2, '0')
+          const day = String(date.getDate()).padStart(2, '0')
+          return year + '-' + month + '-' + day
+        },
+        formatMoney(value) {
+          if (!value && value !== 0) return '0.00'
+          return Number(value).toFixed(2)
+        },
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '结算记录', request: deleteDailySettlement })
+        },
+        async fetchData() {
+          this.loading = true
+          try {
+            const startDate = this.dateRange[0]
+            const endDate = this.dateRange[1]
+            
+            const [listRes, summaryRes] = await Promise.all([
+              getDailySettlementList({ startDate, endDate }),
+              getDailySettlementSummary({ startDate, endDate })
+            ])
+            
+            if (listRes.code === 1) {
+              this.tableData = listRes.data || []
+            } else {
+              // 修改点：此前 else 静默，列表失败无任何反馈
+              ReggieUI.error((listRes && listRes.msg) || '获取日结列表失败')
+            }
+
+            if (summaryRes.code === 1) {
+              this.summary = summaryRes.data
+            } else {
+              // 修改点：此前 else 静默，汇总失败无任何反馈
+              ReggieUI.error((summaryRes && summaryRes.msg) || '获取日结汇总失败')
+            }
+          } catch (err) {
+            ReggieUI.error('获取数据失败')
+          } finally {
+            this.loading = false
+          }
+        },
+        resetQuery() {
+          const end = new Date()
+          const start = new Date()
+          start.setTime(start.getTime() - 30 * 24 * 3600 * 1000)
+          this.dateRange = [
+            this.formatDate(start),
+            this.formatDate(end)
+          ]
+          this.fetchData()
+        },
+        async handleTodaySettlement() {
+          // 防重复提交守卫：日结进行中不允许再次点击
+          if (this.submitting) return
+          try {
+            await ReggieUI.confirm('确定要执行今日日结吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+
+            this.submitting = true
+            const today = this.formatDate(new Date())
+            const res = await executeDailySettlement({ settlementDate: today })
+
+            if (res.code === 1) {
+              ReggieUI.success('日结成功')
+              this.fetchData()
+            } else {
+              ReggieUI.error(res.msg || '日结失败')
+            }
+          } catch (err) {
+            if (err === 'cancel') return
+            console.warn('[daily-settlement] 日结失败:', err)
+            ReggieUI.error('日结失败')
+          } finally {
+            this.submitting = false
+          }
+        },
+        handleViewDetail(row) {
+          this.currentDetail = row
+          this.detailVisible = true
+        },
+        async handleCancelSettlement(row) {
+          try {
+            await ReggieUI.confirm('确定要取消该日结吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+            
+            const res = await cancelDailySettlement({ settlementDate: row.settlementDate })
+            
+            if (res.code === 1) {
+              ReggieUI.success('取消成功')
+              this.fetchData()
+            } else {
+              ReggieUI.error(res.msg || '取消失败')
+            }
+          } catch (err) {
+            if (err === 'cancel') return
+            console.warn('[daily-settlement] 取消失败:', err)
+            ReggieUI.error('取消失败')
+          }
+        },
+        async handleDelete(row) {
+          try {
+            await ReggieUI.confirm('确定要删除该日结记录吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+            
+            const res = await deleteDailySettlement(row.id)
+            
+            if (res.code === 1) {
+              ReggieUI.success('删除成功')
+              this.fetchData()
+            } else {
+              ReggieUI.error(res.msg || '删除失败')
+            }
+          } catch (err) {
+            if (err === 'cancel') return
+            console.warn('[daily-settlement] 删除失败:', err)
+            ReggieUI.error('删除失败')
+          }
+        },
+        // 修改点：table-bar 组件回调桥接
+        handleSearch(params) {
+          // table-bar 的 daterange 实际下发 dateRangeBegin/dateRangeEnd（yyyy-MM-dd HH:mm:ss），
+          // 本页 dateRange 口径为纯日期，截取前 10 位回填，否则日期筛选永不生效
+          if (params && params.dateRangeBegin && params.dateRangeEnd) {
+            this.dateRange = [String(params.dateRangeBegin).substring(0, 10), String(params.dateRangeEnd).substring(0, 10)]
+          }
+          this.fetchData()
+        },
+        handleReset() {
+          var end = new Date()
+          var start = new Date()
+          start.setTime(start.getTime() - 30 * 24 * 3600 * 1000)
+          this.dateRange = [this.formatDate(start), this.formatDate(end)]
+          this.fetchData()
+        },
+        handleAction(action) {
+          if (action.key === 'settle') this.handleTodaySettlement()
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>套餐管理 - 瑞吉外卖管理端</title>
+  <!-- 引入样式 -->
+
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <style>
+    /* 提取的内联样式类 */
+    .combo-img-btn { width: 36px; height: 36px; object-fit: cover; border: none; cursor: pointer; border-radius: var(--radius-sm); flex-shrink: 0; }
+    /* 图片列：缩略图独占一列，点击可预览大图 */
+    /* 已选菜品移除按钮（位图改 remixicon） */
+    .del { display: inline-flex; align-items: center; cursor: pointer; color: var(--text-muted); font-size: 18px; line-height: 1; transition: color var(--transition-base); }
+    .del:hover, .del:focus-visible { color: var(--color-danger); outline: none; }
+    /* ========== 8.2.3 套餐定价试算 ========== */
+    .price-calc {
+      width: 100%;
+      border: 1px solid var(--el-border-color);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      padding: 12px 16px;
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .price-calc__item { flex: 1; min-width: 130px; display: flex; flex-direction: column; gap: 2px; }
+    .price-calc__label { font-size: var(--font-size-xs); color: var(--text-secondary); }
+    .price-calc__value { font-size: var(--font-size-xl); font-weight: 600; color: var(--el-text-primary); font-variant-numeric: tabular-nums; }
+    .price-calc__value--brand { color: var(--color-brand-600); }
+    .price-calc__value--success { color: var(--color-success); }
+    .price-calc__value--danger { color: var(--color-danger); }
+    .price-calc__tip { font-size: var(--font-size-xs); color: var(--text-muted); }
+
+    /* ========== 添加菜品弹窗：左右两栏（分类 + 菜品 | 已选预览） ========== */
+    .dishSelectContent {
+      display: flex;
+      gap: var(--space-4);
+      height: 420px;
+    }
+    /* 左栏：分类 tab + 菜品列表 */
+    .dishSelectContent .leftCont {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      gap: var(--space-3);
+    }
+    .dishSelectContent .tabBut {
+      width: 108px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow-y: auto;
+    }
+    .dishSelectContent .tabBut span {
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-base);
+      color: var(--text-secondary);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    .dishSelectContent .tabBut span:hover { background: var(--bg-subtle); color: var(--text-primary); }
+    .dishSelectContent .tabBut span.act {
+      background: var(--color-brand-500);
+      color: var(--text-on-brand);
+      font-weight: 600;
+    }
+    .dishSelectContent .tabList {
+      flex: 1;
+      min-width: 0;
+      overflow-y: auto;
+      padding: var(--space-2);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+    }
+    .dishSelectContent .tabList .items { padding: 2px 4px; border-radius: var(--radius-sm); transition: background var(--transition-fast); }
+    .dishSelectContent .tabList .items:hover { background: var(--bg-subtle); }
+    .dishSelectContent .tabList .item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .dishSelectContent .item-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* 右栏：已选菜品预览 */
+    .dishSelectContent .ritCont {
+      width: 220px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      padding: var(--space-3);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+    }
+    .dishSelectContent .ritCont .tit {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--text-primary);
+      padding-bottom: var(--space-2);
+      margin-bottom: var(--space-2);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .dishSelectContent .ritCont .items { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+    .dishSelectContent .ritCont .item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 4px 0;
+      font-size: var(--font-size-base);
+    }
+    .dishSelectContent .ritCont .item span:first-child {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .dishSelectContent .price { color: var(--text-secondary); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+    /* 细滚动条 */
+    .dishSelectContent .tabBut,
+    .dishSelectContent .tabList,
+    .dishSelectContent .ritCont .items { scrollbar-width: thin; }
+    .dishSelectContent ::-webkit-scrollbar { width: 6px; height: 6px; }
+    .dishSelectContent ::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+    .dishSelectContent ::-webkit-scrollbar-track { background: transparent; }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
+<div class="dashboard-container" id="combo-app">
+  <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+    <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
+    <h1 class="sr-only" id="page-title">套餐管理</h1>
+
+    <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
+    <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
+
+    <!-- 修改点：使用 <table-bar> 统一组件 -->
+    <table-bar
+      :search-items="tableSearchItems"
+      :actions="tableActions"
+      @search="handleQuery"
+      @reset="reset"
+      @action="onTableAction"
+      :show-refresh="true"
+      @refresh="fetchData(false)">
+      <template slot="search-extra">
+        <!-- 修改点：修复 el-select 标签缺失闭合 >，添加 @change 触发查询 -->
+        <el-select v-model="input" placeholder="请选择套餐名称" class="el-select--narrow-xs" clearable filterable size="small"
+          :loading="optionsLoading"
+          :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')"
+          @visible-change="loadFilterOptions"
+          @change="handleQuery">
+          <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
+        </el-select>
+      </template>
+    </table-bar>
+
+    <!-- ========== 数据表格 ========== -->
+    <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination，支持多选(@selection-change) -->
+    <crud-table
+      :data="tableData"
+      :columns="columns"
+      :page="page"
+      :page-size="pageSize"
+      :total="counts"
+      :loading="loading"
+      :selection="true"
+      row-key="id"
+      :show-actions="true" :viewable="true"
+      :actions-width="180"
+      :batch-delete="doBatchDelete"
+      @selection-change="handleSelectionChange"
+      @batch-deleted="handleQuery()"
+      @page-change="onPageChange"
+      @size-change="onSizeChange"
+    >
+      <!-- 图片列（缩略图独占一列，点击预览大图） -->
+      <template #col-image="{ row }">
+        <el-image
+          class="combo-img-btn"
+          :src="getImage(row.image)"
+          :preview-src-list="[getImage(row.image)]"
+          alt="套餐图片"
+        >
+          <div slot="error" class="image-slot">
+            <img src="./../../images/noImg.png" class="combo-img-btn" alt="暂无图片">
+          </div>
+        </el-image>
+      </template>
+      <!-- 套餐名称列 -->
+      <template #col-name="{ row }">
+        <span :title="row.name">{{ row.name }}</span>
+      </template>
+      <template #col-description="{ row }">
+        <span :title="row.description || ''">{{ row.description || '-' }}</span>
+      </template>
+      <template #col-status="{ row }">
+        <el-tag :type="row.status == '0' ? 'info' : 'success'" size="small">
+          {{ row.status == '0' ? '停售' : '启售' }}
+        </el-tag>
+      </template>
+      <template #actions="{ row }">
+        <el-button type="text" size="small" class="btn-view" @click="addSetMeal(row.id)">修改</el-button>
+        <el-button v-if="row.status == '0'" type="text" size="small" class="btn-success" @click="statusHandle(row)">启售</el-button>
+        <el-button v-else type="text" size="small" class="btn-warning" @click="statusHandle(row)">停售</el-button>
+        <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row)">删除</el-button>
+      </template>
+    </crud-table>
+  </main>
+
+  <!-- ========== 新增/修改套餐弹窗 ========== -->
+  <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog，footer 插槽保留"保存并继续添加" -->
+  <crud-dialog
+    :title="comboDialog.title"
+    :visible.sync="comboDialog.visible"
+    size="xl"
+    :close-on-click-modal="false"
+  >
+    <el-form ref="comboForm" :model="comboForm" :rules="comboRules" label-width="100px">
+      <!-- 双列栅格：大屏两列、小屏单列（CLAUDE.md 7.2 场景C）；试算卡/套餐菜品/图片/描述含复杂组件，保持跨全宽 -->
+      <el-row :gutter="20">
+        <el-col :xs="24" :sm="12">
+          <el-form-item label="套餐名称:" prop="name">
+            <el-input v-model="comboForm.name" placeholder="请填写套餐名称" maxlength="20" ></el-input>
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :sm="12">
+          <el-form-item label="套餐分类:" prop="categoryId">
+            <el-select v-model="comboForm.categoryId" placeholder="请选择套餐分类" style="width: 100%;">
+              <el-option v-for="item in comboCategoryList" :key="item.id" :label="item.name" :value="item.id" ></el-option>
+            </el-select>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-form-item label="套餐价格:" prop="price">
+        <el-input v-model="comboForm.price" placeholder="请设置套餐价格" ></el-input>
+      </el-form-item>
+      <!-- 修改点：8.2.3 套餐价格自动试算（选择菜品后实时联动，辅助定价） -->
+      <el-form-item v-if="comboDishTable.length > 0" label="定价试算">
+        <div class="price-calc" role="group" aria-label="套餐定价试算">
+          <div class="price-calc__item">
+            <span class="price-calc__label">明细原价合计</span>
+            <span class="price-calc__value">¥{{ formatMoney(pricingSummary.originTotal) }}</span>
+            <span class="price-calc__tip">顾客单点这些菜的总价（含份数）</span>
+          </div>
+          <div class="price-calc__item">
+            <span class="price-calc__label">建议售价（85折）</span>
+            <span class="price-calc__value price-calc__value--brand">¥{{ formatMoney(pricingSummary.suggestPrice) }}</span>
+            <span class="price-calc__tip">按原价合计 85% 估算，仅供参考</span>
+          </div>
+          <div class="price-calc__item">
+            <span class="price-calc__label">顾客优惠</span>
+            <span class="price-calc__value" :class="pricingSummary.discount >= 0 ? 'price-calc__value--success' : 'price-calc__value--danger'">¥{{ formatMoney(pricingSummary.discount) }}</span>
+            <span class="price-calc__tip">{{ pricingSummary.marginRate > 0 ? '约 ' + (Math.round(pricingSummary.marginRate * 100) / 10) + ' 折' : '填写套餐售价后计算' }}</span>
+          </div>
+        </div>
+      </el-form-item>
+      <el-form-item label="套餐菜品:" prop="dishList">
+        <div class="addDish">
+          <span v-if="comboDishTable.length == 0" class="addBut" role="button" tabindex="0" @click="openDishSelectDialog" @keydown.enter="openDishSelectDialog" aria-label="添加菜品">+ 添加菜品</span>
+          <div v-if="comboDishTable.length != 0" class="content">
+            <div class="addBut addBut-mb" role="button" tabindex="0" @click="openDishSelectDialog" @keydown.enter="openDishSelectDialog" aria-label="添加菜品">+ 添加菜品</div>
+            <div class="table">
+              <el-table aria-label="数据表格" :data="comboDishTable" border size="small" class="tableBox">
+                <el-table-column prop="name" label="名称" width="180" align="center"></el-table-column>
+                <el-table-column prop="price" label="原价" width="180" align="center">
+                  <template slot-scope="scope">¥{{ formatMoney(scope.row.price) }}</template>
+                </el-table-column>
+                <el-table-column prop="copies" label="份数" width="100" align="center">
+                  <template slot-scope="scope">
+                    <el-input-number v-model="scope.row.copies" size="small" :min="1" :max="99" controls-position="right" ></el-input-number>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="120" align="center" fixed="right">
+                  <template slot-scope="scope">
+                    <el-button type="text" size="small" class="btn-delete" @click="removeComboDish(scope.$index)">删除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </div>
+        </div>
+      </el-form-item>
+      <el-form-item label="套餐图片:" prop="image" class="uploadImg">
+        <el-upload
+          class="avatar-uploader"
+          action="/common/upload"
+          :headers="uploadHeaders()"
+          :data="{ bizType: 'setmeal' }"
+          :show-file-list="false"
+          :on-success="handleComboAvatarSuccess"
+          :on-change="onChange"
+          :on-error="handleComboAvatarError"
+          ref="comboUpload"
+        >
+          <img v-if="comboForm.imageUrl" :src="comboForm.imageUrl" class="avatar" style="border-radius: var(--radius-sm);" alt="套餐图片">
+          <i v-else class="ri-add-line avatar-uploader-icon"></i>
+        </el-upload>
+      </el-form-item>
+      <el-form-item label="套餐描述:">
+        <el-input v-model="comboForm.description" type="textarea" :rows="3" placeholder="套餐描述，最长200字" maxlength="200" ></el-input>
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="handleDialogClose">取 消</el-button>
+      <el-button type="primary" :loading="submitting" @click="submitComboForm()">确 定</el-button>
+      <el-button v-if="comboDialog.actionType == 'add'" type="primary" class="continue" :loading="submitting" @click="submitComboForm('continue')">保存并继续添加</el-button>
+    </template>
+  </crud-dialog>
+
+  <!-- ========== 菜品选择弹窗 ========== -->
+  <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog，footer 插槽保留"取消/确定" -->
+  <crud-dialog
+    title="添加菜品"
+    custom-class="dishSelectDialog"
+    :visible.sync="dishSelectDialog.visible"
+    size="xl"
+    @close="handleDishSelectClose"
+  >
+    <el-input
+      v-model="dishSearchKey"
+      class="search-input"
+      placeholder="请输入菜品名称进行搜索"
+      size="small"
+      clearable
+      style="width: 293px; margin-bottom: 15px;"
+      @input="debounceSearch"
+      @keydown.esc="handleSearchEsc"
+    >
+      <i slot="prefix" class="el-input__icon ri-search-line" @click="searchDish" role="button" aria-label="搜索菜品" tabindex="0"></i>
+    </el-input>
+
+    <div class="dishSelectContent">
+      <!-- 左侧：菜品选择区 -->
+      <div class="leftCont">
+        <div v-show="!dishSearchKey.trim()" class="tabBut">
+          <span
+            v-for="(item, index) in dishTypeList"
+            :key="index"
+            :class="{ act: index === activeDishTypeIndex }"
+            role="button"
+            tabindex="0"
+            @click="selectDishType(index, item.id)"
+            @keydown.enter="selectDishType(index, item.id)"
+            :aria-label="item.name"
+            :aria-pressed="index === activeDishTypeIndex"
+          >{{ item.name }}</span>
+        </div>
+        <div class="tabList">
+          <div class="table">
+            <div v-if="dishSelectList.length == 0" class="empty-tip">暂无菜品!</div>
+            <el-checkbox-group
+              v-if="dishSelectList.length > 0"
+              v-model="selectedDishList"
+              @change="onDishSelectionChange"
+            >
+              <div v-for="(item, index) in dishSelectList" :key="index" class="items">
+                <el-checkbox :label="item" :key="index" :disabled="item.status == 0">
+                  <div class="item">
+                    <span class="item-name">{{ item.dishName }}</span>
+                    <el-tag :type="item.status == 0 ? 'danger' : 'success'" size="small">{{ item.status == 0 ? '停售' : '在售' }}</el-tag>
+                    <span>¥{{ formatMoney(item.price) }}</span>
+                  </div>
+                </el-checkbox>
+              </div>
+            </el-checkbox-group>
+          </div>
+        </div>
+      </div>
+      <!-- 右侧：已选菜品预览 -->
+      <div class="ritCont">
+        <div class="tit">已选菜品({{ selectedDishList.length }})</div>
+        <div class="items">
+          <div v-for="(item, ind) in selectedDishList" :key="ind" class="item">
+            <span>{{ item.dishName }}</span>
+            <span class="price">¥{{ item.price }}</span>
+            <span class="del" @click="removeSelectedDish(ind)" role="button" aria-label="移除该菜品" tabindex="0">
+              <i class="ri-close-circle-line" aria-hidden="true"></i>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <template #footer>
+      <el-button @click="handleDishSelectClose">取 消</el-button>
+      <el-button type="primary" @click="confirmDishSelection">确 定</el-button>
+    </template>
+  </crud-dialog>
+</div>
+
+<!-- JS 依赖 -->
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js?v=20260915"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js?v=20260930"></script>
+<script src="../../js/accessibility-utils.js?v=20260927"></script>
+<script src="../../js/performance-utils.js?v=20260926"></script>
+<script src="../../api/combo.js?v=20260926"></script>
+<script src="../../api/food.js?v=20260926"></script>
+<script src="../../js/components.js?v=20261002"></script>
+
+<script>
+new Vue({
+  el: '#combo-app',
+  // 修改点：引入列表页通用 Mixin，自动提供分页(page/pageSize/counts/loading)与翻页处理
+  mixins: [window.ReggieListMixin],
+  data() {
+    return {
+      input: '',
+      submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
+      // 修改点：搜索下拉框动态选项（从数据库加载套餐名称）
+      filterOptions: { names: [] },
+      optionsLoading: false,
+      optionsLoadError: false,
+      counts: 0,
+      page: 1,
+      pageSize: 10,
+      tableData: [],
+      loading: false,
+      dishState: '',
+      checkList: [],
+      // 数据统计
+      stats: {
+        totalCombos: 0,
+        activeCombos: 0,
+        inactiveCombos: 0,
+        comboCategories: 0
+      },
+      // 当前激活的筛选器值，空字符串 = 全部
+      activeFilter: '',
+      // 修改点：<table-bar> 统一组件配置
+      tableSearchItems: [],
+      tableActions: [
+        { key: 'batchOn', text: '批量启售', type: 'success' },
+        { key: 'batchOff', text: '批量停售', type: 'warning' },
+        { key: 'add', text: '+ 新建套餐', type: 'primary' }
+      ],
+      // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
+      columns: [
+        { prop: 'image', label: '图片', slot: true, width: 76, align: 'center' },
+        { prop: 'name', label: '套餐名称', slot: true, minWidth: 150 },
+        { prop: 'categoryName', label: '分类', width: 100, align: 'center' },
+        { prop: 'price', label: '价格', width: 110, slot: true, type: 'money' },
+        { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
+        { prop: 'description', label: '描述', minWidth: 180 },
+        { prop: 'updateTime', label: '更新时间', width: 180, align: 'center' }
+      ],
+      // 套餐弹窗
+      comboDialog: {
+        title: '添加套餐',
+        visible: false,
+        actionType: 'add',
+        loading: false
+      },
+      comboForm: {
+        name: '',
+        categoryId: '',
+        price: '',
+        image: '',
+        imageUrl: '',
+        description: ''
+      },
+      comboCategoryList: [],
+      comboDishTable: [],
+      // 菜品选择弹窗
+      dishSelectDialog: {
+        visible: false
+      },
+      dishSearchKey: '',
+      dishTypeList: [],
+      dishSelectList: [],
+      selectedDishList: [],
+      activeDishTypeIndex: 0,
+      // 搜索防抖定时器
+      searchTimer: null
+    }
+  },
+  computed: {
+    // 修改点：8.2.3 套餐定价试算（依赖套餐菜品与售价，自动联动）
+    pricingSummary: function() {
+      const items = this.comboDishTable || []
+      const originTotal = items.reduce(function(sum, it) {
+        return sum + (Number(it.price) || 0) * (Number(it.copies) || 1)
+      }, 0)
+      const suggestPrice = originTotal > 0 ? Math.round(originTotal * 0.85 * 100) / 100 : 0
+      const sellPrice = parseFloat(this.comboForm.price)
+      const hasPrice = !isNaN(sellPrice) && sellPrice > 0
+      const discount = hasPrice ? Math.round((originTotal - sellPrice) * 100) / 100 : 0
+      const marginRate = hasPrice && originTotal > 0 ? sellPrice / originTotal : 0
+      return { originTotal: Math.round(originTotal * 100) / 100, suggestPrice: suggestPrice, discount: discount, marginRate: marginRate }
+    },
+    // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+    statsCards: function() {
+      const self = this;
+      return [
+        { key: '', icon: 'ri-box-3-line', label: '套餐总数', value: self.stats.totalCombos || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
+        { key: '1', icon: 'ri-checkbox-circle-line', label: '已启售', value: self.stats.activeCombos || 0, color: 'success', clickable: true, active: self.activeFilter === '1' },
+        { key: '0', icon: 'ri-pause-circle-line', label: '已停售', value: self.stats.inactiveCombos || 0, color: 'warning', clickable: true, active: self.activeFilter === '0' },
+        { key: 'cat', icon: 'ri-bar-chart-box-line', label: '套餐分类数', value: self.stats.comboCategories || 0, color: 'info' }
+      ]
+    },
+    comboRules() {
+      return {
+        name: [
+          { required: true, message: '请输入套餐名称', trigger: 'blur' }
+        ],
+        categoryId: [
+          { required: true, message: '请选择套餐分类', trigger: 'change' }
+        ],
+        price: [
+          {
+            required: true,
+            validator: (rule, value, callback) => {
+              if (!value) {
+                callback(new Error('请设置套餐价格'))
+              } else {
+                const reg = /^\d+(\.\d{0,2})?$/
+                if (reg.test(value)) {
+                  if (value < 10000) {
+                    callback()
+                  } else {
+                    callback(new Error('套餐价格小于10000'))
+                  }
+                } else {
+                  callback(new Error('价格格式只能为数字,且最多保留两位小数'))
+                }
+              }
+            },
+            trigger: 'blur'
+          }
+        ]
+      }
+    }
+  },
+  created() {
+    this.loadFilterOptions()
+    this.fetchData(true)
+  },
+  methods: {
+    // 修改点：<stat-cards> 点击（payload.activeKey 为 .sync 更新后的值）
+    onCardClick: function(payload) {
+      this.activeFilter = payload.activeKey
+      this.input = ''
+      this.page = 1
+      this.fetchData(false)
+    },
+    // 修改点：<table-bar> 组件统一操作分发
+    onTableAction: function(payload) {
+      if (payload.key === 'batchOn') { this.statusHandle('1'); }
+      else if (payload.key === 'batchOff') { this.statusHandle('0'); }
+      else if (payload.key === 'add') { this.addSetMeal('add'); }
+    },
+    // 修改点：通用优化方案 — 加载筛选下拉框选项，带本地缓存
+    async loadFilterOptions() {
+      // 如果已加载过数据，直接使用缓存
+      if (this.filterOptions.names.length > 0) {
+        this.optionsLoading = false
+        return
+      }
+      this.optionsLoading = true
+      this.optionsLoadError = false
+      try {
+        const res = await setmealOptions()
+        if (String(res.code) === '1' && res.data) {
+          this.filterOptions.names = res.data.names || []
+        } else {
+          this.optionsLoadError = true
+          ReggieUI.warning('加载套餐选项失败：' + (res.msg || '接口返回异常'))
+        }
+      } catch (err) {
+        if (err.message === 'NOTLOGIN') {
+          return
+        }
+        this.optionsLoadError = true
+        ReggieUI.error('加载筛选选项失败，请刷新页面重试')
+      } finally {
+        this.optionsLoading = false
+      }
+    },
+    // ========== 数据加载 ==========
+    async fetchData(reloadStats = true) {
+      this.loading = true
+      // 修改点：补传分页参数（原漏传 page/pageSize，套餐翻页永远查第一页）
+      const params = { page: this.page, pageSize: this.pageSize }
+      if (this.activeFilter) {
+        params.status = this.activeFilter
+      }
+      // 修改点：名称筛选参数（原未读取 this.input，导致下拉选中后筛选不生效）
+      var name = (this.input || '').trim()
+      if (name) { params.name = name }
+      try {
+        // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
+        const comboRes = await getSetmealPage(params)
+        if (reloadStats) { await this.loadComboStats() }
+        if (String(comboRes.code) === '1') {
+          this.tableData = comboRes.data.records || []
+          this.counts = comboRes.data.total
+        }
+      } catch (err) {
+        // 修改点：加载三态修复（2026-08-31）——异常仅记录，不弹全局遮屏 toast；
+        // loading 由 finally 复位，避免接口异常时骨架屏永不退出
+        console.warn('加载套餐列表失败:', err)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    /**
+     * 加载套餐统计数据
+     */
+    async loadComboStats() {
+      try {
+        const self = this
+        // 修改点：改用 pageSize:1 多状态并发查询取 total，避免 pageSize:1000 拉全量导致统计截断
+        const [totalRes, activeRes, inactiveRes, catRes] = await Promise.all([
+          getSetmealPage({ page: 1, pageSize: 1 }),
+          getSetmealPage({ page: 1, pageSize: 1, status: 1 }),
+          getSetmealPage({ page: 1, pageSize: 1, status: 0 }),
+          getCategoryList({ type: 2 })
+        ])
+        if (String(totalRes.code) === '1') {
+          let catCount = 0
+          try {
+            catCount = catRes ? (catRes.data || []).length : 0
+          } catch (e) {
+            catCount = 0
+          }
+          this.stats = {
+            totalCombos: totalRes.data.total || 0,
+            activeCombos: activeRes.data.total || 0,
+            inactiveCombos: inactiveRes.data.total || 0,
+            comboCategories: catCount
+          }
+        }
+      } catch (err) {
+        console.warn('加载套餐统计数据失败:', err)
+      }
+    },
+
+    getImage(image) {
+      // 外链/防重复/编码分支统一收敛到共享 imgPath（行为见 shared/js/img-path.js）
+      return imgPath(image)
+    },
+
+    // ========== 搜索与筛选 ==========
+    handleQuery() {
+      this.activeFilter = ''
+      this.page = 1
+      this.fetchData(false)
+    },
+
+    reset() {
+      this.input = ''
+      this.activeFilter = ''
+      this.page = 1
+      this.fetchData(false)
+    },
+
+    // filterBy 已迁移至 onCardClick
+
+    // ========== 分页 ==========
+    // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
+
+    // ========== 多选 ==========
+    // 修改点：<crud-table> 多选事件 payload 为 { rows, ids, count }，直接取 ids
+    handleSelectionChange(val) {
+      this.checkList = val.ids || []
+    },
+
+    // ========== 删除 ==========
+    // 单行删除（确认文案含套餐名；批量删除由 crud-table 内建）
+    deleteHandle(row) {
+      ReggieUI.confirm('确认删除套餐「' + row.name + '」？', '确定删除', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        deleteSetmeal(row.id).then(res => {
+          if (res.code === 1) {
+            ReggieUI.success('删除成功！')
+            this.handleQuery()
+          } else {
+            ReggieUI.error(res.msg || '操作失败')
+          }
+        }).catch(err => {
+          ReggieUI.error('请求失败：' + err)
+        })
+      })
+    },
+    // 内建批量删除：deleteSetmeal 需逗号串（axios 默认会把数组序列化成 ids[]=）
+    doBatchDelete(payload) {
+      return deleteSetmeal(payload.ids.join(','))
+    },
+
+    // ========== 状态变更（启售 / 停售） ==========
+    statusHandle(row) {
+      const params = {}
+      if (typeof row === 'string') {
+        if (this.checkList.length === 0) {
+          ReggieUI.error('批量操作，请先勾选操作套餐！')
+          return false
+        }
+        params.ids = this.checkList.join(',')
+        params.status = row
+      } else {
+        params.ids = row.id
+        params.status = row.status ? '0' : '1'
+      }
+      ReggieUI.confirm('确认更改该套餐状态?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        setmealStatusByStatus(params).then(res => {
+          if (res.code === 1) {
+            ReggieUI.success('套餐状态已经更改成功！')
+            this.handleQuery()
+          } else {
+            ReggieUI.error(res.msg || '操作失败')
+          }
+        }).catch(err => {
+          ReggieUI.error('请求失败：' + err)
+        })
+      })
+    },
+
+    // ========== 新增 / 修改套餐弹窗 ==========
+    addSetMeal(st) {
+      this.resetComboForm()
+      if (st === 'add') {
+        this.comboDialog.title = '添加套餐'
+        this.comboDialog.actionType = 'add'
+        this.comboDialog.visible = true
+        this.getComboCategoryList()
+      } else {
+        this.comboDialog.title = '修改套餐'
+        this.comboDialog.actionType = 'edit'
+        this.comboDialog.visible = true
+        this.getComboCategoryList()
+        this.initComboForm(st)
+      }
+    },
+
+    resetComboForm() {
+      this.comboForm = {
+        name: '',
+        categoryId: '',
+        price: '',
+        image: '',
+        imageUrl: '',
+        description: ''
+      }
+      this.comboDishTable = []
+      if (this.$refs.comboForm) {
+        this.$refs.comboForm.resetFields()
+      }
+    },
+
+    async initComboForm(id) {
+      try {
+        const res = await querySetmealById(id)
+        if (String(res.code) === '1') {
+          const data = res.data
+          this.comboForm = {
+            id: data.id,
+            name: data.name,
+            categoryId: data.categoryId,
+            price: String(data.price),
+            image: data.image,
+            imageUrl: this.getImage(data.image),
+            description: data.description || '',
+            status: data.status
+          }
+          this.comboDishTable = (data.setmealDishes || []).map(function (obj) {
+            return {
+              copies: obj.copies,
+              dishId: obj.dishId || obj.id,
+              name: obj.name,
+              price: obj.price
+            }
+          })
+        } else {
+          ReggieUI.error(res.msg || '获取套餐信息失败')
+        }
+      } catch (err) {
+        ReggieUI.error('请求失败：' + err)
+      }
+    },
+
+    handleDialogClose() {
+      this.comboDialog.visible = false
+      this.resetComboForm()
+    },
+
+    submitComboForm(st) {
+      if (this.submitting) return // 提交防重
+      const self = this
+      this.$refs.comboForm.validate(function (valid) {
+        if (valid) {
+          self.submitting = true
+          const params = Object.assign({}, self.comboForm, {
+            setmealDishes: self.comboDishTable.map(function (obj) {
+              return {
+                copies: obj.copies,
+                dishId: obj.dishId || obj.id,
+                name: obj.name,
+                price: obj.price
+              }
+            }),
+            status: self.comboDialog.actionType === 'add' ? 1 : (self.comboForm.status != null ? self.comboForm.status : 1)
+          })
+
+          if (params.setmealDishes.length < 1) {
+            self.submitting = false
+            ReggieUI.error('请选择菜品！')
+            return
+          }
+          if (!params.image) {
+            self.submitting = false
+            ReggieUI.error('请上传套餐图片')
+            return
+          }
+
+          if (self.comboDialog.actionType === 'add') {
+            addSetmeal(params).then(function (res) {
+              self.submitting = false
+              if (res.code === 1) {
+                ReggieUI.success('套餐添加成功！')
+                self.comboDialog.visible = false
+                self.handleQuery()
+                if (st === 'continue') {
+                  self.resetComboForm()
+                  self.comboDialog.visible = true
+                }
+              } else {
+                ReggieUI.error(res.msg || '操作失败')
+              }
+            }).catch(function (err) {
+              self.submitting = false
+              ReggieUI.error('请求失败：' + err)
+            })
+          } else {
+            editSetmeal(params).then(function (res) {
+              self.submitting = false
+              if (res.code === 1) {
+                ReggieUI.success('套餐修改成功！')
+                self.comboDialog.visible = false
+                self.handleQuery()
+              } else {
+                ReggieUI.error(res.msg || '操作失败')
+              }
+            }).catch(function (err) {
+              self.submitting = false
+              ReggieUI.error('请求失败：' + err)
+            })
+          }
+        }
+      })
+    },
+
+    // ========== 图片上传 ==========
+    // el-upload 绕过 axios，手动带 CSRF Token（生产环境 CsrfFilter 校验）
+    uploadHeaders() {
+      var token = (typeof window.getCsrfToken === 'function') ? window.getCsrfToken() : '';
+      return { 'X-CSRF-Token': token || '' };
+    },
+    handleComboAvatarSuccess(response) {
+      // 后端 /common/upload 未登录时返回 { code: 0, msg: 'NOTLOGIN' }（HTTP 401，走 el-upload 的 on-error 而非此处）
+      // 此处兜底判断：业务失败也提示，避免静默拿到 data:null 仍拼接下载地址
+      if (!response || String(response.code) !== '1' || !response.data) {
+        if (response && response.msg === 'NOTLOGIN') {
+          // 修正：iframe 内 window.top 会被 sandbox 拦截，改用 postMessage 通知顶层跳登录
+          if (window.self !== window.top) { try { window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*'); } catch(e) {} }
+          else { window.location.href = '/backend/page/login/login.html' }
+        } else {
+          ReggieUI.error((response && response.msg) || '图片上传失败，请重试')
+        }
+        return
+      }
+      this.comboForm.imageUrl = imgPath(response.data)
+      this.comboForm.image = response.data
+    },
+    // el-upload 的 :on-error 回调 —— 仅 401/未登录才跳登录，500/403 等服务端异常只提示，避免误踢管理员
+    handleComboAvatarError(err) {
+      var status = err && err.status
+      var msg = (err && err.message) || '图片上传失败，请重试'
+      if (status === 401 || msg.indexOf('status code 401') >= 0) {
+        if (window.self !== window.top) { try { window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*'); } catch(e) {} }
+        else { window.location.href = '/backend/page/login/login.html' }
+        ReggieUI.error('登录已过期，请重新登录')
+        return
+      }
+      ReggieUI.error(msg)
+    },
+
+    onChange(file) {
+      if (file) {
+        // 修改点：取最后一个后缀并转小写，避免「a.v2.png」误判、.PNG 被拒
+        const suffix = file.name.split('.').pop().toLowerCase()
+        const size = file.size / 1024 / 1024 < 2
+        if (['png', 'jpeg', 'jpg'].indexOf(suffix) < 0) {
+          ReggieUI.error('上传图片只支持 png、jpeg、jpg 格式！')
+          this.$refs.comboUpload.clearFiles()
+          return false
+        }
+        if (!size) {
+          ReggieUI.error('上传文件大小不能超过 2MB!')
+          this.$refs.comboUpload.clearFiles()
+          return false
+        }
+        return file
+      }
+    },
+
+    // ========== 菜品选择弹窗 ==========
+    openDishSelectDialog() {
+      this.dishSearchKey = ''
+      this.selectedDishList = []
+      this.dishSelectDialog.visible = true
+      this.activeDishTypeIndex = 0
+      this.getDishTypeList()
+    },
+
+    handleDishSelectClose() {
+      this.dishSelectDialog.visible = false
+      this.dishSearchKey = ''
+      this.selectedDishList = []
+    },
+
+    getComboCategoryList() {
+      const self = this
+      getCategoryList({ type: 2 }).then(function (res) {
+        if (res.code === 1) {
+          self.comboCategoryList = res.data
+        } else {
+          ReggieUI.error(res.msg || '获取分类失败')
+        }
+      }).catch(function (err) {
+        ReggieUI.error('请求失败：' + err)
+      })
+    },
+
+    getDishTypeList() {
+      const self = this
+      getCategoryList({ type: 1 }).then(function (res) {
+        if (res.code === 1) {
+          self.dishTypeList = res.data
+          if (res.data.length > 0) {
+            self.getDishList(res.data[0].id)
+          }
+        } else {
+          ReggieUI.error(res.msg || '获取菜品分类失败')
+        }
+      }).catch(function (err) {
+        ReggieUI.error('请求失败：' + err)
+      })
+    },
+
+    getDishList(categoryId) {
+      const self = this
+      queryDishList({ categoryId: categoryId }).then(function (res) {
+        if (res.code === 1) {
+          if (res.data.length === 0) {
+            self.dishSelectList = []
+            return
+          }
+          self.dishSelectList = res.data.map(function (item) {
+            return {
+              dishId: item.id,
+              dishName: item.name,
+              copies: 1,
+              price: item.price,
+              status: item.status
+            }
+          })
+        } else {
+          ReggieUI.error(res.msg || '获取菜品列表失败')
+        }
+      }).catch(function (err) {
+        ReggieUI.error('请求失败：' + err)
+      })
+    },
+
+    debounceSearch() {
+      const self = this
+      if (this.searchTimer) { clearTimeout(this.searchTimer) }
+      this.searchTimer = setTimeout(function() {
+        self.searchDish()
+      }, 400)
+    },
+
+    handleSearchEsc() {
+      const self = this
+      if (this.searchTimer) { clearTimeout(this.searchTimer) }
+      // 搜索框清空时恢复原始分类列表
+      if (!this.dishSearchKey.trim() && self.dishTypeList.length > 0) {
+        self.getDishList(self.dishTypeList[0].id)
+      }
+    },
+
+    searchDish() {
+      const self = this
+      const name = this.dishSearchKey.trim()
+      if (name) {
+        queryDishList({ name: name }).then(function (res) {
+          if (res.code === 1) {
+            self.dishSelectList = res.data.map(function (item) {
+              return {
+                dishId: item.id,
+                dishName: item.name,
+                copies: 1,
+                price: item.price,
+                status: item.status
+              }
+            })
+          } else {
+            ReggieUI.error(res.msg || '搜索失败')
+          }
+        }).catch(function (err) {
+          ReggieUI.error('请求失败：' + err)
+        })
+      } else {
+        if (self.dishTypeList.length > 0) {
+          self.getDishList(self.dishTypeList[0].id)
+        }
+      }
+    },
+
+    selectDishType(index, id) {
+      this.activeDishTypeIndex = index
+      this.getDishList(id)
+    },
+
+    onDishSelectionChange(value) {
+      this.selectedDishList = value
+    },
+
+    removeSelectedDish(index) {
+      this.selectedDishList.splice(index, 1)
+    },
+
+    confirmDishSelection() {
+      if (this.selectedDishList.length === 0) {
+        ReggieUI.warning('请至少选择一道菜品')
+        return
+      }
+      const existingIds = new Set(this.comboDishTable.map(function (item) { return item.dishId || item.id }))
+      const self = this
+      this.selectedDishList.forEach(function (item) {
+        if (!existingIds.has(item.dishId)) {
+          self.comboDishTable.push({
+            dishId: item.dishId,
+            name: item.dishName,
+            price: item.price,
+            copies: 1
+          })
+        }
+      })
+      this.dishSelectDialog.visible = false
+      ReggieUI.success('添加成功！')
+    },
+
+    removeComboDish(index) {
+      this.comboDishTable.splice(index, 1)
+    }
+  }
+})
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

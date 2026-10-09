@@ -1,0 +1,124 @@
+// 系统管理模块 API
+const sysApi = {
+    // ==================== 角色管理 ====================
+    rolePage(params) {
+        return $axios.get('/sys/role/page', { params })
+    },
+    // 修改点：角色聚合统计（SQL 聚合，替代前端 pageSize:999 拉全量遍历 withPerms）
+    roleStats() {
+        return $axios.get('/sys/role/stats')
+    },
+    roleList() {
+        return $axios.get('/sys/role/list')
+    },
+    // 修改点：筛选下拉选项（动态加载角色名称）
+    roleOptions() {
+        return $axios.get('/sys/role/options')
+    },
+    roleAdd(data) {
+        return $axios.post('/sys/role', data)
+    },
+    roleUpdate(data) {
+        return $axios.put('/sys/role', data)
+    },
+    roleDelete(id) {
+        return $axios.delete('/sys/role/' + id)
+    },
+    rolePermissions(id) {
+        return $axios.get('/sys/role/' + id + '/permissions')
+    },
+    assignPermissions(id, permissionIds) {
+        return $axios.put('/sys/role/' + id + '/permissions', { permissionIds })
+    },
+    // RBAC 闭环：角色-用户分配（多对多）
+    roleUsers(id) {
+        return $axios.get('/sys/role/' + id + '/users')
+    },
+    assignRoleUsers(id, employeeIds) {
+        return $axios.put('/sys/role/' + id + '/users', { employeeIds })
+    },
+    permissionTree() {
+        return $axios.get('/sys/role/permissions/tree')
+    },
+    // 修改点(P1-1)：当前员工菜单权限（角色标识/超管标识/权限集合），供后台菜单按角色过滤
+    menuAccess() {
+        return $axios.get('/sys/menu/access')
+    },
+
+    // ==================== 系统配置 ====================
+    configPage(params) {
+        return $axios.get('/sys/config/page', { params })
+    },
+    configStats() {
+        return $axios.get('/sys/config/stats')
+    },
+    configList() {
+        return $axios.get('/sys/config/list')
+    },
+    configGet(key) {
+        return $axios.get('/sys/config/' + key)
+    },
+    configAdd(data) {
+        return $axios.post('/sys/config', data)
+    },
+    configUpdate(data) {
+        return $axios.put('/sys/config', data)
+    },
+    configBatchUpdate(data) {
+        return $axios.put('/sys/config/batch', data)
+    },
+    configDelete(id) {
+        return $axios.delete('/sys/config/' + id)
+    },
+
+    // ==================== 通知模板 ====================
+    templatePage(params) {
+        return $axios.get('/sys/template/page', { params })
+    },
+    templateList(bizType) {
+        return $axios.get('/sys/template/list', { params: { bizType } })
+    },
+    templateDetail(id) {
+        return $axios.get('/sys/template/' + id)
+    },
+    templateAdd(data) {
+        return $axios.post('/sys/template', data)
+    },
+    templateUpdate(data) {
+        return $axios.put('/sys/template', data)
+    },
+    templateToggle(id, status) {
+        return $axios.put('/sys/template/' + id + '/toggle', null, { params: { status } })
+    },
+    templateDelete(id) {
+        return $axios.delete('/sys/template/' + id)
+    },
+
+    // ==================== 操作日志 ====================
+    logPage(params) {
+        return $axios.get('/sys/log/page', { params })
+    },
+    logStats() {
+        return $axios.get('/sys/log/stats')
+    },
+    logByBiz(tableName, bizId) {
+        return $axios.get('/sys/log/biz', { params: { tableName, bizId } })
+    },
+
+    // ==================== 部门管理（企业组织架构） ====================
+    departmentPage(params) {
+        return $axios.get('/sys/department/page', { params })
+    },
+    departmentList() {
+        return $axios.get('/sys/department/list')
+    },
+    departmentAdd(data) {
+        return $axios.post('/sys/department', data)
+    },
+    departmentUpdate(data) {
+        return $axios.put('/sys/department', data)
+    },
+    departmentDelete(id) {
+        return $axios.delete('/sys/department/' + id)
+    }
+}

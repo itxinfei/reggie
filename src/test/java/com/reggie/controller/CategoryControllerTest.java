@@ -1,0 +1,137 @@
+package com.reggie.controller;
+
+import com.reggie.common.BaseContext;
+import com.reggie.test.TestDatabaseCleaner;
+import com.reggie.module.category.model.Category;
+import com.reggie.module.category.service.CategoryService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest(classes = com.reggie.ReggieApplication.class)
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+public class CategoryControllerTest extends BaseControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private CategoryService categoryService;
+
+    @Autowired
+    private TestDatabaseCleaner cleaner;
+
+    @BeforeEach
+    void setUp() {
+        cleaner.cleanTables("category");
+        BaseContext.setCurrentId(1L);
+        BaseContext.setCurrentTenantId(999L);
+
+        Category category = new Category();
+        // 主键用测试专用高 ID，避开 reggie 库租户 1 演示分类占用的小主键（单库改造，2026-10-02）
+        category.setId(991001L);
+        category.setName("测试分类");
+        category.setType(1);
+        category.setSort(1);
+        categoryService.save(category);
+    }
+
+    @Test
+    void testSave() throws Exception {
+        Category category = new Category();
+        category.setName("新增分类");
+        category.setType(2);
+        category.setSort(2);
+
+        mockMvc.perform(withCsrfToken(mockMvc, post("/category")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 999L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"新增分类\",\"type\":2,\"sort\":2}")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data").value("新增分类成功"));
+    }
+
+    @Test
+    void testPage() throws Exception {
+        mockMvc.perform(get("/category/page")
+                .param("page", "1")
+                .param("pageSize", "10")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.records[0].name").value("测试分类"));
+    }
+
+    @Test
+    void testDelete() throws Exception {
+        Category cat2 = new Category();
+        cat2.setName("待删除分类");
+        cat2.setType(1);
+        cat2.setSort(10);
+        categoryService.save(cat2);
+        long generatedId = cat2.getId();
+
+        mockMvc.perform(withCsrfToken(mockMvc, delete("/category/" + generatedId)
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 999L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data").value("分类删除成功"));
+    }
+
+    @Test
+    void testUpdate() throws Exception {
+        mockMvc.perform(withCsrfToken(mockMvc, put("/category")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 999L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"id\":991001,\"name\":\"修改后分类\",\"type\":1,\"sort\":1}")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data").value("分类修改成功"));
+
+        org.junit.jupiter.api.Assertions.assertEquals("修改后分类", categoryService.getById(991001L).getName());
+    }
+
+    @Test
+    void testGetById() throws Exception {
+        mockMvc.perform(get("/category/991001")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 999L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.name").value("测试分类"));
+    }
+
+    @Test
+    void testList() throws Exception {
+        mockMvc.perform(get("/category/list")
+                .param("type", "1")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data[0].name").value("测试分类"));
+    }
+}
+
+
+

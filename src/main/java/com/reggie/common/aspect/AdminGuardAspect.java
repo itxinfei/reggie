@@ -1,0 +1,86 @@
+package com.reggie.common.aspect;
+
+import com.reggie.common.R;
+import lombok.extern.slf4j.Slf4j;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+
+/**
+ * <p>
+ * 超级管理员鉴权切面
+ * 拦截 {@link com.reggie.common.annotation.RequiresAdmin} 标注的接口，
+ * 仅允许超级管理员（roleKey=SUPER_ADMIN）访问，其余角色一律拒绝，防止系统管理类接口越权。
+ * </p>
+ *
+ * @author 心飞为你飞
+ * @since 2026-07-20
+ */
+@Slf4j
+@Aspect
+@Component
+public class AdminGuardAspect {
+
+    /** 超级管理员角色标识，需与 PermissionAspect.ADMIN_ROLE_KEY 保持一致 */
+    private static final String ADMIN_ROLE_KEY = "SUPER_ADMIN";
+
+    // 同时拦截方法级(@annotation)与类级(@within) @RequiresAdmin。
+    // 仅写 @annotation 会导致类级注解的 Controller 不被命中，非管理员可越权操作系统管理接口(P0 漏洞)。
+    /**
+     * 校验 admin。
+     * @param joinPoint 参数 joinPoint
+     * @return 返回结果
+     */
+    @Around("@annotation(com.reggie.common.annotation.RequiresAdmin) || " +
+            "@within(com.reggie.common.annotation.RequiresAdmin)")
+    /**
+     * 校验 admin。
+     * @param joinPoint 参数 joinPoint
+     * @return 返回结果
+     */
+    public Object checkAdmin(ProceedingJoinPoint joinPoint) throws Throwable {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes == null) {
+            return R.error("未登录或登录已过期");
+        }
+        HttpServletRequest request = attributes.getRequest();
+
+        Long employeeId = (Long) request.getAttribute("employeeId");
+        // 兜底：LoginCheckFilter 通过 @WebFilter 注册，在 MockMvc 测试中不生效，
+        // 此时从 session 属性 "employee" 获取（测试通过 .sessionAttr("employee", id) 设置）
+        if (employeeId == null) {
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                Object empAttr = session.getAttribute("employee");
+                if (empAttr instanceof Long) {
+                    employeeId = (Long) empAttr;
+                }
+            }
+        }
+        if (employeeId == null) {
+            log.warn("[管理员鉴权] 未登录访问受限接口被拒绝：uri={}", request.getRequestURI());
+            return R.error("未登录或登录已过期");
+        }
+
+        String roleKey = (String) request.getAttribute("roleKey");
+        // 修复 P0-4：roleKey 为空时直接拒绝（原兜底默认 SUPER_ADMIN 为权限提升漏洞）。
+        // MockMvc 测试需显式通过 .addAttribute("roleKey", "SUPER_ADMIN") 设置角色标识。
+        if (roleKey == null || roleKey.isEmpty()) {
+            log.warn("[管理员鉴权] roleKey 为空，拒绝访问：employeeId={}, uri={}",
+                employeeId, request.getRequestURI());
+            return R.error("管理员权限校验失败，请重新登录");
+        }
+        if (!ADMIN_ROLE_KEY.equals(roleKey)) {
+            log.warn("[管理员鉴权] 非管理员访问受限接口被拒绝：employeeId={}, roleKey={}", employeeId, roleKey);
+            return R.error("权限不足，仅超级管理员可操作");
+        }
+
+        return joinPoint.proceed();
+    }
+}

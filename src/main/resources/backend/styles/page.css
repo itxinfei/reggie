@@ -1,0 +1,1574 @@
+/* 页面容器表面（背景/边框/圆角/阴影/定位/溢出）统一在 design-system.css 第 2 节定义，
+   紧凑内边距（8/12）与外层 8px 留白由 consistency.css 最终断言。
+   本文件原先的 .dashboard-container 重复规则（padding:30px 28px、border-radius:4px 等）
+   已删除——它们是死声明且会把卡片圆角从规范的 12px 压成 4px。 */
+
+/* ========== tableBar — 搜索筛选 + 操作按钮栏（统一设计规范） ========== */
+
+/* 主容器：flex row，控件紧靠，操作区推到右侧 */
+.container .tableBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 0 0 20px; /* 上下边距全站统一：上 0、下 20px（原仅 margin-bottom，杜绝个别页漂移） */
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* table-bar 统一刷新按钮：推到最右；action-group 已靠右时剩余空间为 0，自然成组 */
+.container .tableBar .table-bar__refresh {
+  margin-left: auto;
+}
+
+/* 搜索区域（<table-bar> 组件使用，聚合搜索控件+查询/重置按钮） */
+.container .tableBar .search-area {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* 搜索区内的输入框：默认 200px */
+.container .tableBar .search-area .el-input {
+  flex: 0 1 200px;
+  min-width: 150px;
+  width: auto !important;
+}
+
+/* tableBar 内的输入框（不含 search-area）：默认 120px，窄屏可收缩 */
+.container .tableBar > .el-input {
+  flex: 0 1 120px;
+  min-width: 100px;
+  width: auto;
+}
+
+/* 搜索区内的下拉框：默认 160px */
+.container .tableBar .search-area .el-select {
+  flex: 0 1 160px;
+  min-width: 120px;
+  width: auto !important;
+}
+
+/* tableBar 内的下拉框（不含 search-area）：默认 100px，窄屏可收缩 */
+.container .tableBar > .el-select {
+  flex: 0 1 100px;
+  min-width: 80px;
+  width: auto;
+}
+
+/* 搜索区内的日期选择器：默认 340px */
+.container .tableBar .search-area .el-date-editor {
+  flex: 0 1 340px;
+  min-width: 260px;
+  width: auto !important;
+}
+
+/* 搜索区内控件清除 Element UI 固定宽度冲突 */
+.container .tableBar .search-area .el-input--small,
+.container .tableBar .search-area .el-select--small {
+  width: auto !important;
+}
+
+/* 搜索扩展插槽 */
+.container .tableBar .search-area > .search-extra {
+  flex: 0 0 auto;
+}
+
+/* 查询/重置按钮组 */
+.container .tableBar .search-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ============================================
+   统一按钮颜色体系（按功能明确区分）
+   ============================================ */
+
+/* 基础按钮尺寸 */
+.container .tableBar .el-button:not(.el-button--text) {
+  font-size: 13px;
+  padding: 7px 15px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-all);
+  white-space: nowrap;
+}
+
+/* --- 查询按钮：项目主色 var(--color-brand-500) --- */
+.container .tableBar .btn-query {
+  background: var(--color-brand-500) !important;
+  border: none !important;
+  color: var(--legacy-333) !important;
+  font-weight: 500;
+}
+.container .tableBar .btn-query:hover {
+  background: var(--color-brand-300) !important;
+  color: var(--legacy-333) !important;
+}
+.container .tableBar .btn-query.is-loading {
+  background: var(--color-brand-500) !important;
+}
+
+/* --- 重置按钮：白底细边框（次要操作） --- */
+.container .tableBar .btn-reset {
+  background: var(--color-white);
+  border: 1px solid var(--el-border-default);
+  color: var(--el-text-regular);
+}
+.container .tableBar .btn-reset:hover {
+  color: var(--color-brand-500);
+  border-color: var(--legacy-fbe396);
+  background: var(--color-brand-50);
+}
+
+/* --- 新增按钮：绿色（创建/添加） --- */
+/* 修改点：彩色按钮统一使用中性柔和阴影令牌（静止 sm / 悬浮 md），
+   移除原先绿/红/橙色发光阴影（违反"禁止发光、多重阴影"规范）。
+   按钮本身已是高饱和实色，辨识度足够，无需彩色光晕。 */
+/* P0 对比度修复（2026-09-27）：白字在原语义色底上仅 2.1~2.5:1，改用文字安全令牌（白字 ≥4.9:1） */
+.container .tableBar .btn-add,
+.container .tableBar .btn-action.el-button--success {
+  background: var(--color-success-text) !important;
+  border: none !important;
+  color: var(--color-white) !important;
+  font-weight: 500;
+  box-shadow: var(--shadow-sm);
+}
+.container .tableBar .btn-add:hover,
+.container .tableBar .btn-action.el-button--success:hover {
+  background: var(--color-success-text-hover) !important;
+  box-shadow: var(--shadow-md);
+}
+
+/* --- 删除按钮：红色（危险操作） --- */
+.container .tableBar .btn-delete,
+.container .tableBar .btn-action.el-button--danger {
+  background: var(--color-danger-text) !important;
+  border: none !important;
+  color: var(--color-white) !important;
+  font-weight: 500;
+  box-shadow: var(--shadow-sm);
+}
+.container .tableBar .btn-delete:hover,
+.container .tableBar .btn-action.el-button--danger:hover {
+  background: var(--color-danger-text-hover) !important;
+  box-shadow: var(--shadow-md);
+}
+
+/* --- 导出按钮：橙色（数据导出） --- */
+.container .tableBar .btn-export,
+.container .tableBar .btn-action.el-button--warning {
+  background: var(--color-warning-text) !important;
+  border: none !important;
+  color: var(--color-white) !important;
+  font-weight: 500;
+  box-shadow: var(--shadow-sm);
+}
+.container .tableBar .btn-export:hover,
+.container .tableBar .btn-action.el-button--warning:hover {
+  background: var(--color-warning-text-hover) !important;
+  box-shadow: var(--shadow-md);
+}
+
+/* --- 信息按钮：中性灰（白字需≥4.5:1） --- */
+/* 底色统一引用令牌（原硬编码 #6f7276 仅 4.4:1 → --color-info-solid #656b78 达 5.34:1，零视觉回归风险） */
+.container .tableBar .btn-action.el-button--info {
+  background: var(--color-info-solid, #656b78) !important;
+  border: none !important;
+  color: var(--text-inverse, #fff) !important;
+  font-weight: 500;
+  box-shadow: var(--shadow-sm);
+}
+.container .tableBar .btn-action.el-button--info:hover {
+  background: var(--color-info-solid-hover, #5c5f63) !important;
+  box-shadow: var(--shadow-md);
+}
+
+/* --- 刷新按钮：信息灰边框（数据刷新） --- */
+.container .tableBar .btn-refresh {
+  background: var(--color-white);
+  border: 1px solid var(--el-border-base);
+  color: var(--color-info);
+}
+.container .tableBar .btn-refresh:hover {
+  color: var(--color-brand-500);
+  border-color: var(--legacy-fbe396);
+  background: var(--color-brand-50);
+}
+
+/* --- 预警按钮：橙色（库存预警等） --- */
+.container .tableBar .btn-warning-status {
+  background: var(--color-warning) !important;
+  border: none !important;
+  color: var(--color-white) !important;
+  font-weight: 500;
+  box-shadow: var(--shadow-sm);
+}
+.container .tableBar .btn-warning-status:hover {
+  background: var(--color-warning-dark) !important;
+  box-shadow: var(--shadow-md);
+}
+
+/* --- 操作按钮组（右侧，自动推到最右边） --- */
+.container .tableBar .action-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+/* 操作按钮微悬浮效果（中性柔和阴影，静止 sm / 悬浮 md） */
+.container .tableBar .btn-action {
+  box-shadow: var(--shadow-sm);
+}
+.container .tableBar .btn-action:hover {
+  box-shadow: var(--shadow-md);
+}
+.container .tableBox {
+  width: 100%;
+}
+
+.container .tableBox .el-image img {
+  width: 40px;
+  border-radius: 5px;
+}
+
+/* 修改点：tableLab 操作区推到右侧，与 action-group 行为一致 */
+.container .tableBar .tableLab {
+  margin-left: auto;
+}
+
+.container .tableLab .span-btn {
+  cursor: pointer;
+  display: inline-block;
+  font-size: 14px;
+  padding: 0 20px;
+  color: var(--text-legacy-muted);
+  border-right: solid 1px var(--el-border-soft);
+}
+
+.container .tableLab .el-button {
+  margin-left: 10px;
+}
+
+/* tableLab 中的文本按钮样式（用于批量操作） */
+.container .tableLab .el-button--text {
+  padding: 0 20px;
+  font-size: 14px;
+  color: var(--text-legacy-muted);
+  position: relative;
+}
+
+.container .tableLab .el-button--text::after {
+  content: "";
+  position: absolute;
+  right: -6px;
+  height: 14px;
+  width: 0px;
+  border-right: solid 1px var(--el-border-light);
+}
+
+/* blueBug/delBut 旧操作按钮类已无页面引用，统一走 .btn-view/.btn-delete（components.css） */
+
+.el-table-column--selection .cell {
+  padding: 0 !important;
+  text-align: center !important;
+}
+
+/* 添加 */
+.addBrand-container .avatar-uploader .el-upload {
+  border: 1px dashed var(--antd-border);
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.addBrand-container .avatar-uploader .el-upload:hover {
+  border-color: var(--color-brand-500);
+}
+.addBrand-container .avatar-uploader-icon {
+  font-size: 28px;
+  color: var(--legacy-8c939d);
+  width: 200px;
+  height: 160px;
+  line-height: 160px;
+  text-align: center;
+}
+.addBrand-container .avatar {
+  width: 160px;
+  height: 160px;
+  display: block;
+  border-radius: 4px;
+}
+.addBrand-container .el-form--inline .el-form-item__content {
+  width: 293px;
+}
+.addBrand-container .el-input {
+  width: 293px;
+}
+
+.addBrand-container {
+  margin: 30px;
+}
+.addBrand-container .container {
+  position: relative;
+  z-index: 1;
+  background: var(--color-white);
+  padding: 30px;
+  border-radius: 4px;
+  min-height: 500px;
+  /* 修改点：限制容器最大宽度，防止表单在大屏上铺满 */
+  max-width: 700px;
+  margin: 0 auto;
+}
+.addBrand-container .container .subBox {
+  padding-top: 30px;
+  text-align: center;
+  border-top: solid 1px var(--el-bg-soft);
+}
+
+/* 修改点：移除固定宽度 777px，改为自适应，与表单其他字段对齐 */
+.flavorBox {
+  width: 100%;
+}
+.flavorBox .addBut {
+  background: var(--color-brand-500);
+  display: inline-block;
+  padding: 0px 20px;
+  border-radius: 3px;
+  line-height: 40px;
+  cursor: pointer;
+  border-radius: 4px;
+  color: var(--gray-333);
+  font-weight: 500;
+}
+.flavorBox .flavor {
+  border: solid 1px var(--legacy-dfe2e8);
+  border-radius: 3px;
+  padding: 15px;
+  background: var(--el-bg-white);
+}
+.flavorBox .flavor .title {
+  color: var(--legacy-606168);
+}
+.flavorBox .flavor .cont .items {
+  display: flex;
+  margin: 10px 0;
+}
+.flavorBox .flavor .cont .items .itTit {
+  width: 150px;
+  margin-right: 15px;
+}
+.flavorBox .flavor .cont .items .itTit input {
+  width: 100%;
+  line-height: 40px;
+  border-radius: 3px;
+  padding: 0 10px;
+}
+.flavorBox .flavor .cont .items .labItems {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  border-radius: 3px;
+  min-height: 39px;
+  border: solid 1px var(--el-border-soft);
+  background: var(--color-white);
+  padding: 0 5px;
+}
+.flavorBox .flavor .cont .items .labItems span {
+  display: inline-block;
+  color: var(--legacy-f19c59);
+  margin: 5px;
+  line-height: 26px;
+  height: 26px;
+  padding: 0 10px;
+  background: var(--legacy-fdf4eb);
+  border-radius: 3px;
+  border: solid 1px var(--legacy-fae2cd);
+}
+.flavorBox .flavor .cont .items .labItems span i {
+  cursor: pointer;
+  font-style: normal;
+}
+.flavorBox .flavor .cont .items .labItems .inputBox {
+  display: inline-block;
+  width: 100%;
+  height: 36px;
+  line-height: 36px;
+  overflow: hidden;
+}
+.flavorBox .flavor .cont .items .delFlavor {
+  display: inline-block;
+  padding: 0 10px;
+  color: var(--legacy-f19c59);
+  cursor: pointer;
+}
+
+/* 修改点：移除 .address 区域 777px 强制定宽，使 textarea 和按钮区与其他字段对齐 */
+.addBrand-container .address .el-form-item__content {
+  width: 100% !important;
+  max-width: 500px;
+}
+
+.el-button--text {
+  font-weight: 400 !important;
+  font-size: 13px !important;
+}
+
+/* 修改点(2026-09-01)：删除 .el-table td 的 13px !important 覆盖 ——
+   与 components.css 的 .tableBox.el-table td{font-size:var(--font-size-base)}（14px，36 页统一密度规范）
+   冲突且以 !important 静默压制。删除后回归统一基准 var(--font-size-base)，字号只维护一处。 */
+
+/* 非 selection 的第一列保留左缩进，selection 列由上方规则重置为 0 */
+.el-table .cell,
+.el-table th div {
+  padding-left: 12px;
+}
+
+/* 修改点(2026-09-01)：删除 .el-table th 的 text-align:center !important 强制 ——
+   表头对齐唯一来源为 components.js 的 resolveColAlign（:header-align）+
+   consistency.css 的三态 !important（.is-left/.is-center/.is-right .cell），
+   此处重复管辖属冗余定义，删除后由单轨生效（AGENTS.md crud-table 对齐规范）。 */
+
+/* 标准输入框宽度（弹窗表单内使用） */
+.container .el-dialog .el-input,
+.container .el-dialog .el-select,
+.container .el-dialog .el-textarea__inner {
+  width: 293px;
+  max-width: 100%;
+}
+.container .el-dialog .el-input--small,
+.container .el-dialog .el-select--small {
+  width: 200px;
+  max-width: 100%;
+}
+/* 全宽输入框（弹窗内） */
+.container .el-dialog .el-input--full,
+.container .el-dialog .el-textarea__inner {
+  width: 100%;
+}
+
+/* 统一表格视觉样式（.tableBox 与 .el-table 是同一元素，须用复合选择器）。
+   表头底色/字重/字号已由 consistency.css 的 .el-table th.el-table__cell 单一定义
+   （手写表与 crud 表通用；crud 表在 .crud-table-wrapper 内由 components.css 更高
+   特异性接管并额外带品牌底线），此处不再用 !important 重复声明。 */
+.tableBox.el-table {
+  font-size: var(--font-size-base);
+}
+
+/* 统一表格内容垂直居中 + 密度（padding 13px 0 与 components.css crud 规范一致） */
+.tableBox.el-table td {
+  vertical-align: middle;
+  font-size: var(--font-size-base);
+  padding: 13px 0;
+}
+
+/* 表格行高：min-height 48px + height auto —— 与 components.css 的 crud-table 规范对齐，
+   保证手写 el-table 与 crud-table 行高一致；多行内容自动增长不被截断 */
+.tableBox.el-table .el-table__row {
+  min-height: 48px;
+  height: auto;
+}
+
+/* 增强斑马纹对比度（与 crud 表格一致） */
+.tableBox.el-table--striped .el-table__body tr.el-table__row--striped td {
+  background-color: var(--bg-subtle) !important;
+}
+
+/* 表格操作按钮间距 */
+.tableBox .el-button {
+  margin: 0 5px;
+}
+
+/* 表格操作按钮样式（对齐 components.css 规范：4px 圆角 + 紧凑内边距） */
+.tableBox .el-button--text {
+  padding: 3px 8px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+/* 通用操作按钮悬停效果 */
+.tableBox .el-button--text:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 操作列 nowrap 已迁移至 components.css .crud-actions-col .cell（精确作用域，避免影响所有居中列） */
+
+/* 图片圆角样式 */
+.tableBox .el-image {
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* 搜索图标样式 */
+.container .tableBar .el-input .search-icon {
+  cursor: pointer;
+}
+
+/* 文本按钮悬停效果 */
+.container .tableLab .el-button--text:hover {
+  opacity: 0.8;
+  transition: opacity 0.3s;
+}
+
+/* 表格行悬停过渡 */
+.el-table__body tr {
+  transition: background-color 0.2s ease;
+}
+
+/* 按钮过渡效果 */
+.el-button {
+  transition: all 0.3s ease;
+}
+
+/* 空状态提示样式 */
+.empty-tip {
+  text-align: center;
+  padding: 40px;
+  color: var(--color-info);
+  font-size: 14px;
+}
+
+/* 统一表单标签样式 */
+.addBrand-container .el-form-item {
+  margin-bottom: 22px;
+}
+
+/* 表格边框增强 */
+.tableBox {
+  border: 1px solid var(--el-border-light);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* ========== tableBar 原生 HTML 页面回退样式（被 .search-area 覆盖的组件页不受影响） ========== */
+
+/* 筛选条件组（外卖配送等复杂筛选场景） */
+.container .tableBar .filter-group {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* 原生 HTML 页面 tableBar 直接子控件统一间距（组件页由 .search-area 的 gap 控制） */
+/* 修改点：防止控件之间无间距导致按钮被贴紧/遮挡 */
+.container .tableBar > .el-input,
+.container .tableBar > .el-select,
+.container .tableBar > .el-date-editor {
+  margin-right: 8px !important;
+}
+
+
+/* 视图切换器（桌台管理的表格/卡片切换） */
+.table-grid-toggle {
+  display: flex;
+  border: 1px solid var(--antd-border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-left: 10px;
+}
+.table-grid-toggle .toggle-btn {
+  padding: 6px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--el-text-regular);
+  background: var(--color-white);
+  transition: all 0.3s;
+  border: none;
+}
+.table-grid-toggle .toggle-btn.active {
+  background: var(--color-brand-500);
+  color: var(--color-white);
+}
+.table-grid-toggle .toggle-btn:hover:not(.active) {
+  color: var(--color-brand-500);
+}
+
+/* ========== tableBar 各页面自定义宽度（弹性模式，优先收缩日期选择器） ========== */
+/* 修改点：全部从固定 width 改为 flex: 0 1 <width> + min-width，窄屏自动收缩 */
+
+/* --- 80px 下拉框（2字极短选项如启用/停用） --- */
+/* 修改点：不参与弹性收缩，保持固定宽度以区别内容长度 */
+.container .tableBar .el-select--narrow-xxs {
+  flex: 0 0 80px;
+  min-width: 80px;
+  width: auto;
+}
+
+/* --- 100px 下拉框（短选项如连接类型/状态） --- */
+.container .tableBar .el-select--narrow-xs {
+  flex: 0 0 100px;
+  width: auto;
+}
+
+/* --- 120px 下拉框（配送/打印/日志） --- */
+.container .tableBar .el-select--wide-xs {
+  flex: 0 1 120px;
+  min-width: 90px;
+  width: auto;
+}
+
+/* --- 120px 输入框（短文本如操作人、编号） --- */
+.container .tableBar .el-input--wide-xs {
+  flex: 0 1 120px;
+  min-width: 90px;
+  width: auto;
+}
+
+/* --- 130px 输入框/下拉框 --- */
+.container .tableBar .el-input--narrow-sm,
+.container .tableBar .el-select--narrow-sm {
+  flex: 0 1 130px;
+  min-width: 100px;
+  width: auto;
+}
+
+/* --- 140px 输入框/下拉框 --- */
+.container .tableBar .el-input--narrow-md,
+.container .tableBar .el-select--narrow-md {
+  flex: 0 1 140px;
+  min-width: 110px;
+  width: auto;
+}
+
+/* --- 150px 输入框/下拉框（中等短文本/常规选项） --- */
+/* 修改点：命名留存，但语义已修正 —— 弹性基准 150px，可缩至 120px */
+.container .tableBar .el-input--narrow,
+.container .tableBar .el-select--narrow {
+  flex: 0 1 150px;
+  min-width: 120px;
+  width: auto;
+}
+
+/* --- 180px 输入框（打印日志/搜索等） --- */
+.container .tableBar .el-input--wide-sm {
+  flex: 0 1 180px;
+  min-width: 140px;
+  width: auto;
+}
+
+/* --- 220px 输入框（菜品/套餐/分类/订单） --- */
+.container .tableBar .el-input--wide {
+  flex: 0 1 220px;
+  min-width: 160px;
+  width: auto;
+}
+
+/* --- 500px 日期选择器（支付管理/datetimerange 等需要更宽空间的场景） --- */
+.container .tableBar .el-date-editor--3xl {
+  flex: 0 1 500px;
+  min-width: 320px;
+  width: auto;
+}
+
+/* 表单内行布局（盘点明细等） */
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* ========== 弹窗宽度规范 ========== */
+
+/* 小弹窗：简单确认（删除、提示） */
+.container .el-dialog--sm,
+.el-dialog--sm { width: 420px !important; }
+/* 中弹窗：详情展示 */
+.container .el-dialog--md,
+.el-dialog--md { width: 560px !important; }
+/* 大弹窗：常规表单（新增/编辑） */
+.container .el-dialog--lg,
+.el-dialog--lg { width: 720px !important; }
+/* 超大弹窗：复杂表单（订单详情、菜品编辑） */
+.container .el-dialog--xl,
+.el-dialog--xl { width: 840px !important; }
+/* 全屏弹窗：iframe 嵌入、大屏看板等（宽度 92%，top 由 crud-dialog 组件控制为 4vh） */
+.container .el-dialog--fullscreen,
+.el-dialog--fullscreen { width: 92% !important; }
+.el-dialog--fullscreen .el-dialog__body { max-height: 78vh; overflow-y: auto; }
+
+/* ========== 弹窗垂直居中（全局生效，revised 2026-07-17） ==========
+ * 所有 el-dialog 自动水平+垂直居中。
+ * 原理：
+ *   1. wrapper 设为 flex 容器 + align-items:center → 弹窗精确居中
+ *   2. dialog margin:0 → 清除 Element UI 默认 top 偏移，居中由 flex 接管
+ *   3. unified-dialog 限高 90vh + flex 列布局 → body 内部滚动
+ *   4. 非 unified-dialog 限高 85vh + overflow:auto → 安全兜底，不会截断
+ *
+ * 设计说明（为什么废弃 margin:auto 方案）：
+ *   旧方案用 margin:auto 在 flex 中垂直居中，依赖 :not([style*="display: none"])
+ *   选择器让 wrapper 变成 flex 容器。一旦选择器匹配失败（Element UI 版本差异或
+ *   内联 style 写法变化），wrapper 退回普通块容器，此时 margin:auto 的垂直方向
+ *   塌缩为 0 → 弹窗贴顶。
+ *   新方案用 align-items:center 控制垂直居中，与 margin 解耦；配合 max-height
+ *   限制，弹窗内容再高也不会截断（内部滚动）。
+ * ============================================================ */
+
+/* 修改点：wrapper flex 居中容器 — 加 !important 防覆盖，加 align-items:center 精确垂直居中
+ * 关键：仅在弹窗"可见"（无内联 display:none）时启用 flex。
+ * Element 关闭弹窗时给 wrapper 注入 style="display:none" 来隐藏；
+ * 若无条件写 display:flex，会让本该隐藏的弹窗变成全屏 flex 遮罩，
+ * 覆盖并拦截页面数据。故用 :not([style*="display: none"]) 排除隐藏态。 */
+.el-dialog__wrapper:not([style*="display: none"]) {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 修改点：dialog margin 归零 — 覆盖 Element UI 默认 margin:100px auto 0
+ * 及 JS 动态 margin-top，居中完全由 wrapper flex 控制 */
+.el-dialog:not(.is-fullscreen) {
+  margin: 0 !important;
+}
+
+/* 修改点：非 unified-dialog 弹窗安全限高 — 内容超高时内部滚动，不截断 */
+.el-dialog:not(.unified-dialog):not(.is-fullscreen) {
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+.el-dialog:not(.unified-dialog):not(.is-fullscreen) .el-dialog__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  max-height: none;
+}
+
+/* unified-dialog：限高 + flex 列布局，body 内部滚动 */
+.unified-dialog {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+.unified-dialog .el-dialog__header {
+  flex-shrink: 0;
+}
+.unified-dialog .el-dialog__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  max-height: none; /* 覆盖 common.css 原 60vh 限制，由 flex 布局自动管理高度 */
+}
+
+/* 修改点：弹窗表单提示文字（如"不填则自动排列到最后"）
+ * 设计：放在输入框下方独占一行，避免在窄弹窗内被挤成多行 */
+.form-tip {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-info);
+  line-height: 1.5;
+}
+.unified-dialog .el-dialog__footer {
+  flex-shrink: 0;
+}
+
+/* 响应式：平板（≤768px）弹窗宽度自适应 */
+@media (max-width: 768px) {
+  .el-dialog,
+  .el-dialog--sm,
+  .el-dialog--md,
+  .el-dialog--lg,
+  .el-dialog--xl {
+    width: 92% !important;
+  }
+  .unified-dialog {
+    max-height: 88vh;
+  }
+}
+
+/* 响应式：手机（≤480px）弹窗近全屏
+ * 修改点：margin 归零（居中由 wrapper flex 全局控制）；取消全屏弹窗宽度覆盖 */
+@media (max-width: 480px) {
+  .el-dialog,
+  .el-dialog--sm,
+  .el-dialog--md,
+  .el-dialog--lg,
+  .el-dialog--xl {
+    width: 96% !important;
+  }
+  /* 修改点：手机端弹窗顶部轻微偏移，避免居中时被虚拟键盘遮挡输入框 */
+  .el-dialog__wrapper:not([style*="display: none"]) {
+    align-items: flex-start;
+    padding-top: 2vh;
+  }
+  .unified-dialog {
+    max-height: 94vh;
+    border-radius: 6px !important;
+  }
+  .unified-dialog .el-dialog__body {
+    padding: 16px;
+  }
+}
+
+/* ========== 表格列宽规范 ========== */
+
+/* 操作列统一宽度 */
+.el-table .action-col {
+  width: 160px;
+  min-width: 160px;
+}
+.el-table .action-col-narrow {
+  width: 120px;
+  min-width: 120px;
+}
+.el-table .action-col-wide {
+  width: 200px;
+  min-width: 200px;
+}
+
+/* ID 列 */
+.el-table .id-col {
+  width: 80px;
+  min-width: 80px;
+}
+.el-table .id-col-long {
+  width: 120px;
+  min-width: 120px;
+}
+
+/* 状态列 */
+.el-table .status-col {
+  width: 100px;
+  min-width: 100px;
+}
+
+/* 图片列 */
+.el-table .img-col {
+  width: 80px;
+  min-width: 80px;
+}
+
+/* 评分/星级列 */
+.el-table .rating-col {
+  width: 140px;
+  min-width: 140px;
+}
+
+/* ========== 表单 label-width 规范 ========== */
+
+.container .el-form-item__label {
+  font-weight: 500;
+  color: var(--el-text-regular);
+}
+/* 标准表单 label 宽度 */
+.container .el-form--label-width-sm .el-form-item__label {
+  width: 80px !important;
+}
+.container .el-form--label-width-md .el-form-item__label {
+  width: 100px !important;
+}
+.container .el-form--label-width-lg .el-form-item__label {
+  width: 120px !important;
+}
+.container .el-form--label-width-xl .el-form-item__label {
+  width: 140px !important;
+}
+
+/* ========== 按钮样式规范 ========== */
+
+/* --- 尺寸规范 --- */
+/* tableBar 按钮统一 small（与输入框高度 32px 对齐） */
+.container .tableBar .el-button {
+  font-size: 13px;
+  padding: 9px 15px;
+  height: 32px;
+  line-height: 1;
+}
+/* 修改点：确保 tableBar 内输入框与按钮高度完全一致 */
+.container .tableBar .el-input .el-input__inner {
+  height: 32px;
+  line-height: 32px;
+}
+/* 修改点：确保 tableBar 内下拉选择框与按钮高度完全一致 */
+.container .tableBar .el-select .el-input__inner {
+  height: 32px;
+  line-height: 32px;
+}
+.container .tableBar .el-button [class*="el-icon"] {
+  font-size: 13px;
+}
+/* dialog footer 按钮统一 medium */
+.container .el-dialog .dialog-footer .el-button {
+  font-size: 14px;
+  min-width: 80px;
+}
+
+/* --- 语义按钮类（替代 inline style） --- */
+/* P0 对比度修复（2026-09-27）：原语义色白底仅 2.2~3.1:1，统一改用文字安全令牌（≥4.8:1） */
+/* 查看/编辑 */
+.btn-view {
+  color: var(--color-brand-text);
+}
+.btn-view:hover {
+  background: var(--color-brand-50);
+}
+/* 删除 */
+.btn-delete {
+  color: var(--color-danger-text);
+}
+.btn-delete:hover {
+  background: var(--color-danger-light);
+}
+/* 启用/通过 */
+.btn-success {
+  color: var(--color-success-text);
+}
+.btn-success:hover {
+  background: var(--color-success-light);
+}
+/* 禁用/拒绝 */
+.btn-warning {
+  color: var(--color-warning-text);
+}
+.btn-warning:hover {
+  background: var(--color-warning-light);
+}
+/* 信息/详情 */
+.btn-info {
+  color: var(--color-info-text);
+}
+.btn-info:hover {
+  background: var(--color-info-light);
+}
+
+/* --- 按钮间距规范 --- */
+.tableBox .el-button {
+  margin: 0 4px;
+}
+.tableBox .el-button:first-child {
+  margin-left: 0;
+}
+.tableBox .el-button:last-child {
+  margin-right: 0;
+}
+
+/* --- dialog footer 按钮间距 --- */
+.container .el-dialog .dialog-footer {
+  text-align: right;
+  padding-top: 16px;
+  border-top: 1px solid var(--el-bg-page);
+}
+.container .el-dialog .dialog-footer .el-button {
+  margin-left: 10px;
+}
+.container .el-dialog .dialog-footer .el-button:first-child {
+  margin-left: 0;
+}
+
+/* --- 按钮间距工具类 --- */
+.ml-0 { margin-left: 0 !important; }
+.ml-8 { margin-left: 8px !important; }
+.ml-10 { margin-left: 10px !important; }
+.ml-auto { margin-left: auto !important; }
+
+/* --- 文本按钮颜色工具类（替代 inline style） --- */
+/* P0 对比度修复（2026-09-27）：统一改用文字安全令牌 */
+.text-danger { color: var(--color-danger-text) !important; }
+.text-danger:hover { background: var(--color-danger-light) !important; }
+.text-warning { color: var(--color-warning-text) !important; }
+.text-warning:hover { background: var(--color-warning-light) !important; }
+.text-success { color: var(--color-success-text) !important; }
+.text-success:hover { background: var(--color-success-light) !important; }
+.text-primary { color: var(--color-brand-text) !important; }
+.text-info { color: var(--color-info-text) !important; }
+.text-primary:hover { background: var(--color-brand-50) !important; }
+.text-info:hover { background: var(--color-info-light) !important; }
+
+/* 低库存数字警示（纯文本，无 hover 底；替代内联 :style） */
+.stock-low { color: var(--color-danger); font-weight: var(--font-weight-bold); }
+
+/* 排名徽章（热销榜等：前三名彩色，其余中性；business-report / dish-ranking 共用） */
+.rank-badge { display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: var(--radius-md); font-size: var(--font-size-xs); font-weight: 700; }
+/* P0 对比度修复(2026-09-27)：原用「浅色语义色 + 白字」，如 #f56c6c 上白字仅 2.90:1、
+   #e6a23c 上白字仅 2.19:1，远低于 WCAG AA 的 4.5:1。这里改用同名深文字色作背景，
+   白字对比度可达 4.9~6.4:1，色相与层级语义保持不变。 */
+.rank-badge.r1 { background: var(--color-danger-text); color: var(--bg-surface); }
+.rank-badge.r2 { background: var(--color-brand-500); color: var(--text-on-brand); }
+.rank-badge.r3 { background: var(--color-warning-text); color: var(--bg-surface); }
+/* 中性徽章：#909399 压 #f0f4f8 只有 2.70:1，改用已达标的信息文字色。 */
+.rank-badge.rn { background: var(--el-bg-lighter); color: var(--color-info-text); }
+
+/* ========== 统一按钮系统（非 Element UI 页面用） ========== */
+
+/* --- 基础按钮重置 --- */
+.app-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 18px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  user-select: none;
+  outline: none;
+  vertical-align: middle;
+}
+.app-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.app-btn:focus {
+  box-shadow: 0 0 0 2px rgba(255, 194, 0, 0.2);
+}
+
+/* --- 尺寸变体 --- */
+.app-btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.app-btn-lg {
+  padding: 10px 24px;
+  font-size: 14px;
+}
+
+/* --- 颜色变体 --- */
+/* 主操作 - 蓝色 */
+.app-btn-primary {
+  background: var(--color-brand-500);
+  border-color: var(--color-brand-500);
+  color: var(--color-white);
+}
+.app-btn-primary:hover:not(:disabled) {
+  background: var(--color-brand-500);
+  border-color: var(--color-brand-500);
+}
+.app-btn-primary:active:not(:disabled) {
+  background: var(--color-brand-600);
+  border-color: var(--color-brand-600);
+}
+
+/* 成功/确认 - 绿色 */
+.app-btn-success {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: var(--color-white);
+}
+.app-btn-success:hover:not(:disabled) {
+  background: var(--el-color-success-light);
+  border-color: var(--el-color-success-light);
+}
+.app-btn-success:active:not(:disabled) {
+  background: var(--el-color-success-dark);
+  border-color: var(--el-color-success-dark);
+}
+
+/* 危险/删除 - 红色 */
+.app-btn-danger {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: var(--color-white);
+}
+.app-btn-danger:hover:not(:disabled) {
+  background: var(--el-color-danger-light);
+  border-color: var(--el-color-danger-light);
+}
+.app-btn-danger:active:not(:disabled) {
+  background: var(--el-color-danger-dark);
+  border-color: var(--el-color-danger-dark);
+}
+
+/* 警告 - 橙色 */
+.app-btn-warning {
+  background: var(--color-warning);
+  border-color: var(--color-warning);
+  color: var(--color-white);
+}
+.app-btn-warning:hover:not(:disabled) {
+  background: var(--el-color-warning-light);
+  border-color: var(--el-color-warning-light);
+}
+.app-btn-warning:active:not(:disabled) {
+  background: var(--legacy-cf9236);
+  border-color: var(--legacy-cf9236);
+}
+
+/* 信息 - 灰色 */
+.app-btn-info {
+  background: var(--color-info);
+  border-color: var(--color-info);
+  color: var(--color-white);
+}
+.app-btn-info:hover:not(:disabled) {
+  background: var(--gray-a6);
+  border-color: var(--gray-a6);
+}
+.app-btn-info:active:not(:disabled) {
+  background: var(--el-text-muted);
+  border-color: var(--el-text-muted);
+}
+
+/* 默认/取消 - 白底边框 */
+.app-btn-default {
+  background: var(--color-white);
+  border-color: var(--el-border-default);
+  color: var(--el-text-regular);
+}
+.app-btn-default:hover:not(:disabled) {
+  color: var(--color-brand-500);
+  border-color: var(--legacy-fbe396);
+  background: var(--color-brand-50);
+}
+.app-btn-default:active:not(:disabled) {
+  color: var(--color-brand-600);
+  border-color: var(--color-brand-600);
+}
+
+/* 文本按钮 - 无背景无边框 */
+.app-btn-text {
+  background: transparent;
+  border-color: transparent;
+  color: var(--el-text-regular);
+  padding: 4px 10px;
+}
+.app-btn-text:hover:not(:disabled) {
+  background: var(--el-bg-subtle);
+  color: var(--color-brand-500);
+}
+
+/* 导出 Excel 专用（独立于颜色体系） */
+.app-btn-excel {
+  background: var(--color-success-light);
+  border-color: var(--antd-success-l);
+  color: var(--antd-success-d);
+}
+.app-btn-excel:hover:not(:disabled) {
+  background: var(--antd-success-d);
+  border-color: var(--antd-success-d);
+  color: var(--color-white);
+}
+
+/* 导出 PDF 专用 */
+.app-btn-pdf {
+  background: var(--color-danger-light);
+  border-color: var(--antd-error-l2);
+  color: var(--antd-error-d);
+}
+.app-btn-pdf:hover:not(:disabled) {
+  background: var(--antd-error-d);
+  border-color: var(--antd-error-d);
+  color: var(--color-white);
+}
+
+/* 紫色按钮（通知管理 - APP推送专用） */
+.app-btn-purple {
+  background: var(--antd-purple);
+  border-color: var(--antd-purple);
+  color: var(--color-white);
+}
+.app-btn-purple:hover:not(:disabled) {
+  background: var(--legacy-9254de);
+  border-color: var(--legacy-9254de);
+}
+.app-btn-purple:active:not(:disabled) {
+  background: var(--legacy-531dab);
+  border-color: var(--legacy-531dab);
+}
+
+/* --- 按钮组 --- */
+.app-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.app-btn-group--right {
+  justify-content: flex-end;
+}
+
+/* ========== 表单布局优化 ========== */
+
+/* 弹窗内表单：防止内容被截断，确保可滚动 */
+.el-dialog__body {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* 弹窗内表单行内布局 */
+.form-inline-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.form-inline-row .form-inline-item {
+  flex: 1;
+  min-width: 0;
+}
+.form-inline-row .form-inline-item--fixed {
+  flex: 0 0 auto;
+}
+
+/* 表单区域防止溢出 */
+.el-dialog .el-form {
+  overflow: visible;
+}
+.el-dialog .el-form-item {
+  margin-bottom: 18px;
+}
+.el-dialog .el-form-item:last-child {
+  margin-bottom: 0;
+}
+
+/* 筛选栏输入框统一最小宽度，防止挤压变形 */
+.filter-input {
+  min-width: 120px;
+}
+.filter-input--sm {
+  min-width: 80px;
+}
+.filter-input--lg {
+  min-width: 180px;
+}
+
+/* 自定义模态弹窗统一规范（非 Element UI 弹窗） */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 2000;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+  overflow-y: auto;
+}
+.modal-overlay.show {
+  display: flex;
+}
+.modal-container,
+.modal {
+  background: var(--color-white);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+}
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--el-border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.modal-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--el-text-primary);
+}
+.modal-close {
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--color-info);
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 1;
+}
+.modal-close:hover {
+  color: var(--el-text-primary);
+}
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--el-border-light);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* 表单组（非 Element UI） */
+.form-group {
+  margin-bottom: 16px;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: var(--el-text-regular);
+  font-weight: 500;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--el-border-default);
+  border-radius: 4px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: var(--color-brand-500);
+}
+.form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+.form-group .hint {
+  font-size: 12px;
+  color: var(--color-info);
+  margin-top: 4px;
+}
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+.form-row .form-group {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ========== 响应式适配 ========== */
+
+/* 移动端 (≤768px)：纵向堆叠，search-area 和 action-group 各占满宽 */
+@media (max-width: 768px) {
+  .container .el-dialog .el-input,
+  .container .el-dialog .el-select {
+    width: 100% !important;
+  }
+
+  .container .tableBar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .container .tableBar .search-area {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .container .tableBar .search-area .el-input,
+  .container .tableBar .search-area .el-select,
+  .container .tableBar .search-area .el-date-editor,
+  .container .tableBar .el-input,
+  .container .tableBar .el-select,
+  .container .tableBar .el-date-editor {
+    width: 100% !important;
+    flex: 1 1 auto;
+  }
+
+  .container .tableBar .search-actions {
+    flex-wrap: wrap;
+  }
+
+  .container .tableBar .action-group {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .modal-container,
+  .modal {
+    max-width: 95vw;
+  }
+}
+
+/* 中等屏幕 (769px-1200px)：减小搜索控件弹性基准，压缩按钮 padding */
+@media (min-width: 769px) and (max-width: 1200px) {
+  .container .tableBar {
+    gap: 8px;
+  }
+
+  .container .tableBar .search-area .el-input {
+    flex-basis: 160px;
+    min-width: 120px;
+  }
+
+  .container .tableBar .search-area .el-select {
+    flex-basis: 130px;
+    min-width: 100px;
+  }
+
+  .container .tableBar .search-area .el-date-editor {
+    flex-basis: 220px;
+    min-width: 180px;
+  }
+
+  .container .tableBar .search-actions {
+    gap: 6px;
+  }
+
+  .container .tableBar .btn-action {
+    padding: 6px 12px !important;
+    font-size: 12px;
+  }
+
+  .container .tableBar .btn-query,
+  .container .tableBar .btn-reset {
+    padding: 7px 12px !important;
+  }
+}
+
+/* ============================================
+   修改点：修复 el-range__icon 垂直偏下 + search-area 整体美化
+   ============================================ */
+
+/* --- 1. 修复日期范围选择器图标垂直偏下 --- */
+/* 根因：common.css 中 .el-date-editor .el-range__icon 使用了 float:left + 固定 line-height，
+         在 flex 父容器中无法精确垂直居中，small 尺寸下 line-height:30px < height:32px 导致偏移 */
+
+/* 通用日期范围选择器图标：移除 float，统一用 flex 居中 */
+.container .tableBar .el-range-editor .el-range__icon,
+.container .tableBar .el-range-editor .el-range__close-icon {
+  float: none !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  height: 100%;
+  margin-left: 0;
+  width: auto;
+  flex-shrink: 0;
+}
+
+/* search-area 内日期选择器覆盖层级更高，确保生效 */
+.container .tableBar .search-area .el-range-editor .el-range__icon,
+.container .tableBar .search-area .el-range-editor .el-range__close-icon {
+  float: none !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  height: 100%;
+  margin-left: 0;
+  width: auto;
+  flex-shrink: 0;
+}
+
+/* 日期分隔符（"至"）垂直居中 */
+.container .tableBar .el-range-editor .el-range-separator {
+  display: inline-flex !important;
+  align-items: center;
+  height: 100%;
+  line-height: 1;
+}
+
+/* --- 2. search-area 容器整体美化 --- */
+
+/* 2.1 输入框/下拉框文字垂直居中（消除上下padding导致的不居中） */
+.container .tableBar .search-area .el-input__inner,
+.container .tableBar .search-area .el-select .el-input__inner {
+  height: 32px;
+  line-height: 32px;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 13px;
+}
+
+/* 2.2 搜索前缀/后缀图标容器使用 flex 居中（替代绝对定位 + line-height） */
+.container .tableBar .search-area .el-input__prefix,
+.container .tableBar .search-area .el-input__suffix {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  top: 0;
+  left: 5px;
+}
+
+.container .tableBar .search-area .el-input__suffix {
+  left: auto;
+  right: 5px;
+}
+
+.container .tableBar .search-area .el-input__prefix .el-input__icon,
+.container .tableBar .search-area .el-input__suffix .el-input__icon {
+  line-height: 1;
+}
+
+/* 2.3 统一占位符颜色与字号 */
+.container .tableBar .search-area .el-input__inner::placeholder,
+.container .tableBar .search-area .el-select .el-input__inner::placeholder {
+  color: var(--el-border-base);
+  font-size: 13px;
+}
+
+/* 2.4 搜索区按钮文字图标垂直对齐 */
+.container .tableBar .search-area .search-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 32px;
+}
+
+.container .tableBar .search-area .search-actions .el-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 7px 15px;
+  font-size: 13px;
+}
+
+.container .tableBar .search-area .search-actions .el-button [class*="el-icon"] {
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* 2.5 搜索区内所有表单控件统一中线对齐 */
+.container .tableBar .search-area > .el-input,
+.container .tableBar .search-area > .el-select,
+.container .tableBar .search-area > .el-date-editor {
+  vertical-align: middle;
+}
+
+/* 2.6 清除按钮图标垂直居中 */
+.container .tableBar .search-area .el-input__clear {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  line-height: 1;
+}
+
+/* 2.7 日期编辑器中 range-input 文字垂直居中 */
+.container .tableBar .search-area .el-range-editor .el-range-input {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  line-height: 1;
+}
+
+
+
+
+
+
+
+/* 表格对齐/垂直居中/操作列 nowrap 已统一迁移至：
+   - consistency.css（td/th .cell 三态对齐 is-left/is-center/is-right，!important 单一来源）
+   - components.css（.crud-table-wrapper 域内 vertical-align、.crud-actions-col .cell nowrap 精确作用域）
+   原"全局表格数据居中样式"块已删除，避免与 consistency.css 冲突及重复定义。 */

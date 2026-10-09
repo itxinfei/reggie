@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>配送范围管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+<link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260926" />
+  <style>
+    /* 修复（2026-09-20 抖动根因）：html 定高且不产生滚动条，滚动统一由 body 承担。
+       原写法 html/body 同为 height:100% + overflow-y:auto，el-select/el-dropdown 等
+       append-to-body 的绝对定位浮层超出视口底部时（页面底部分页的「每页条数」下拉必现），
+       会撑高 documentElement 瞬间产生第二根垂直滚动条、挤占 10~15px 宽度，
+       关闭浮层后滚动条消失宽度恢复——表格列与 fixed 操作列因此整体左右抖动。 */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: var(--el-bg-subtle);
+    }
+    html {
+      overflow: hidden;
+    }
+    body {
+      overflow-y: auto;
+    }
+    .container {
+      padding: var(--space-3) var(--space-4);
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    /* 工具栏统一走 table-bar 组件，外观由 page.css 的 .container .tableBar 兜底
+       （纯 flex 栏，无卡片表面/hover），本页不再私有覆盖；
+       旧 range-type-tag/fee-type-tag/status-tag/fee-info 手写标签已全部改用
+       el-tag/插槽内联，对应死样式一并移除。 */
+
+    /* 范围形状预览：内网无地图 SDK，用 SVG 帮助核对经纬度与多边形形状（功能需要，非美化） */
+    .range-preview { margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--bg-surface); }
+    .range-preview__title { font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 6px; }
+    .range-preview__svg { width: 100%; height: auto; max-height: 240px; display: block; }
+    .range-preview__tip { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 6px; }
+    .range-preview__tip.is-error { color: var(--color-danger); }
+    .rp-box { fill: none; stroke: var(--border-default); stroke-width: 1; }
+    .rp-grid { stroke: var(--border-default); stroke-width: 1; stroke-dasharray: 3 3; }
+    .rp-point { fill: var(--color-brand-500); }
+    .rp-cross { stroke: var(--color-brand-500); stroke-width: 1.5; }
+    .rp-poly { fill: var(--color-brand-500); fill-opacity: 0.18; stroke: var(--color-brand-500); stroke-width: 1.5; }
+    .rp-vtx { fill: var(--color-brand-500); }
+    .rp-vtx-text { font-size: 9px; fill: var(--text-secondary); }
+  </style>
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <main class="container" id="main-content" role="main" aria-labelledby="page-title">
+    <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
+    <h1 class="sr-only" id="page-title">配送范围管理</h1>
+    <!-- 统计卡片 -->
+    <stat-cards :cards="statsCards"></stat-cards>
+
+    <!-- 搜索 + 操作栏 -->
+    <table-bar
+      :search-items="searchItems"
+      :actions="actionItems"
+      :show-refresh="true"
+      @search="onSearch"
+      @reset="onReset"
+      @action="onAction"
+      @refresh="fetchData()"
+    ></table-bar>
+
+    <!-- 数据表格 -->
+    <crud-table
+      :data="pagedData"
+      :columns="columns"
+      :loading="loading"
+      :page="page"
+      :page-size="pageSize"
+      :total="filteredTotal"
+      :show-actions="true" :viewable="true"
+      :actions-width="180"
+      :actions-fixed="true"
+      row-key="id"
+      :batch-delete="doBatchDelete"
+      @batch-deleted="fetchData()"
+      @page-change="onPageChange"
+      @size-change="onSizeChange"
+      aria-label="配送范围规则列表"
+    >
+      <!-- 范围类型列 -->
+      <template #col-rangeType="{ row }">
+        <el-tag :type="row.rangeType === 1 ? 'warning' : 'success'" size="small">
+          {{ row.rangeType === 1 ? '圆形' : '多边形' }}
+        </el-tag>
+      </template>
+      <!-- 范围参数列 -->
+      <template #col-rangeParams="{ row }">
+        <div v-if="row.rangeType === 1">
+          <div>半径：{{ row.radius }}米</div>
+          <div style="font-size: var(--font-size-xs); color: var(--text-muted);">中心：{{ row.centerLatitude }}, {{ row.centerLongitude }}</div>
+        </div>
+        <div v-else>
+          <div>多边形范围</div>
+          <div style="font-size: var(--font-size-xs); color: var(--text-muted);">坐标点数量：{{ getPolygonPointCount(row.polygonPoints) }}</div>
+        </div>
+      </template>
+      <!-- 配送费类型列 -->
+      <template #col-feeType="{ row }">
+        <el-tag :type="getFeeTypeTag(row.feeType)" size="small">
+          {{ getFeeTypeText(row.feeType) }}
+        </el-tag>
+      </template>
+      <!-- 配送费信息列 -->
+      <template #col-feeInfo="{ row }">
+        <div v-if="row.feeType === 1">
+          固定：¥{{ formatMoney(row.baseFee) }}
+        </div>
+        <div v-else-if="row.feeType === 2">
+          阶梯计费
+        </div>
+        <div v-else>
+          基础：¥{{ formatMoney(row.baseFee) }} + {{ row.feePerKm }}元/公里
+        </div>
+        <div v-if="row.freeThreshold" style="font-size: var(--font-size-xs); color: var(--text-muted);">
+          满¥{{ formatMoney(row.freeThreshold) }}免配送费
+        </div>
+      </template>
+      <!-- 状态列 -->
+      <template #col-status="{ row }">
+        <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+          {{ row.status === 1 ? '启用' : '禁用' }}
+        </el-tag>
+      </template>
+      <!-- 操作列契约：内置查看 + 编辑常显（3 元素档 180），阶梯规则/启停/删除收「更多」 -->
+      <template #actions="{ row }">
+        <el-button type="text" size="small" class="btn-view" @click="handleEdit(row)">编辑</el-button>
+        <el-dropdown trigger="click" @command="(cmd) => handleRowCommand(cmd, row)" @click.native.stop>
+          <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+          <el-dropdown-menu slot="dropdown">
+            <el-dropdown-item command="step" icon="ri-road-map-line">阶梯规则</el-dropdown-item>
+            <el-dropdown-item command="toggle" :icon="row.status === 1 ? 'ri-lock-line' : 'ri-lock-unlock-line'">{{ row.status === 1 ? '禁用' : '启用' }}</el-dropdown-item>
+            <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+          </el-dropdown-menu>
+        </el-dropdown>
+      </template>
+    </crud-table>
+
+    <!-- 新增/编辑对话框 -->
+    <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" size="lg" show-close :show-submit="true" :show-cancel="true" :submit-loading="submitLoading" @submit="handleSubmit">
+      <el-form :model="formData" :rules="rangeTypeRules || formRules" ref="ruleForm" label-width="120px">
+        <!-- 双列栅格：大屏两列、小屏单列（CLAUDE.md 7.2 场景C）；条件字段（多边形坐标/配送费类型/免费门槛）与备注保持跨全宽 -->
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="规则名称" prop="ruleName">
+              <el-input v-model="formData.ruleName" placeholder="请输入规则名称"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="范围类型" prop="rangeType">
+              <el-radio-group v-model="formData.rangeType">
+                <el-radio :label="1">圆形范围</el-radio>
+                <el-radio :label="2">多边形范围</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <!-- 圆形范围参数 -->
+        <template v-if="formData.rangeType === 1">
+          <el-row :gutter="20">
+            <el-col :xs="24" :sm="12">
+              <el-form-item label="中心经度" prop="centerLongitude">
+                <el-input-number v-model="formData.centerLongitude" :precision="8" :step="0.0001" style="width: 100%;"></el-input-number>
+              </el-form-item>
+            </el-col>
+            <el-col :xs="24" :sm="12">
+              <el-form-item label="中心纬度" prop="centerLatitude">
+                <el-input-number v-model="formData.centerLatitude" :precision="8" :step="0.0001" style="width: 100%;"></el-input-number>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-form-item label="半径（米）" prop="radius">
+            <el-input-number v-model="formData.radius" :min="100" :max="50000" style="width: 100%;"></el-input-number>
+          </el-form-item>
+          <!-- 位置预览：帮助核对经纬度是否填反/落错城市（内网无地图 SDK 的轻量替代） -->
+          <div class="range-preview" v-if="formData.centerLongitude !== null && formData.centerLongitude !== undefined && formData.centerLatitude !== null && formData.centerLatitude !== undefined">
+            <div class="range-preview__title">位置预览（方框为中国大致范围 73°E–135°E / 18°N–53°N，非真实地图）</div>
+            <svg viewBox="0 0 300 200" preserveAspectRatio="xMidYMid meet" class="range-preview__svg" role="img" aria-label="中心位置预览图">
+              <rect x="12" y="12" width="276" height="176" class="rp-box"></rect>
+              <line x1="12" y1="100" x2="288" y2="100" class="rp-grid"></line>
+              <line x1="150" y1="12" x2="150" y2="188" class="rp-grid"></line>
+              <circle :cx="circlePreview.x" :cy="circlePreview.y" r="5" class="rp-point"></circle>
+              <line :x1="circlePreview.x - 9" :y1="circlePreview.y" :x2="circlePreview.x + 9" :y2="circlePreview.y" class="rp-cross"></line>
+              <line :x1="circlePreview.x" :y1="circlePreview.y - 9" :x2="circlePreview.x" :y2="circlePreview.y + 9" class="rp-cross"></line>
+            </svg>
+            <div class="range-preview__tip is-error" v-if="!circlePreview.inRange">中心点不在中国常见经纬度范围内，请确认经纬度是否填反或数值有误</div>
+            <div class="range-preview__tip">经度 {{ Number(formData.centerLongitude).toFixed(6) }}，纬度 {{ Number(formData.centerLatitude).toFixed(6) }}，半径 {{ formData.radius }} 米</div>
+          </div>
+        </template>
+
+        <!-- 多边形范围参数 -->
+        <template v-if="formData.rangeType === 2">
+          <el-form-item label="多边形坐标" prop="polygonPoints">
+            <el-input v-model="formData.polygonPoints" type="textarea" :rows="4"
+              placeholder="请输入坐标点JSON，格式：[[lon1,lat1],[lon2,lat2],...]"></el-input>
+            <div class="form-tip">
+              至少需要3个坐标点，首尾点会自动闭合
+            </div>
+            <!-- 形状预览：实时解析 JSON，非法时直接给出具体错误（内网无地图 SDK 的轻量替代） -->
+            <div class="range-preview">
+              <div class="range-preview__title">形状预览（等比缩放，非真实地图比例）</div>
+              <div class="range-preview__tip is-error" v-if="polygonPreview.error">{{ polygonPreview.error }}</div>
+              <template v-else-if="polygonPreview.ready">
+                <svg viewBox="0 0 300 200" preserveAspectRatio="xMidYMid meet" class="range-preview__svg" role="img" aria-label="多边形形状预览图">
+                  <rect x="12" y="12" width="276" height="176" class="rp-box"></rect>
+                  <polygon :points="polygonPreview.points" class="rp-poly"></polygon>
+                  <g v-for="(p, i) in polygonPreview.labels" :key="i">
+                    <circle :cx="p.x" :cy="p.y" r="2.5" class="rp-vtx"></circle>
+                    <text :x="p.x + 4" :y="p.y - 4" class="rp-vtx-text">{{ i + 1 }}</text>
+                  </g>
+                </svg>
+                <div class="range-preview__tip">共 {{ polygonPreview.count }} 个坐标点<template v-if="polygonPreview.closed">，首尾不重合将自动闭合</template></div>
+              </template>
+              <div class="range-preview__tip" v-else>输入坐标后在此预览形状</div>
+            </div>
+          </el-form-item>
+        </template>
+
+        <el-divider content-position="left">配送费设置</el-divider>
+
+        <el-form-item label="配送费类型" prop="feeType">
+          <el-radio-group v-model="formData.feeType">
+            <el-radio :label="1">固定配送费</el-radio>
+            <el-radio :label="2">距离阶梯</el-radio>
+            <el-radio :label="3">基础费+距离费</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item v-if="formData.feeType === 1 || formData.feeType === 3" label="基础配送费">
+              <el-input-number v-model="formData.baseFee" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item v-if="formData.feeType === 3" label="每公里费用">
+              <el-input-number v-model="formData.feePerKm" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="最低配送费">
+              <el-input-number v-model="formData.minFee" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+              <div class="form-tip">0表示不限制</div>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="最高配送费">
+              <el-input-number v-model="formData.maxFee" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+              <div class="form-tip">0表示不限制</div>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item label="免费配送门槛">
+          <el-input-number v-model="formData.freeThreshold" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+          <div class="form-tip">订单金额达到此值免配送费，0表示不启用</div>
+        </el-form-item>
+
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="排序">
+              <el-input-number v-model="formData.sortOrder" :min="0" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="状态">
+              <el-switch v-model="formData.status" :active-value="1" :inactive-value="0"></el-switch>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="备注">
+          <el-input v-model="formData.remark" type="textarea" :rows="2" placeholder="请输入备注"></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- 阶梯规则对话框（只读，仅有关闭按钮） -->
+    <crud-dialog title="配送费阶梯规则" :visible.sync="feeStepVisible" size="xl" show-close :show-submit="false" :show-cancel="true" cancel-text="关 闭">
+      <div style="margin-bottom: 16px;">
+        <el-button type="primary" size="small" icon="ri-add-line" @click="handleAddFeeStep">新增阶梯</el-button>
+      </div>
+      <el-table aria-label="数据表格" :data="feeSteps" border stripe style="width: 100%">
+        <el-table-column prop="startDistance" label="起始距离(米)" width="120" align="center" :header-align="'center'"></el-table-column>
+        <el-table-column prop="endDistance" label="结束距离(米)" width="120" align="center" :header-align="'center'"></el-table-column>
+        <el-table-column prop="fee" label="配送费(元)" width="130" align="center" :header-align="'center'" :show-overflow-tooltip="true"></el-table-column>
+        <el-table-column prop="incrementDistance" label="递增距离(米)" width="120" align="center" :header-align="'center'"></el-table-column>
+        <el-table-column prop="incrementFee" label="递增费用(元)" width="120" align="center" :header-align="'center'"></el-table-column>
+        <el-table-column label="操作" width="150" align="center" :header-align="'center'" fixed="right">
+          <template slot-scope="scope">
+            <el-button type="text" size="small" class="btn-view" @click="handleEditFeeStep(scope.row)">编辑</el-button>
+            <el-button type="text" size="small" class="btn-delete" @click="handleDeleteFeeStep(scope.row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </crud-dialog>
+
+    <!-- 阶梯规则编辑对话框 -->
+    <crud-dialog :title="feeStepDialogTitle" :visible.sync="feeStepEditVisible" size="md" :show-submit="true" :show-cancel="true" :submit-loading="submitLoading" @submit="handleFeeStepSubmit">
+      <el-form :model="feeStepForm" :rules="feeStepRules" ref="feeStepFormRef" label-width="100px">
+        <el-form-item label="起始距离" prop="startDistance">
+          <el-input-number v-model="feeStepForm.startDistance" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="结束距离" prop="endDistance">
+          <el-input-number v-model="feeStepForm.endDistance" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="配送费" prop="fee">
+          <el-input-number v-model="feeStepForm.fee" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="递增距离" prop="incrementDistance">
+          <el-input-number v-model="feeStepForm.incrementDistance" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="递增费用" prop="incrementFee">
+          <el-input-number v-model="feeStepForm.incrementFee" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+ </main>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/common.js?v=20260926"></script>
+  <script src="../../api/delivery-enhanced.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#main-content',
+      data() {
+        return {
+          loading: false,
+          allData: [],
+          page: 1,
+          pageSize: 10,
+          // 搜索配置
+          searchItems: [
+            { field: 'ruleName', label: '规则名称', type: 'input', placeholder: '请输入规则名称' },
+            { field: 'rangeType', label: '范围类型', type: 'select', placeholder: '全部类型', options: [
+              { label: '圆形', value: 1 },
+              { label: '多边形', value: 2 }
+            ]},
+            { field: 'status', label: '状态', type: 'select', placeholder: '全部状态', options: [
+              { label: '启用', value: 1 },
+              { label: '禁用', value: 0 }
+            ]}
+          ],
+          // 操作按钮配置
+          actionItems: [
+            { key: 'add', text: '新增配送范围规则', type: 'primary', icon: 'ri-add-line' },
+            { key: 'realign', text: '圆心对齐门店', icon: 'ri-focus-3-line' }
+          ],
+          // 表格列配置
+          columns: [
+            { prop: 'id', label: 'ID', width: 80, align: 'center' },
+            { prop: 'ruleName', label: '规则名称', minWidth: 150, align: 'center' },
+            { prop: 'rangeType', label: '范围类型', width: 120, align: 'center', slot: true },
+            { prop: 'rangeParams', label: '范围参数', minWidth: 200, align: 'center', slot: true },
+            { prop: 'feeType', label: '配送费类型', width: 120, align: 'center', slot: true },
+            { prop: 'feeInfo', label: '配送费信息', minWidth: 200, align: 'center', slot: true },
+            { prop: 'status', label: '状态', width: 100, align: 'center', slot: true }
+          ],
+          // 搜索参数
+          searchParams: {},
+          dialogVisible: false,
+          dialogTitle: '新增配送范围规则',
+          submitLoading: false,
+          formData: {
+            id: null,
+            ruleName: '',
+            rangeType: 1,
+            centerLongitude: null,
+            centerLatitude: null,
+            radius: 3000,
+            polygonPoints: '',
+            feeType: 1,
+            baseFee: 5,
+            feePerKm: 1,
+            minFee: 3,
+            maxFee: 20,
+            freeThreshold: 30,
+            sortOrder: 0,
+            status: 1,
+            remark: ''
+          },
+          formRules: {
+            ruleName: [{ required: true, message: '请输入规则名称', trigger: 'blur' }],
+            rangeType: [{ required: true, message: '请选择范围类型', trigger: 'change' }],
+            feeType: [{ required: true, message: '请选择配送费类型', trigger: 'change' }]
+          },
+          // 修改点(2026-09-14)：移除 data 中的 rangeTypeRules: null，
+          // 该属性已在 computed 中动态合并基础规则+条件规则，data 里的空声明会与 computed 冲突触发 Vue 警告
+          feeStepVisible: false,
+          feeStepEditVisible: false,
+          feeStepDialogTitle: '新增阶梯规则',
+          currentRuleId: null,
+          feeSteps: [],
+          feeStepForm: {
+            id: null,
+            ruleId: null,
+            startDistance: 0,
+            endDistance: 1000,
+            fee: 3,
+            incrementDistance: 500,
+            incrementFee: 1
+          },
+          feeStepRules: {
+            startDistance: [{ required: true, message: '请输入起始距离', trigger: 'blur' }],
+            endDistance: [{ required: true, message: '请输入结束距离', trigger: 'blur' }],
+            fee: [{ required: true, message: '请输入配送费', trigger: 'blur' }],
+            incrementDistance: [{ required: true, message: '请输入递增距离', trigger: 'blur' }],
+            incrementFee: [{ required: true, message: '请输入递增费用', trigger: 'blur' }]
+          }
+        }
+      },
+      computed: {
+        // 修改点：合并基础校验规则(formRules)与条件校验规则(圆形/多边形)，原 rangeTypeRules || formRules 导致 feeType 校验丢失
+        rangeTypeRules() {
+          var base = {
+            ruleName: [{ required: true, message: '请输入规则名称', trigger: 'blur' }],
+            rangeType: [{ required: true, message: '请选择范围类型', trigger: 'change' }],
+            feeType: [{ required: true, message: '请选择配送费类型', trigger: 'change' }]
+          }
+          if (this.formData.rangeType === 1) {
+            // 经度必须在 -180~180（必填由 required 先拦截）
+            base.centerLongitude = [
+              { required: true, message: '请输入中心经度', trigger: ['blur', 'change'] },
+              { validator: (rule, value, cb) => {
+                  if (value === null || value === undefined || value === '') { cb(); return }
+                  const v = Number(value)
+                  if (isNaN(v) || v < -180 || v > 180) { cb(new Error('经度范围为 -180 ~ 180')) } else { cb() }
+                }, trigger: ['blur', 'change'] }
+            ]
+            // 纬度必须在 -90~90
+            base.centerLatitude = [
+              { required: true, message: '请输入中心纬度', trigger: ['blur', 'change'] },
+              { validator: (rule, value, cb) => {
+                  if (value === null || value === undefined || value === '') { cb(); return }
+                  const v = Number(value)
+                  if (isNaN(v) || v < -90 || v > 90) { cb(new Error('纬度范围为 -90 ~ 90')) } else { cb() }
+                }, trigger: ['blur', 'change'] }
+            ]
+            base.radius = [{ required: true, message: '请输入半径', trigger: 'blur' }]
+          } else if (this.formData.rangeType === 2) {
+            // 必填 + JSON 结构校验（非法 JSON / 点数不足 / 单点格式错 / 经纬度越界 均给出明确提示）
+            base.polygonPoints = [
+              { required: true, whitespace: true, message: '请输入多边形坐标', trigger: 'blur' },
+              { validator: (rule, value, cb) => {
+                  if (!value || !value.trim()) { cb(); return }
+                  const parsed = this.parsePolygonPoints(value)
+                  if (parsed.error) { cb(new Error(parsed.error)) } else { cb() }
+                }, trigger: 'blur' }
+            ]
+          }
+          return base
+        },
+        // 圆形范围中心点预览坐标（映射到中国大致范围方框，越界时贴边显示并给出提示）
+        circlePreview() {
+          const lon = Number(this.formData.centerLongitude)
+          const lat = Number(this.formData.centerLatitude)
+          if (isNaN(lon) || isNaN(lat)) return { x: 150, y: 100, inRange: false }
+          const pad = 12, W = 300, H = 200
+          const x = pad + ((lon - 73) / (135 - 73)) * (W - pad * 2)
+          const y = H - pad - ((lat - 18) / (53 - 18)) * (H - pad * 2)
+          const inRange = lon >= 73 && lon <= 135 && lat >= 18 && lat <= 53
+          return {
+            x: Math.max(pad, Math.min(W - pad, Math.round(x * 100) / 100)),
+            y: Math.max(pad, Math.min(H - pad, Math.round(y * 100) / 100)),
+            inRange: inRange
+          }
+        },
+        // 多边形形状预览：解析并等比归一化到 300×200 画布
+        polygonPreview() {
+          const raw = this.formData.polygonPoints
+          if (!raw || !raw.trim()) return { ready: false }
+          const parsed = this.parsePolygonPoints(raw)
+          if (parsed.error) return { ready: false, error: parsed.error }
+          const arr = parsed.points
+          let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity
+          arr.forEach(pt => {
+            if (pt[0] < minLon) minLon = pt[0]
+            if (pt[0] > maxLon) maxLon = pt[0]
+            if (pt[1] < minLat) minLat = pt[1]
+            if (pt[1] > maxLat) maxLat = pt[1]
+          })
+          // 退化图形（所有点同经纬度）时扩展 bbox，避免缩放除零
+          let spanLon = maxLon - minLon
+          let spanLat = maxLat - minLat
+          if (spanLon === 0) { minLon -= 0.001; maxLon += 0.001; spanLon = maxLon - minLon }
+          if (spanLat === 0) { minLat -= 0.001; maxLat += 0.001; spanLat = maxLat - minLat }
+          const pad = 18, W = 300, H = 200
+          // 等比缩放保持形状不变形，居中放置
+          const scale = Math.min((W - pad * 2) / spanLon, (H - pad * 2) / spanLat)
+          const ox = (W - spanLon * scale) / 2
+          const oy = (H - spanLat * scale) / 2
+          const labels = arr.map(pt => {
+            const x = Math.round((ox + (pt[0] - minLon) * scale) * 100) / 100
+            const y = Math.round((H - oy - (pt[1] - minLat) * scale) * 100) / 100
+            return { x: x, y: y }
+          })
+          const first = arr[0], last = arr[arr.length - 1]
+          return {
+            ready: true,
+            count: arr.length,
+            closed: first[0] !== last[0] || first[1] !== last[1],
+            points: labels.map(p => p.x + ',' + p.y).join(' '),
+            labels: labels
+          }
+        },
+        statsCards() {
+          return [
+            { key: 'total', icon: 'ri-shopping-cart-2-line', label: '配送规则', value: this.allData.length, color: 'primary' },
+            { key: 'circle', icon: 'ri-checkbox-circle-line', label: '圆形范围', value: this.allData.filter(function(r){ return r.rangeType === 1 }).length, color: 'success' },
+            { key: 'polygon', icon: 'ri-building-line', label: '多边形范围', value: this.allData.filter(function(r){ return r.rangeType === 2 }).length, color: 'info' },
+            { key: 'active', icon: 'ri-time-line', label: '启用中', value: this.allData.filter(function(r){ return r.status === 1 }).length, color: 'warning' }
+          ]
+        },
+        pagedData() {
+          const start = (this.page - 1) * this.pageSize
+          return this.filteredData.slice(start, start + this.pageSize)
+        },
+        filteredData() {
+          let data = this.allData
+          const params = this.searchParams
+          if (params.ruleName) {
+            data = data.filter(function(item) { return item.ruleName && item.ruleName.indexOf(params.ruleName) > -1 })
+          }
+          if (params.rangeType !== undefined && params.rangeType !== '') {
+            data = data.filter(function(item) { return item.rangeType === params.rangeType })
+          }
+          if (params.status !== undefined && params.status !== '') {
+            data = data.filter(function(item) { return item.status === params.status })
+          }
+          return data
+        },
+        // 修改点：分页 total 绑定 filteredData.length —— 原绑定 allData.length，
+        // 筛选后 total 与实际行数不符，翻到后页出现空表格
+        filteredTotal() {
+          return this.filteredData.length
+        }
+      },
+      created() {
+        this.fetchData()
+      },
+      methods: {
+        formatMoney(value) {
+          if (!value && value !== 0) return '0.00'
+          return Number(value).toFixed(2)
+        },
+        getPolygonPointCount(points) {
+          if (!points) return 0
+          try {
+            const arr = JSON.parse(points)
+            return Array.isArray(arr) ? arr.length : 0
+          } catch (e) {
+            return 0
+          }
+        },
+        // 解析多边形坐标文本：返回 { error: 错误说明 } 或 { points: [[lon,lat],...] }，
+        // 供预览 computed 与表单 validator 共用，保证校验口径一致
+        parsePolygonPoints(raw) {
+          let arr
+          try {
+            arr = JSON.parse(String(raw).trim())
+          } catch (e) {
+            return { error: '坐标不是合法 JSON，请按 [[经度,纬度],[经度,纬度],...] 格式填写' }
+          }
+          if (!Array.isArray(arr)) {
+            return { error: '坐标必须是数组，格式：[[lon,lat],[lon2,lat2],...]' }
+          }
+          if (arr.length < 3) {
+            return { error: '至少需要 3 个坐标点，当前仅 ' + arr.length + ' 个' }
+          }
+          for (let i = 0; i < arr.length; i++) {
+            const pt = arr[i]
+            if (!Array.isArray(pt) || pt.length !== 2 ||
+                typeof pt[0] !== 'number' || typeof pt[1] !== 'number' ||
+                isNaN(pt[0]) || isNaN(pt[1])) {
+              return { error: '第 ' + (i + 1) + ' 个点格式错误，必须是 [经度,纬度] 两个数字' }
+            }
+            if (pt[0] < -180 || pt[0] > 180) {
+              return { error: '第 ' + (i + 1) + ' 个点经度超出范围（-180 ~ 180）' }
+            }
+            if (pt[1] < -90 || pt[1] > 90) {
+              return { error: '第 ' + (i + 1) + ' 个点纬度超出范围（-90 ~ 90）' }
+            }
+          }
+          return { points: arr }
+        },
+        getFeeTypeTag(type) {
+          const map = { 1: 'warning', 2: 'info', 3: 'danger' }
+          return map[type] || 'info'
+        },
+        getFeeTypeText(type) {
+          const map = { 1: '固定', 2: '阶梯', 3: '动态' }
+          return map[type] || '未知'
+        },
+        onPageChange(payload) {
+          this.page = payload.page
+        },
+        onSizeChange(payload) {
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
+        },
+        onSearch(params) {
+          this.searchParams = params
+          this.page = 1
+        },
+        onReset() {
+          this.searchParams = {}
+          this.page = 1
+        },
+        onAction(payload) {
+          if (payload.key === 'add') {
+            this.handleAdd()
+          } else if (payload.key === 'realign') {
+            this.handleRealign()
+          }
+        },
+        async handleRealign() {
+          try {
+            await ReggieUI.confirm('将把当前门店的圆形配送范围圆心更新为门店坐标，是否继续？', '圆心对齐门店', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+
+            const res = await realignRangeCenter()
+            if (res.code === 1) {
+              ReggieUI.success(`已对齐 ${res.data} 条规则`)
+              this.fetchData()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          } catch (err) {
+            if (err === 'cancel') return
+            ReggieUI.error('操作失败')
+          }
+        },
+        async fetchData() {
+          this.loading = true
+          try {
+            const res = await getRangeRules()
+            if (res.code === 1) {
+              this.allData = res.data || []
+            }
+          } catch (err) {
+            ReggieUI.error('获取数据失败')
+          } finally {
+            this.loading = false
+          }
+        },
+        handleAdd() {
+          this.dialogTitle = '新增配送范围规则'
+          this.formData = {
+            id: null,
+            ruleName: '',
+            rangeType: 1,
+            centerLongitude: null,
+            centerLatitude: null,
+            radius: 3000,
+            polygonPoints: '',
+            feeType: 1,
+            baseFee: 5,
+            feePerKm: 1,
+            minFee: 3,
+            maxFee: 20,
+            freeThreshold: 30,
+            sortOrder: 0,
+            status: 1,
+            remark: ''
+          }
+          this.dialogVisible = true
+          this.$nextTick(() => {
+            this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
+          })
+        },
+        handleEdit(row) {
+          this.dialogTitle = '编辑配送范围规则'
+          this.formData = { ...row }
+          this.dialogVisible = true
+          this.$nextTick(() => {
+            this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
+          })
+        },
+        async handleToggleStatus(row) {
+          // 修改点：启用/禁用属高危操作，补二次确认（对齐 handleDelete 确认模式）
+          try {
+            await ReggieUI.confirm(row.status === 1 ? '确定要禁用该配送范围规则吗？' : '确定要启用该配送范围规则吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+          } catch (e) {
+            return // 用户取消
+          }
+          try {
+            const newStatus = row.status === 1 ? 0 : 1
+            const res = await updateRangeRule({ ...row, status: newStatus })
+            if (res.code === 1) {
+              ReggieUI.success(newStatus === 1 ? '已启用' : '已禁用')
+              this.fetchData()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          } catch (err) {
+            ReggieUI.error('操作失败')
+          }
+        },
+        // 批量删除：顺序循环单删接口，汇总成功/失败
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '配送范围', request: deleteRangeRule })
+        },
+        async handleDelete(row) {
+          try {
+            await ReggieUI.confirm('确定要删除该配送范围规则吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+
+            const res = await deleteRangeRule(row.id)
+            if (res.code === 1) {
+              ReggieUI.success('删除成功')
+              this.fetchData()
+            } else {
+              ReggieUI.error(res.msg || '删除失败')
+            }
+          } catch (err) {
+            if (err === 'cancel') return
+            console.warn('[range-management] 删除失败:', err)
+            ReggieUI.error('删除失败')
+          }
+        },
+        async handleSubmit() {
+          const self = this
+          const valid = await new Promise(function(resolve) {
+            self.$refs.ruleForm.validate(function(v) { resolve(v) })
+          })
+          if (!valid) { ReggieUI.warning('请完善表单必填项'); return }
+
+          self.submitLoading = true
+          const apiCall = self.formData.id ? updateRangeRule(self.formData) : saveRangeRule(self.formData)
+          apiCall.then(function(res) {
+            if (res.code === 1) {
+              ReggieUI.success(self.formData.id ? '更新成功' : '新增成功')
+              self.dialogVisible = false
+              self.fetchData()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          }).catch(function(err) {
+            ReggieUI.error('操作失败')
+          }).finally(function() {
+            self.submitLoading = false
+          })
+        },
+        // 操作列「更多」下拉命令分发：阶梯规则 / 启停 / 删除
+        handleRowCommand(cmd, row) {
+          if (cmd === 'step') {
+            this.handleFeeStep(row)
+          } else if (cmd === 'toggle') {
+            this.handleToggleStatus(row)
+          } else if (cmd === 'delete') {
+            this.handleDelete(row)
+          }
+        },
+        async handleFeeStep(row) {
+          this.currentRuleId = row.id
+          this.feeStepVisible = true
+          await this.fetchFeeSteps()
+        },
+        async fetchFeeSteps() {
+          try {
+            const res = await getFeeSteps({ ruleId: this.currentRuleId })
+            if (res.code === 1) {
+              this.feeSteps = res.data || []
+            }
+          } catch (err) {
+            ReggieUI.error('获取阶梯规则失败')
+          }
+        },
+        handleAddFeeStep() {
+          this.feeStepDialogTitle = '新增阶梯规则'
+          this.feeStepForm = {
+            id: null,
+            ruleId: this.currentRuleId,
+            startDistance: 0,
+            endDistance: 1000,
+            fee: 3,
+            incrementDistance: 500,
+            incrementFee: 1
+          }
+          this.feeStepEditVisible = true
+          this.$nextTick(() => {
+            this.$refs.feeStepFormRef && this.$refs.feeStepFormRef.clearValidate()
+          })
+        },
+        handleEditFeeStep(row) {
+          this.feeStepDialogTitle = '编辑阶梯规则'
+          this.feeStepForm = { ...row }
+          this.feeStepEditVisible = true
+          this.$nextTick(() => {
+            this.$refs.feeStepFormRef && this.$refs.feeStepFormRef.clearValidate()
+          })
+        },
+        async handleDeleteFeeStep(row) {
+          try {
+            await ReggieUI.confirm('确定要删除该阶梯规则吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+            
+            const res = await deleteFeeStep(row.id)
+            if (res.code === 1) {
+              ReggieUI.success('删除成功')
+              await this.fetchFeeSteps()
+            } else {
+              ReggieUI.error(res.msg || '删除失败')
+            }
+          } catch (err) {
+            if (err === 'cancel') return
+            console.warn('[range-management] 删除阶梯规则失败:', err)
+            ReggieUI.error('删除失败')
+          }
+        },
+        async handleFeeStepSubmit() {
+          const self = this
+          const valid = await new Promise(function(resolve) {
+            self.$refs.feeStepFormRef.validate(function(v) { resolve(v) })
+          })
+          if (!valid) { ReggieUI.warning('请完善表单必填项'); return }
+
+          self.submitLoading = true
+          const apiCall = self.feeStepForm.id ? updateFeeStep(self.feeStepForm) : saveFeeStep(self.feeStepForm)
+          apiCall.then(function(res) {
+            if (res.code === 1) {
+              ReggieUI.success(self.feeStepForm.id ? '更新成功' : '新增成功')
+              self.feeStepEditVisible = false
+              self.fetchFeeSteps()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          }).catch(function(err) {
+            ReggieUI.error('操作失败')
+          }).finally(function() {
+            self.submitLoading = false
+          })
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+
+

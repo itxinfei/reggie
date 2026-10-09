@@ -1,0 +1,10 @@
+#!/bin/sh
+# UI 规范门禁：提交前跑 lint-ui-conventions，ERROR 级别阻断提交。
+# 安装（一次性）：bash hooks/install.sh
+# 绕过（紧急修复）：git commit --no-verify
+if ! command -v node >/dev/null 2>&1; then
+  echo "⚠️  未检测到 Node.js，跳过 UI 规范检查（仅影响前端页面改动；安装 Node 后自动恢复）。"
+  exit 0
+fi
+
+node scripts/lint-ui-conventions.js --quiet

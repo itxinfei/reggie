@@ -1,0 +1,333 @@
+package com.reggie.module.sys.controller;
+import com.reggie.common.utils.PageUtils;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.R;
+import com.reggie.common.RateLimit;
+import com.reggie.module.sys.model.Permission;
+import com.reggie.module.sys.model.Role;
+import com.reggie.module.auth.model.Employee;
+import com.reggie.module.auth.service.EmployeeService;
+import com.reggie.common.annotation.RequiresAdmin;
+import com.reggie.common.aspect.PermissionAspect;
+import com.reggie.module.sys.service.PermissionService;
+import com.reggie.module.sys.service.RoleService;
+import com.reggie.module.sys.dto.RoleSaveDTO;
+import com.reggie.module.sys.dto.RoleUpdateDTO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * <p>
+ * 角色管理Controller
+ * </p>
+ *
+ * @author reggie
+ * @since 2026-07-09
+ */
+@Slf4j
+@RequiresAdmin
+@RestController
+@RequestMapping("/sys/role")
+@Tag(name = "系统管理-角色管理", description = "角色CRUD及权限分配接口")
+public class RoleController {
+
+    @Autowired
+    private RoleService roleService;
+
+    @Autowired
+    private PermissionService permissionService;
+
+    @Autowired
+    private PermissionAspect permissionAspect;
+
+    @Autowired
+    private EmployeeService employeeService;
+
+    /**
+     * 角色分页查询
+     * @param page 页码
+     * @param pageSize 每页条数
+     * @param roleName 角色名称
+     * @return 分页结果
+     */
+    @GetMapping("/page")
+    @Operation(summary = "角色分页查询")
+    public R<Page<Role>> page(
+                        @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
+            @Parameter(description = "角色名称") @RequestParam(required = false) String roleName,
+            @Parameter(description = "状态：1=启用 0=禁用") @RequestParam(required = false) Integer status) {
+        // 修改点：补 status 精确筛选（原仅支持 roleName，前端 stat-cards 点击「已启用/已禁用」无效）
+        Page<Role> pageInfo = PageUtils.of(page, pageSize);
+        LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
+        if (roleName != null && !roleName.isEmpty()) {
+            wrapper.like(Role::getRoleName, roleName);
+        }
+        if (status != null) {
+            wrapper.eq(Role::getStatus, status);
+        }
+        wrapper.eq(Role::getIsDeleted, 0)
+               .orderByDesc(Role::getSort);
+        roleService.page(pageInfo, wrapper);
+        return R.success(pageInfo);
+    }
+
+    /**
+     * 角色统计
+     * <p>使用 SQL 聚合替代前端 pageSize:999 拉全量遍历，避免全表扫描</p>
+     *
+     * @return 角色总数、启用数、禁用数、已分配权限数
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "角色统计", description = "聚合统计角色总数、启用数、禁用数、已分配权限角色数")
+    public R<Map<String, Object>> stats() {
+        Map<String, Object> stats = roleService.statRoles();
+        if (stats == null) {
+            stats = new HashMap<>();
+        }
+        return R.success(stats);
+    }
+
+    /**
+     * 所有角色列表（下拉用）
+     * @return 角色列表
+     */
+    @GetMapping("/list")
+    @Operation(summary = "角色列表")
+    public R<List<Role>> list() {
+        LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Role::getIsDeleted, 0)
+               .eq(Role::getStatus, 1)
+               .orderByDesc(Role::getSort);
+        return R.success(roleService.list(wrapper));
+    }
+
+    /**
+     * 新增角色
+     * <p>租户安全：使用 RoleSaveDTO 仅接收业务字段，tenantId 由 Service 层通过 BaseContext 强制设置。</p>
+     *
+     * @param dto 角色信息
+     * @return 操作结果
+     */
+    @PostMapping
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "新增角色", description = "创建新角色，需提供角色名称和编码")
+    public R<String> add(
+            @Parameter(description = "角色信息") @Valid @RequestBody RoleSaveDTO dto) {
+        roleService.addTenantRole(dto.getRoleName(), dto.getRoleKey(),
+                dto.getDescription(), dto.getSort(), dto.getStatus());
+        return R.success("角色创建成功");
+    }
+
+    /**
+     * 修改角色
+     * <p>租户安全：使用 RoleUpdateDTO，Service 层先校验归属再更新业务字段，
+     * 绕过全实体覆盖漏洞。</p>
+     *
+     * @param dto 角色信息
+     * @return 操作结果
+     */
+    @PutMapping
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "修改角色", description = "更新角色信息")
+    public R<String> update(
+            @Parameter(description = "角色信息") @Valid @RequestBody RoleUpdateDTO dto) {
+        roleService.updateTenantRole(dto.getId(), dto.getRoleName(), dto.getRoleKey(),
+                dto.getDescription(), dto.getSort(), dto.getStatus());
+        return R.success("角色更新成功");
+    }
+
+    /**
+     * 删除角色（逻辑删除）
+     * <p>租户安全：Service 层先校验该角色属于当前租户，再执行级联删除。</p>
+     *
+     * @param id 角色ID
+     * @return 操作结果
+     */
+    @DeleteMapping("/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "删除角色", description = "逻辑删除指定角色并清理角色-权限关联")
+    public R<String> delete(@Parameter(description = "角色ID") @PathVariable Long id) {
+        // 租户安全删除：先校验归属再执行级联删除
+        roleService.deleteTenantRole(id);
+        // 角色权限变更，清除角色与员工权限缓存
+        permissionService.clearPermissionCache(id);
+        permissionAspect.clearAllEmployeePermissionCache();
+        return R.success("角色删除成功");
+    }
+
+    /**
+     * 查询角色拥有的权限ID列表
+     * @param id 角色ID
+     * @return 权限ID列表
+     */
+    @GetMapping("/{id}/permissions")
+    @Operation(summary = "查询角色权限", description = "获取指定角色已分配的权限ID列表")
+    public R<List<Long>> getPermissions(@Parameter(description = "角色ID") @PathVariable Long id) {
+        List<Long> permIds = roleService.getPermissionIds(id);
+        return R.success(permIds);
+    }
+
+    /**
+     * 为角色分配权限
+     * @param id 角色ID
+     * @param body 权限ID列表
+     * @return 操作结果
+     */
+    @PutMapping("/{id}/permissions")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "分配角色权限", description = "为角色批量分配权限")
+    public R<String> assignPermissions(
+            @Parameter(description = "角色ID") @PathVariable Long id,
+            @Parameter(description = "权限ID列表") @RequestBody Map<String, List<Long>> body) {
+        List<Long> permissionIds = body.get("permissionIds");
+        roleService.assignPermissions(id, permissionIds);
+
+        // 修改点：权限分配后真正清除缓存，确保新权限立即生效
+        permissionService.clearPermissionCache(id);
+        permissionAspect.clearAllEmployeePermissionCache();
+
+        log.info("[角色权限] 角色{} 重新分配了{}个权限", id,
+                permissionIds != null ? permissionIds.size() : 0);
+        return R.success("权限分配成功");
+    }
+
+    /**
+     * 查询角色已分配的员工ID列表 + 全量员工选项
+     * <p>RBAC 闭环：一次请求返回 {assignedUserIds, employees}，
+     * 前端 el-transfer 用 employees 作 data、assignedUserIds 作右栏初始值。
+     * employees 仅含当前租户员工（MP 租户拦截器自动隔离 tenant_id）。</p>
+     *
+     * @param id 角色ID
+     * @return {assignedUserIds:[...], employees:[{id,name},...]}
+     */
+    @GetMapping("/{id}/users")
+    @Operation(summary = "查询角色员工", description = "获取角色已分配员工ID及全量员工选项")
+    public R<Map<String, Object>> getRoleUsers(@Parameter(description = "角色ID") @PathVariable Long id) {
+        List<Long> assignedUserIds = roleService.getRoleUserIds(id);
+        Map<String, Object> result = new HashMap<>();
+        result.put("assignedUserIds", assignedUserIds != null ? assignedUserIds : new ArrayList<>());
+        // 显式按 tenantId 过滤员工，避免依赖 MP 拦截器的隐性行为
+        Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
+        LambdaQueryWrapper<Employee> empWrapper = new LambdaQueryWrapper<>();
+        empWrapper.eq(Employee::getTenantId, tenantId)
+                  .select(Employee::getId, Employee::getName);
+        List<Employee> employees = employeeService.list(empWrapper);
+        List<Map<String, Object>> empOptions = new ArrayList<>();
+        for (Employee emp : employees) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", emp.getId());
+            item.put("name", emp.getName());
+            empOptions.add(item);
+        }
+        result.put("employees", empOptions);
+        return R.success(result);
+    }
+
+    /**
+     * 为角色分配员工（多对多）
+     * <p>RBAC 闭环：用户→角色。删旧批插新，幂等。
+     * 分配后清除全量员工权限缓存，确保新角色权限立即生效。</p>
+     *
+     * @param id 角色ID
+     * @param body {employeeIds:[...]}
+     * @return 操作结果
+     */
+    @PutMapping("/{id}/users")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "分配角色员工", description = "为角色批量分配员工，支持多对多")
+    public R<String> assignRoleUsers(
+            @Parameter(description = "角色ID") @PathVariable Long id,
+            @Parameter(description = "员工ID列表") @RequestBody Map<String, List<Long>> body) {
+        List<Long> employeeIds = body.get("employeeIds");
+        // 租户归属校验：employee 表在多租户忽略白名单内（不自动注入 tenant_id），
+        // 必须逐个确认员工属于当前租户，否则可把其他租户员工挂到本租户角色上（越权授权）
+        if (employeeIds != null && !employeeIds.isEmpty()) {
+            Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
+            if (tenantId == null) {
+                return R.error("租户信息缺失，无法分配员工");
+            }
+            LambdaQueryWrapper<Employee> ownedWrapper = new LambdaQueryWrapper<>();
+            ownedWrapper.in(Employee::getId, employeeIds)
+                        .eq(Employee::getTenantId, tenantId)
+                        .select(Employee::getId);
+            Set<Long> ownedIds = new HashSet<>();
+            for (Employee emp : employeeService.list(ownedWrapper)) {
+                ownedIds.add(emp.getId());
+            }
+            List<Long> unauthorizedIds = new ArrayList<>();
+            for (Long empId : employeeIds) {
+                if (empId == null || !ownedIds.contains(empId)) {
+                    unauthorizedIds.add(empId);
+                }
+            }
+            if (!unauthorizedIds.isEmpty()) {
+                return R.error("以下员工不属于当前租户，无法分配：ID=" + unauthorizedIds);
+            }
+        }
+        roleService.assignUsersToRole(id, employeeIds);
+        // 角色-用户变更，清除全量员工权限缓存
+        permissionAspect.clearAllEmployeePermissionCache();
+        log.info("[角色用户] 角色{} 重新分配了{}个员工", id,
+                employeeIds != null ? employeeIds.size() : 0);
+        return R.success("员工分配成功");
+    }
+
+    /**
+     * 获取所有权限（构建权限树）
+     * @return 权限列表
+     */
+    @GetMapping("/permissions/tree")
+    @Operation(summary = "获取权限树")
+    public R<List<Permission>> permissionTree() {
+        List<Permission> allPerms = permissionService.getAllPermissions();
+        return R.success(allPerms);
+    }
+
+    /**
+     * 获取筛选下拉选项（角色名称列表）
+     * @return 包含角色名称列表的Map
+     */
+    @GetMapping("/options")
+    @Operation(summary = "筛选选项", description = "获取所有角色名称，供搜索条件下拉框使用")
+    public R<Map<String, List<String>>> options() {
+        List<Role> list = roleService.list();
+        Set<String> nameSet = new HashSet<>();
+        for (Role role : list) {
+            if (role.getRoleName() != null && !role.getRoleName().isEmpty()) {
+                nameSet.add(role.getRoleName());
+            }
+        }
+        Map<String, List<String>> result = new HashMap<>();
+        result.put("names", new ArrayList<>(nameSet));
+        return R.success(result);
+    }
+}
+
+
+
+
+

@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>收银台 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: var(--el-bg-subtle);
+    }
+    /* 防抖动（2026-09-20）：滚动统一由 body 承担；若 html 也产生滚动条，append-to-body 的
+       下拉浮层超出视口底部时会撑高 html、闪现第二滚动条挤占宽度，表格随之左右横跳 */
+    html {
+      overflow: hidden;
+    }
+    body {
+      overflow-y: auto;
+    }
+    .cashier-container {
+      padding: 10px; /* 主内容区边距全站统一 10px（原 24px 32px） */
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .cashier-header {
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      margin-bottom: var(--space-5);
+      box-shadow: var(--shadow-sm);
+    }
+    .cashier-title {
+      font-size: var(--font-size-3xl);
+      font-weight: 600;
+      color: var(--el-text-primary);
+      margin-bottom: var(--space-4);
+    }
+    /* C.1：页内日结条 */
+    .settle-bar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+      margin-top: var(--space-5);
+      padding: var(--space-3) var(--space-5);
+      background: var(--bg-surface);
+      border: 1px solid var(--el-border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      font-size: var(--font-size-sm);
+      color: var(--el-text-secondary);
+    }
+    .settle-bar__icon { color: var(--el-color-primary); }
+    .settle-bar__label { font-weight: 600; color: var(--el-text-primary); }
+    .settle-bar__item b { color: var(--el-text-primary); font-weight: 600; margin-left: 2px; }
+    .settle-bar__diff--warn { color: var(--el-color-warning); }
+    .settle-bar__btn { margin-left: auto; }
+    .cashier-main {
+      display: grid;
+      grid-template-columns: 1fr var(--cashier-side-width);
+      gap: var(--space-5);
+    }
+    /* 响应式：小屏切换单列，避免 400px 支付面板溢出 375px 视口 */
+    @media (max-width: 900px) {
+      .cashier-main { grid-template-columns: 1fr; }
+      .cashier-container { padding: 10px; }
+    }
+    .order-panel {
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      box-shadow: var(--shadow-sm);
+    }
+    .panel-title {
+      font-size:var(--font-size-lg);
+      font-weight: 600;
+      color: var(--el-text-primary);
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-3);
+      border-bottom: 1px solid var(--el-border-lighter);
+    }
+    .order-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .order-item {
+      display: flex;
+      align-items: center;
+      padding: var(--space-3);
+      margin-bottom: var(--space-2);
+      background: var(--el-bg-page);
+      border-radius: var(--radius-md);
+    }
+    .order-item:hover {
+      background: var(--el-color-primary-lighter);
+    }
+    .order-item.active {
+      background: var(--el-color-primary-lighter);
+      border: 1px solid var(--el-color-primary);
+    }
+    .order-info {
+      flex: 1;
+    }
+    .order-number {
+      font-weight: 600;
+      color: var(--el-text-primary);
+      margin-bottom: 4px;
+    }
+    .order-time {
+      font-size:var(--font-size-xs);
+      color: var(--el-text-secondary);
+    }
+    .order-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+    .table-chip {
+      display: inline-block;
+      padding: 1px 6px;
+      background: var(--el-color-success-lighter);
+      color: var(--color-success-text);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-xs);
+      font-weight: 500;
+    }
+    .phone-chip {
+      display: inline-block;
+      padding: 1px 6px;
+      background: var(--el-fill-color-light);
+      color: var(--el-text-secondary);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-xs);
+    }
+    .order-amount {
+      font-size:var(--font-size-xl);
+      font-weight: 700;
+      color: var(--el-color-danger);
+    }
+    .payment-panel {
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .payment-summary {
+      margin-bottom: 20px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--el-border-lighter);
+    }
+    .summary-row:last-child {
+      border-bottom: none;
+    }
+    .summary-label {
+      color: var(--el-text-secondary);
+    }
+    .summary-value {
+      font-weight: 600;
+      color: var(--el-text-primary);
+    }
+    .summary-value.total {
+      font-size:var(--font-size-2xl);
+      color: var(--el-color-danger);
+    }
+    .payment-methods {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .payment-method {
+      padding: 16px;
+      text-align: center;
+      border: 2px solid var(--el-border-lighter);
+      border-radius: var(--radius-md);
+    }
+    .payment-method:hover {
+      border-color: var(--el-color-primary);
+    }
+    .payment-method.active {
+      border-color: var(--el-color-primary);
+      background: var(--el-color-primary-lighter);
+    }
+    .payment-method.disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .payment-method.disabled:hover {
+      border-color: var(--el-border-lighter);
+    }
+    .payment-method i {
+      font-size: var(--font-size-3xl);
+      margin-bottom: 8px;
+      display: block;
+    }
+    .payment-method span {
+      font-size:var(--font-size-base);
+    }
+    .amount-input {
+      margin-bottom: 20px;
+    }
+    .amount-input label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .amount-input .el-input-number {
+      width: 100%;
+    }
+    .quick-amounts {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .quick-label {
+      font-size: var(--font-size-xs);
+      color: var(--el-text-secondary);
+      margin-right: 2px;
+    }
+    .quick-amounts .el-button {
+      padding: 6px 12px;
+      font-size: var(--font-size-xs);
+      font-weight: 500;
+    }
+    .change-amount {
+      text-align: center;
+      padding: 16px;
+      background: var(--el-color-success-lighter);
+      border-radius: var(--radius-md);
+      font-size:var(--font-size-base);
+      color: var(--el-text-secondary);
+      margin-bottom: 4px;
+    }
+    .change-value {
+      font-size: var(--font-size-3xl);
+      font-weight: 700;
+      color: var(--color-success-text);
+    }
+    .member-section {
+      margin-bottom: 20px;
+      padding: 12px;
+      border: 1px solid var(--el-border-color);
+      border-radius: var(--border-radius-card);
+      background: var(--el-fill-color-light);
+    }
+    .member-info {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: var(--font-size-base);
+    }
+    .member-info .member-name {
+      font-weight: 600;
+      color: var(--el-text-primary);
+    }
+    .member-info .member-meta {
+      color: var(--el-text-secondary);
+    }
+    .submit-btn {
+      width: 100%;
+      height: 50px;
+      font-size:var(--font-size-xl);
+    }
+    .coupon-section {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--el-border-lighter);
+    }
+    .coupon-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .coupon-title {
+      font-weight: 500;
+      color: var(--el-text-primary);
+    }
+    .coupon-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 40px;
+    }
+    .coupon-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--el-border-color);
+      border-radius: var(--border-radius-base);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .coupon-item:hover {
+      border-color: var(--el-color-primary);
+    }
+    .coupon-item.active {
+      border-color: var(--el-color-primary);
+      background: var(--el-color-primary-lighter);
+    }
+    .coupon-name {
+      font-weight: 600;
+      color: var(--el-text-primary);
+      margin-bottom: 4px;
+    }
+    .coupon-cond {
+      font-size: var(--font-size-xs);
+      color: var(--el-text-secondary);
+    }
+    .coupon-right {
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      color: var(--el-color-danger);
+    }
+    .pay-hint {
+      margin: 4px 0 20px;
+      padding: 10px 12px;
+      font-size: var(--font-size-sm);
+      color: var(--el-text-secondary);
+      background: var(--el-color-primary-lighter);
+      border: 1px solid var(--el-color-primary-light-5);
+      border-radius: var(--border-radius-base);
+      line-height: 1.5;
+    }
+    .pay-hint .ri-information-line {
+      color: var(--el-color-primary);
+      margin-right: 4px;
+    }
+    /* ====== 桌台网格 ====== */
+    .table-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+      max-height: 420px;
+      overflow-y: auto;
+      padding: 4px;
+    }
+    .table-card {
+      background: var(--bg-surface);
+      border: 2px solid var(--el-border-lighter);
+      border-radius: var(--radius-md);
+      padding: 14px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--transition-base, 0.2s);
+      position: relative;
+    }
+    .table-card:hover { border-color: var(--el-color-primary); box-shadow: var(--shadow-sm); }
+    .table-card.active { border-color: var(--el-color-primary); background: var(--el-color-primary-lighter); }
+    .table-card.status-FREE { border-color: var(--el-border-lighter); }
+    .table-card.status-OCCUPIED { border-color: var(--color-success-text); }
+    .table-card.status-OCCUPIED .table-name { color: var(--color-success-text); font-weight: 700; }
+    .table-card.status-RESERVED { border-color: var(--el-color-info); }
+    .table-card .table-name { font-size: var(--font-size-xl); font-weight: 600; margin-bottom: 4px; }
+    /* P0/P1 对比度修复(2026-09-27)：--el-text-muted 压白底仅 3.74:1（30 处桌台信息），
+       占桌金额 #f56c6c 压白底仅 2.90:1。统一改用已达标文字变体。 */
+    .table-card .table-meta { font-size: var(--font-size-xs); color: var(--color-info-text); }
+    .table-card .table-amount {
+      font-size: var(--font-size-lg); font-weight: 700; color: var(--color-danger-text);
+      margin-top: 6px;
+    }
+    .table-filter-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    /* ====== 桌台详情 ====== */
+    .table-detail { max-height: 480px; overflow-y: auto; }
+    .detail-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .detail-header h3 { margin: 0; font-size: var(--font-size-lg); }
+    .detail-order { margin-bottom: 16px; padding: 12px; background: var(--el-bg-page); border-radius: var(--radius-md); }
+    .detail-order .order-title { font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .detail-items { margin-top: 8px; }
+    .detail-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--el-border-lighter); font-size: var(--font-size-sm); }
+    .detail-item:last-child { border-bottom: none; }
+    .detail-item .item-name { flex: 1; }
+    .detail-item .item-qty { width: 40px; text-align: center; color: var(--el-text-secondary); }
+    .detail-item .item-amount { width: 80px; text-align: right; font-weight: 500; }
+    .table-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--el-border-lighter); }
+    /* ====== 加菜弹窗 ====== */
+    .add-items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 360px; overflow-y: auto; padding: 4px; }
+    .dish-pick-card { padding: 10px; border: 1px solid var(--el-border-lighter); border-radius: var(--radius-md); cursor: pointer; transition: all var(--transition-base, 0.2s); }
+    .dish-pick-card:hover { border-color: var(--el-color-primary); }
+    .dish-pick-card.selected { border-color: var(--el-color-primary); background: var(--el-color-primary-lighter); }
+    .dish-pick-card .dish-name { font-weight: 500; margin-bottom: 4px; }
+    .dish-pick-card .dish-price { color: var(--el-color-danger); font-weight: 600; }
+    .dish-pick-card .dish-qty { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <!-- ====== 收银台主页面 ====== -->
+  <!-- 功能：线下收银结账，支持选择待结账订单、会员识别与优惠券抵扣、多种支付方式、现金找零、一键日结 -->
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
+  <div id="main-content" class="cashier-container" role="main" aria-label="页面主要内容">
+    <!-- 头部统计（统一 stat-cards 组件） -->
+    <div class="cashier-header">
+      <div class="cashier-title">
+        <i class="ri-shopping-cart-2-line" style="color: var(--el-color-primary); margin-right: var(--space-2);"></i>
+        收银台
+      </div>
+      <stat-cards :cards="headerCards" :loading="false"></stat-cards>
+    </div>
+
+    <!-- 主要内容区 -->
+    <div class="cashier-main">
+      <!-- 左侧：桌台网格 + 桌台详情 -->
+      <div class="order-panel">
+        <!-- 桌台列表视图（未选中桌台时显示） -->
+        <div v-if="!selectedTable">
+          <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;">
+            <span><i class="ri-layout-grid-line"></i> 桌台总览</span>
+            <span style="font-size:var(--font-size-sm);color:var(--el-text-muted);">
+              共 {{ tables.length }} 桌 / {{ occupiedCount }} 桌在用
+            </span>
+          </div>
+          <div class="table-filter-bar">
+            <el-button size="mini" :type="tableFilter===''?'primary':'default'" @click="tableFilter=''">全部</el-button>
+            <el-button size="mini" :type="tableFilter==='OCCUPIED'?'success':'default'" @click="tableFilter='OCCUPIED'">在用</el-button>
+            <el-button size="mini" :type="tableFilter==='FREE'?'info':'default'" @click="tableFilter='FREE'">空闲</el-button>
+          </div>
+          <div v-if="filteredTables.length===0" style="text-align:center;padding:var(--space-10);color:var(--el-text-secondary);">
+            暂无{{ tableFilter==='OCCUPIED'?'在用':'' }}桌台
+          </div>
+          <div class="table-grid">
+            <div v-for="t in filteredTables" :key="t.id"
+              class="table-card" :class="['status-'+t.status, {active: selectedTable && selectedTable.tableId===t.id}]"
+              role="button" tabindex="0"
+              @click="selectTable(t)" @keydown.enter="selectTable(t)"
+              :aria-label="'桌台 '+t.name">
+              <div class="table-name">{{ t.name }}</div>
+              <div class="table-meta">{{ t.areaName || '' }} · {{ t.seatCount }}人</div>
+              <div v-if="t.status==='OCCUPIED'" class="table-amount">
+                {{ tableAmountMap[t.id] != null ? '¥'+formatMoney(tableAmountMap[t.id]) : '...' }}
+              </div>
+              <div v-else-if="t.status==='FREE'" class="table-meta" style="color:var(--color-success-text);">空闲</div>
+              <div v-else class="table-meta">{{ t.status }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 桌台详情视图（选中桌台后显示） -->
+        <div v-if="selectedTable">
+          <div class="detail-header">
+            <h3>
+              <i class="ri-arrow-left-line" style="cursor:pointer;margin-right:8px;" @click="clearTableSelection" title="返回桌台列表"></i>
+              {{ selectedTable.tableName }}
+              <span style="font-size:var(--font-size-sm);color:var(--el-text-muted);margin-left:8px;">
+                {{ selectedTable.areaName || '' }} · {{ selectedTable.seatCount }}人
+              </span>
+            </h3>
+            <el-button type="primary" size="small" @click="openAddItemsDialog" :disabled="pendingTableOrders.length===0">
+              <i class="ri-add-line"></i> 加菜
+            </el-button>
+          </div>
+
+          <div v-if="detailLoading" style="text-align:center;padding:var(--space-10);">
+            <i class="el-icon-loading" style="font-size:24px;color:var(--el-color-primary);"></i>
+          </div>
+          <div v-else-if="!selectedTable.orders||selectedTable.orders.length===0" class="table-detail" style="text-align:center;padding:var(--space-10);color:var(--el-text-secondary);">
+            暂无订单
+          </div>
+          <div v-else class="table-detail">
+            <div v-for="order in selectedTable.orders" :key="order.orderId" class="detail-order">
+              <div class="order-title">
+                <span>{{ order.orderNumber }}</span>
+                <el-tag size="mini" :type="order.status===1?'warning':(order.status===3?'info':'success')">{{ orderStatusText(order.status) }}</el-tag>
+                <span style="margin-left:auto;font-weight:700;color:var(--el-color-danger);">¥{{ formatMoney(order.amount) }}</span>
+              </div>
+              <div class="detail-items">
+                <div class="detail-item" v-for="d in order.details" :key="d.id">
+                  <span class="item-name">{{ d.name }}{{ d.dishFlavor ? '（'+d.dishFlavor+'）' : '' }}</span>
+                  <span class="item-qty">×{{ d.number }}</span>
+                  <span class="item-amount">¥{{ formatMoney(d.amount * d.number) }}</span>
+                </div>
+              </div>
+              <div style="font-size:var(--font-size-xs);color:var(--el-text-muted);margin-top:6px;">{{ order.orderTime }}</div>
+            </div>
+          </div>
+
+          <div class="table-actions">
+            <el-button size="small" @click="showTransferDialog=true" :disabled="pendingTableOrders.length===0">
+              <i class="ri-arrow-left-right-line"></i> 转台
+            </el-button>
+            <el-button size="small" @click="handleCheckout" :disabled="pendingTableOrders.length===0"
+              type="primary">
+              <i class="ri-money-cny-circle-line"></i> 结账（¥{{ formatMoney(tableTotalAmount) }}）
+            </el-button>
+            <div v-if="(selectedTable.orders||[]).length>0 && pendingTableOrders.length===0"
+                 style="font-size:var(--font-size-xs);color:var(--el-text-muted);margin-top:6px;">
+              本桌订单均已下单/制作中，无待付款订单
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 支付面板 -->
+      <div class="payment-panel">
+        <div class="panel-title">
+          <i class="ri-money-cny-circle-line"></i>
+          结账信息
+        </div>
+
+        <!-- 订单摘要 -->
+        <div class="payment-summary" v-if="selectedOrder">
+          <div class="summary-row">
+            <span class="summary-label">订单号</span>
+            <span class="summary-value">{{ selectedOrder.number }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">下单时间</span>
+            <span class="summary-value">{{ selectedOrder.orderTime }}</span>
+          </div>
+          <!-- 修改点(2026-09-18)：按桌台合并结账提示——本桌存在多笔未结订单时明确告知，
+               避免店员以为只收当前这一单的钱（后端已按桌台合并收款） -->
+          <div class="summary-row" v-if="previewMerged"
+               style="margin-bottom: var(--space-2); padding: var(--space-2); border-radius: var(--radius-sm); background: var(--color-brand-50);">
+            <span class="summary-label">本桌共 {{ previewOrderCount }} 笔未结订单</span>
+            <span class="summary-value" style="color: var(--el-color-primary, #ffc200);">将合并结账</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">订单金额</span>
+            <span class="summary-value">¥{{ formatMoney(grossAmount) }}</span>
+          </div>
+          <div class="summary-row" v-if="discountAmount > 0">
+            <span class="summary-label">优惠券抵扣</span>
+            <span class="summary-value" style="color: var(--color-success-text);">-¥{{ formatMoney(discountAmount) }}</span>
+          </div>
+          <div class="summary-row" v-if="levelDiscountAmount > 0">
+            <span class="summary-label">会员等级折扣</span>
+            <span class="summary-value" style="color: var(--color-success-text);">-¥{{ formatMoney(levelDiscountAmount) }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">应付金额</span>
+            <span class="summary-value total">¥{{ formatMoney(payableAmount) }}</span>
+          </div>
+        </div>
+        <div v-else style="text-align: center; padding: var(--space-10); color: var(--el-text-secondary);">
+          请先选择订单
+        </div>
+
+        <!-- 会员识别 -->
+        <div v-if="selectedOrder" class="member-section">
+          <div class="summary-row">
+            <span class="summary-label">会员</span>
+            <span class="summary-value">
+              <el-input
+                v-model="memberPhone"
+                placeholder="输入会员手机号"
+                size="small"
+                style="width: 160px;"
+                @keyup.enter.native="identifyMember">
+              </el-input>
+              <el-button
+                size="small"
+                type="primary"
+                :loading="memberLoading"
+                @click="identifyMember"
+                style="margin-left: var(--space-2);">
+                识别
+              </el-button>
+            </span>
+          </div>
+          <!-- 修改点：P2-1 骨架屏——会员信息加载态（识别中显示脉冲条，替代 el-input loading 转圈） -->
+          <div v-if="memberLoading" class="cashier-member-skeleton">
+            <div class="ds-skeleton">
+              <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+              <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            </div>
+          </div>
+          <div v-else-if="currentMember" class="member-info">
+            <span class="member-name">{{ currentMember.name || currentMember.nickname }}</span>
+            <span class="member-meta">积分 {{ currentMember.points }}</span>
+            <span class="member-meta">余额 ¥{{ formatMoney(currentMember.balance) }}</span>
+            <span class="member-meta">等级 {{ currentMember.levelName || '普通会员' }}</span>
+          </div>
+
+          <!-- 优惠券选择 -->
+          <div v-if="currentMember" class="coupon-section">
+            <div class="coupon-header">
+              <span class="coupon-title">优惠券</span>
+              <el-button
+                v-if="availableCoupons.length === 0 && !couponLoading"
+                type="text"
+                size="mini"
+                disabled>暂无可用券</el-button>
+              <el-button
+                v-else-if="availableCoupons.length > 0"
+                type="text"
+                size="mini"
+                @click="clearCoupon">不使用优惠券</el-button>
+            </div>
+            <!-- 修改点：P2-1 骨架屏——优惠券加载态（脉冲骨架替代纯转圈） -->
+            <div v-if="couponLoading" class="cashier-coupon-skeleton">
+              <div class="ds-skeleton">
+                <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+              </div>
+            </div>
+            <div v-else v-loading="couponLoading" class="coupon-list">
+              <div
+                v-for="coupon in availableCoupons"
+                :key="coupon.id"
+                class="coupon-item"
+                :class="{ active: selectedCouponId === coupon.id }"
+                @click="selectCoupon(coupon)">
+                <div class="coupon-left">
+                  <div class="coupon-name">{{ coupon.name }}</div>
+                  <div class="coupon-cond">{{ couponConditionText(coupon) }}</div>
+                </div>
+                <div class="coupon-right">-¥{{ formatMoney(coupon.currentDiscount) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 支付方式 -->
+        <div v-if="selectedOrder">
+          <div style="margin-bottom: var(--space-3); font-weight: 500;">支付方式</div>
+          <div class="payment-methods">
+            <div
+              class="payment-method"
+              :class="{ active: payType === 1 }"
+              @click="selectPayType(1)">
+              <i class="ri-money-cny-circle-line" style="color: var(--color-success-text);"></i>
+              <span>现金</span>
+            </div>
+            <div
+              class="payment-method"
+              :class="{ active: payType === 2 }"
+              @click="selectPayType(2)">
+              <i class="ri-chat-3-line" style="color: var(--color-success-text);"></i>
+              <span>微信</span>
+            </div>
+            <div
+              class="payment-method"
+              :class="{ active: payType === 3 }"
+              @click="selectPayType(3)">
+              <i class="ri-computer-line" style="color: var(--el-color-primary);"></i>
+              <span>支付宝</span>
+            </div>
+            <div
+              class="payment-method"
+              :class="{ active: payType === 4 }"
+              @click="selectPayType(4)">
+              <i class="ri-bank-card-line" style="color: var(--el-color-warning);"></i>
+              <span>银行卡</span>
+            </div>
+            <div
+              class="payment-method"
+              :class="{ active: payType === 5, disabled: !currentMember }"
+              @click="currentMember ? selectPayType(5) : ReggieUI.warning('请先识别会员后使用储值支付')">
+              <i class="ri-wallet-line" style="color: var(--el-color-primary);"></i>
+              <span>会员储值</span>
+            </div>
+          </div>
+          <div v-if="payType === 5 && currentMember" class="pay-hint">
+            将从会员「{{ currentMember.name || currentMember.nickname }}」储值余额抵扣 ¥{{ formatMoney(payableAmount) }}
+          </div>
+
+          <!-- 现金支付输入 -->
+          <div v-if="payType === 1" class="amount-input">
+            <label id="lbl-actual-amount" for="inp-actual-amount">实收金额</label>
+            <el-input-number
+              v-model="actualAmount"
+              :precision="2"
+              :min="payableAmount"
+              :step="10"
+              placeholder="请输入实收金额"
+              id="inp-actual-amount"
+              @change="onActualAmountChange">
+            </el-input-number>
+            <div class="quick-amounts">
+              <span class="quick-label">快捷：</span>
+              <el-button size="mini" plain @click="setActualAmount(Math.ceil(payableAmount))">凑整 ¥{{ Math.ceil(payableAmount) }}</el-button>
+              <el-button size="mini" plain :disabled="payableAmount > 50" @click="setActualAmount(50)">50元</el-button>
+              <el-button size="mini" plain :disabled="payableAmount > 100" @click="setActualAmount(100)">100元</el-button>
+              <el-button size="mini" plain :disabled="payableAmount > 200" @click="setActualAmount(200)">200元</el-button>
+              <el-button size="mini" plain :disabled="payableAmount > 500" @click="setActualAmount(500)">500元</el-button>
+            </div>
+          </div>
+
+          <!-- 找零显示 -->
+          <div v-if="payType === 1 && actualAmount > payableAmount" class="change-amount">
+            <div class="change-label">找零</div>
+            <div class="change-value">¥{{ formatMoney(actualAmount - payableAmount) }}</div>
+          </div>
+
+          <!-- 非现金支付说明：如实记录所选渠道，实收默认等于应付金额 -->
+          <div v-if="payType !== 1 && payType !== 5" class="pay-hint">
+            <i class="ri-information-line"></i>
+            「{{ payTypeText }}」为门店线下收款（扫顾客付款码或顾客扫门店码），请确认款项到账后再点击收款；顾客在手机端发起的在线支付无需在此操作。
+          </div>
+
+          <!-- 付款凭证：微信/支付宝/银行卡线下收款可上传到账截图，便于交接班对账与纠纷核查（选填，不阻断收款） -->
+          <div v-if="payType === 2 || payType === 3 || payType === 4" style="margin-bottom: var(--space-5);">
+            <div style="margin-bottom: var(--space-2); font-weight: 500;">付款凭证（选填）</div>
+            <rg-image-uploader v-model="voucherImage" biz-type="payvoucher" :single="true" :max="1"></rg-image-uploader>
+          </div>
+
+          <!-- 备注 -->
+          <div style="margin-bottom: var(--space-5);">
+            <el-input v-model="remark" type="textarea" :rows="2" placeholder="备注（可选）"></el-input>
+          </div>
+
+          <!-- 提交按钮（C.1：快捷键 Enter，未聚焦输入框时触发） -->
+          <el-button
+            type="primary"
+            class="submit-btn"
+            :loading="submitLoading"
+            title="快捷键：Enter（未聚焦输入框时）"
+            @click="handlePayment">
+            <i class="ri-check-line"></i>
+            确认收款 ¥{{ formatMoney(payableAmount) }}
+          </el-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 加菜弹窗：自定义菜品选择网格放默认插槽，统一走 crud-dialog -->
+    <crud-dialog title="加菜" :visible.sync="addItemsVisible" size="lg" :close-on-click-modal="false">
+      <div v-if="addItemsLoading" style="text-align:center;padding:var(--space-10);">
+        <i class="el-icon-loading" style="font-size:24px;color:var(--el-color-primary);"></i>
+      </div>
+      <div v-else>
+        <el-input v-model="dishSearch" placeholder="搜索菜品名称" size="small" style="margin-bottom:12px;" clearable>
+          <i slot="prefix" class="ri-search-line"></i>
+        </el-input>
+        <div class="add-items-grid">
+          <div v-for="d in filteredDishes" :key="d.id" class="dish-pick-card"
+            :class="{selected: addItemsSelection[d.id]}" @click="toggleDishSelect(d)">
+            <div class="dish-name">{{ d.name }}</div>
+            <div class="dish-price">¥{{ formatMoney(d.price) }}</div>
+            <div class="dish-qty" v-if="addItemsSelection[d.id]" @click.stop>
+              <el-button size="mini" icon="el-icon-minus" circle @click="adjustDishQty(d.id,-1)"></el-button>
+              <span style="min-width:24px;text-align:center;font-weight:600;">{{ addItemsSelection[d.id].qty }}</span>
+              <el-button size="mini" icon="el-icon-plus" circle @click="adjustDishQty(d.id,1)"></el-button>
+            </div>
+          </div>
+        </div>
+        <div v-if="Object.keys(addItemsSelection).length>0"
+          style="margin-top:12px;padding:12px;background:var(--el-bg-page);border-radius:var(--radius-md);display:flex;justify-content:space-between;align-items:center;">
+          <span>已选 <b>{{ Object.keys(addItemsSelection).length }}</b> 个菜品</span>
+          <span style="font-weight:700;color:var(--el-color-danger);">合计 ¥{{ formatMoney(addItemsTotal) }}</span>
+        </div>
+      </div>
+      <div slot="footer">
+        <el-button @click="addItemsVisible=false">取消</el-button>
+        <el-button type="primary" :loading="addItemsSubmitting" :disabled="Object.keys(addItemsSelection).length===0"
+          @click="submitAddItems">确认加菜</el-button>
+      </div>
+    </crud-dialog>
+
+    <!-- 转台弹窗：标准小表单，统一走 crud-dialog（footer 插槽保留未选桌台时禁用确认） -->
+    <crud-dialog title="转台" :visible.sync="showTransferDialog" size="sm">
+      <el-form label-width="80px" @submit.native.prevent>
+        <el-form-item label="目标桌台">
+          <el-select v-model="transferToTableId" placeholder="选择空闲桌台" style="width:100%;">
+            <el-option v-for="t in freeTables" :key="t.id" :label="t.name + '（'+t.seatCount+'人）'" :value="t.id"></el-option>
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <div slot="footer">
+        <el-button @click="showTransferDialog=false">取消</el-button>
+        <el-button type="primary" :loading="transferLoading" :disabled="!transferToTableId" @click="handleTransfer">确认转台</el-button>
+      </div>
+    </crud-dialog>
+
+    <!-- C.1：页内日结条（本日应收/实收/差异 + 一键日结，收敛 daily-settlement） -->
+    <div class="settle-bar" v-if="todayStats">
+      <i class="ri-bar-chart-line settle-bar__icon" aria-hidden="true"></i>
+      <span class="settle-bar__label">今日结账</span>
+      <span class="settle-bar__item">应收 <b>¥{{ formatMoney(todayStats.totalAmount) }}</b></span>
+      <span class="settle-bar__item">已结 <b>¥{{ formatMoney(settledAmount) }}</b></span>
+      <span class="settle-bar__item">差异 <b :class="{ 'settle-bar__diff--warn': diffAmount > 0 }">¥{{ formatMoney(diffAmount) }}</b></span>
+      <span class="settle-bar__item">堂食待结 <b>{{ pendingOrders.length }}</b> 笔 / <b>¥{{ formatMoney(pendingAmount) }}</b></span>
+      <el-button
+        type="primary"
+        size="small"
+        class="settle-bar__btn"
+        :loading="settleLoading"
+        title="执行当日日结（原独立页 daily-settlement.html 已收敛至此）"
+        @click="handleSettlement">
+        一键日结
+      </el-button>
+    </div>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <!-- 修改点：补引 axios —— request.js 首行即使用全局 axios，缺失会抛错导致
+       $axios 永不挂载，本页所有接口请求全部失效 -->
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/common.js?v=20260926"></script>
+  <script src="../../api/cashier.js?v=20260926"></script>
+  <script src="../../api/order.js?v=20260926"></script>
+  <script src="../../api/member-center.js?v=20260926"></script>
+  <script src="../../api/dining.js?v=20260918b"></script>
+  <script src="../../api/food.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#main-content',
+      data() {
+        return {
+          currentTime: '',
+          todayStats: {
+            totalCount: 0,
+            totalAmount: 0,
+            avgAmount: 0
+          },
+          pendingOrders: [],
+          selectedOrder: null,
+          payType: 1,
+          actualAmount: 0,
+          remark: '',
+          // 付款凭证截图相对路径（仅微信/支付宝/银行卡线下收款时上传，选填）
+          voucherImage: '',
+          submitLoading: false,
+          timeTimer: null,
+          memberPhone: '',
+          currentMember: null,
+          memberLoading: false,
+          availableCoupons: [],
+          selectedCouponId: null,
+          couponLoading: false,
+          // C.1：今日日结状态 + 一键日结
+          settlementInfo: null,
+          settleLoading: false,
+          // 修改点(2026-09-18)：服务端结算预览下发的应付金额（权威值，含券抵扣与会员等级折扣）
+          previewPayable: null,
+          previewLoading: false,
+          // 修改点(2026-09-18)：按桌台合并结账提示（本桌未结订单笔数 / 是否多笔合并）
+          previewOrderCount: 1,
+          previewMerged: false,
+          // 服务端预览下发的金额构成（订单总额/券抵扣/等级折扣），展示以服务端为准
+          previewOrderAmount: null,
+          previewCouponDiscount: 0,
+          previewLevelDiscount: 0,
+          // 实收金额是否被收银员手动改动（手动改动后不被预览刷新覆盖）
+          actualAmountTouched: false,
+          // ====== 桌台视图 ======
+          tables: [],
+          tableFilter: '',
+          selectedTable: null,
+          detailLoading: false,
+          tableAmountMap: {},
+          // 加菜弹窗
+          addItemsVisible: false,
+          addItemsLoading: false,
+          addItemsSubmitting: false,
+          dishSearch: '',
+          allDishes: [],
+          addItemsSelection: {},
+          // 转台弹窗
+          showTransferDialog: false,
+          transferToTableId: null,
+          transferLoading: false
+        }
+      },
+      // 修改点(2026-09-18)：订单/优惠券/会员变化时向服务端请求权威结算预览，
+      // 保证页面展示的应付金额与服务端 BigDecimal 计算完全一致（消除前端自算的口径与浮点误差）
+      watch: {
+        selectedOrder: function() { this.loadPreview() },
+        selectedCouponId: function() { this.loadPreview() },
+        currentMember: function() { this.loadPreview() }
+      },
+      computed: {
+        discountAmount() {
+          // 以服务端预览重算的券抵扣为准（合并结账/会员场景下券面展示值可能与之不同）
+          return this.previewCouponDiscount != null ? Number(this.previewCouponDiscount) || 0 : 0
+        },
+        // 订单总额（服务端预览值；未就绪时回退本地选中金额）
+        grossAmount() {
+          if (this.previewOrderAmount != null) return Number(this.previewOrderAmount)
+          return this.selectedOrder ? Number(this.selectedOrder.amount) || 0 : 0
+        },
+        // 会员等级折扣金额 = 折前 - 券抵扣 - 应付
+        levelDiscountAmount() {
+          if (!this.selectedOrder || this.previewPayable == null) return 0
+          const v = this.grossAmount - this.discountAmount - Number(this.previewPayable)
+          return v > 0 ? Math.round(v * 100) / 100 : 0
+        },
+        payableAmount() {
+          // 修改点(2026-09-18)：优先使用服务端结算预览的应付金额（已含券抵扣 + 会员等级折扣），
+          // 避免前端 JS 相减与服务端 BigDecimal 口径不一致；预览未就绪时回退为本地估算
+          if (this.previewPayable != null) return this.previewPayable
+          if (!this.selectedOrder) return 0
+          const payable = Number(this.selectedOrder.amount) - this.discountAmount
+          return payable > 0 ? Math.round(payable * 100) / 100 : 0
+        },
+        payTypeText() {
+          const map = { 1: '现金', 2: '微信', 3: '支付宝', 4: '银行卡', 5: '会员储值' }
+          return map[this.payType] || '现金'
+        },
+        headerCards() {
+          return [
+            { key: 'orders', icon: 'ri-file-list-3-line', label: '今日订单', value: this.todayStats.totalCount || 0, color: 'primary' },
+            { key: 'revenue', icon: 'ri-money-cny-circle-line', label: '今日收入', value: this.formatMoney(this.todayStats.totalAmount), color: 'success' },
+            { key: 'avg', icon: 'ri-line-chart-line', label: '客单价', value: this.formatMoney(this.todayStats.avgAmount), color: 'info' },
+            { key: 'time', icon: 'ri-time-line', label: '当前时间', value: this.currentTime, color: 'warning' }
+          ]
+        },
+        settledAmount() {
+          const d = this.settlementInfo
+          if (!d) return 0
+          return d.totalAmount != null ? Number(d.totalAmount) : (d.amount != null ? Number(d.amount) : 0)
+        },
+        pendingAmount() {
+          return this.pendingOrders.reduce((sum, o) => sum + (Number(o.amount) || 0), 0)
+        },
+        diffAmount() {
+          const diff = (Number(this.todayStats.totalAmount) || 0) - this.settledAmount
+          return diff > 0 ? diff : 0
+        },
+        // ====== 桌台相关 computed ======
+        filteredTables() {
+          var self = this
+          if (!self.tableFilter) return self.tables
+          return self.tables.filter(function(t) { return t.status === self.tableFilter })
+        },
+        occupiedCount() {
+          return this.tables.filter(function(t) { return t.status === 'OCCUPIED' }).length
+        },
+        freeTables() {
+          return this.tables.filter(function(t) { return t.status === 'FREE' })
+        },
+        // 仅「待付款(1)」订单计入可结账金额——后端合并结账只结 PENDING_PAY 订单，
+        // 已下单/配送中的订单已在别的链路处理，不能计入收银合计
+        pendingTableOrders() {
+          if (!this.selectedTable || !this.selectedTable.orders) return []
+          return this.selectedTable.orders.filter(function(o) { return o.status === 1 })
+        },
+        tableTotalAmount() {
+          return this.pendingTableOrders.reduce(function(sum, o) { return sum + (Number(o.amount) || 0) }, 0)
+        },
+        filteredDishes() {
+          var q = (this.dishSearch || '').toLowerCase()
+          if (!q) return this.allDishes
+          return this.allDishes.filter(function(d) { return (d.name || '').toLowerCase().indexOf(q) >= 0 })
+        },
+        addItemsTotal() {
+          var self = this
+          var total = 0
+          Object.keys(this.addItemsSelection).forEach(function(id) {
+            var sel = self.addItemsSelection[id]
+            total += (Number(sel.price) || 0) * sel.qty
+          })
+          return total
+        }
+      },
+      created() {
+        this.updateTime()
+        this.timeTimer = setInterval(this.updateTime, 1000)
+        this.fetchData()
+        this.loadTables()
+      },
+      mounted() {
+        // C.1：全局快捷键 Enter=收款（未聚焦输入框时）
+        document.addEventListener('keydown', this.onGlobalKeydown)
+      },
+      beforeDestroy() {
+        if (this.timeTimer) {
+          clearInterval(this.timeTimer)
+        }
+        document.removeEventListener('keydown', this.onGlobalKeydown)
+      },
+      methods: {
+        /* ── 工具方法 ── */
+        updateTime() {
+          const now = new Date()
+          const hours = String(now.getHours()).padStart(2, '0')
+          const minutes = String(now.getMinutes()).padStart(2, '0')
+          const seconds = String(now.getSeconds()).padStart(2, '0')
+          this.currentTime = `${hours}:${minutes}:${seconds}`
+        },
+        formatMoney(value) {
+          if (!value && value !== 0) return '0.00'
+          return Number(value).toFixed(2)
+        },
+        last4(phone) {
+          if (!phone || phone.length < 4) return ''
+          return phone.substring(phone.length - 4)
+        },
+        /* ── 数据加载 ── */
+        async fetchData() {
+          try {
+            // 获取今日统计
+            const now = new Date()
+            // 修改点：toISOString() 是 UTC 时间，东八区会取错日期（UTC 日期先于本地一天）；
+            // 改用本地时间拼接 yyyy-MM-dd
+            const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')
+            const startDate = todayStr + ' 00:00:00'
+            const endDate = todayStr + ' 23:59:59'
+
+            const statsRes = await getCashierStatistics({ startDate, endDate })
+            if (statsRes.code === 1) {
+              this.todayStats = statsRes.data
+            } else {
+              // 修改点：此前 else 静默
+              ReggieUI.error((statsRes && statsRes.msg) || '获取今日统计失败')
+            }
+
+            // 获取待收银订单（管理端专用接口）
+            const ordersRes = await getPendingCheckoutList()
+            if (ordersRes.code === 1) {
+              this.pendingOrders = ordersRes.data || []
+              // 修改点（2026-09-15）：支持从桌台管理「结账/加菜」跳转自动选中订单
+              // 桌台页 window.open('/backend/page/cashier/index.html?orderId=N')，此处按参数自动点选
+              const urlOrderId = new URLSearchParams(location.search).get('orderId')
+              if (urlOrderId) {
+                const target = this.pendingOrders.find(function(o) { return String(o.id) === String(urlOrderId) })
+                if (target) {
+                  this.selectOrder(target)
+                } else {
+                  ReggieUI.warning('订单 #' + urlOrderId + ' 不在待结账列表中（可能已结账），请手动选择')
+                }
+              }
+            } else {
+              // 修改点：此前 else 静默
+              ReggieUI.error((ordersRes && ordersRes.msg) || '获取待收银订单失败')
+            }
+
+            // C.1：今日日结状态（本日已结算金额）
+            const settleRes = await getDailySettlementByDate(todayStr)
+            if (settleRes.code === 1) {
+              this.settlementInfo = settleRes.data || null
+            } else {
+              // 修改点：此前 else 静默（注意此处业务上无记录也返回非1，不应报错打扰，仅降级为空）
+              this.settlementInfo = null
+            }
+          } catch (err) {
+            ReggieUI.error('获取数据失败')
+          }
+        },
+        /* ── 订单选择与支付方式 ── */
+        selectOrder(order) {
+          this.selectedOrder = order
+          this.actualAmount = order.amount
+          // 切换订单视为新收银会话：清掉预览构成与手动实收标记，
+          // 由 loadPreview 返回后把实收回填为应付（默认恰好收齐，不产生虚假找零）
+          this.actualAmountTouched = false
+          this.previewOrderAmount = null
+          this.previewCouponDiscount = 0
+          this.previewLevelDiscount = 0
+          this.previewPayable = null
+          this.payType = 1
+          this.remark = ''
+          this.voucherImage = ''
+          this.memberPhone = ''
+          this.currentMember = null
+          this.availableCoupons = []
+          this.selectedCouponId = null
+        },
+        // 修改点(2026-09-18)：拉取服务端结算预览（订单金额 / 券抵扣 / 会员等级折扣 / 应付）
+        async loadPreview() {
+          if (!this.selectedOrder || !this.selectedOrder.id) {
+            this.previewPayable = null
+            return
+          }
+          this.previewLoading = true
+          try {
+            const res = await previewCheckout({
+              orderId: this.selectedOrder.id,
+              // 修改点(2026-09-18)：带桌台ID时按该桌所有待付款订单合计预览，与合并结账同口径
+              tableId: this.selectedOrder.tableId || null,
+              usedCouponId: this.selectedCouponId || null,
+              memberUserId: this.currentMember ? this.currentMember.userId : null
+            })
+            if (res && res.code === 1 && res.data) {
+              this.previewPayable = Number(res.data.payable)
+              this.previewOrderAmount = res.data.orderAmount != null ? Number(res.data.orderAmount) : null
+              this.previewCouponDiscount = Number(res.data.couponDiscount) || 0
+              this.previewLevelDiscount = Number(res.data.levelDiscount) || 0
+              this.previewOrderCount = Number(res.data.orderCount) || 1
+              this.previewMerged = !!res.data.merged
+              // 实收回填：非现金永远等于应付；现金在收银员未手动录入时也回到应付
+              // （默认恰好收齐），否则会员/券折扣后输入框仍停留在折前总额，
+              // 页面会凭空显示一笔找零
+              if (this.payType !== 1 || !this.actualAmountTouched) {
+                this.actualAmount = this.previewPayable
+              }
+            } else {
+              this.previewPayable = null
+              this.previewOrderAmount = null
+              this.previewCouponDiscount = 0
+            }
+          } catch (e) {
+            console.warn('[cashier] 结算预览失败，回退本地计算:', e)
+            this.previewPayable = null
+          } finally {
+            this.previewLoading = false
+          }
+        },
+        selectPayType(value) {
+          this.payType = value
+          this.actualAmountTouched = false
+          // 切换支付方式后清空付款凭证（不同方式的凭证不能混用），实收回到应付
+          this.voucherImage = ''
+          // 切换支付方式后实收统一回到应付金额；现金若收整钞再由收银员手动改
+          this.actualAmount = this.payableAmount
+        },
+        // 收银员手动录入实收（现金）：此后预览刷新不再覆盖
+        onActualAmountChange() {
+          if (this.payType === 1) this.actualAmountTouched = true
+        },
+        // 快捷金额按钮统一入口（同步手动标记，避免预览把整钞金额覆盖回应付价）
+        setActualAmount(val) {
+          this.actualAmount = val
+          this.actualAmountTouched = true
+        },
+        orderStatusText(status) {
+          return status === 1 ? '待付款' : (status === 3 ? '制作/配送中' : '已下单')
+        },
+        /* ── 会员识别与优惠券 ── */
+        async identifyMember() {
+          const phone = (this.memberPhone || '').trim()
+          if (!phone) {
+            ReggieUI.warning('请输入会员手机号')
+            return
+          }
+          this.memberLoading = true
+          try {
+            const res = await memberByPhone(phone)
+            if (res.code === 1 && res.data) {
+              this.currentMember = res.data
+              ReggieUI.success('已识别会员：' + (res.data.name || res.data.nickname || phone))
+              this.fetchAvailableCoupons()
+            } else {
+              this.currentMember = null
+              ReggieUI.warning((res.msg || '未找到会员'))
+            }
+          } catch (err) {
+            this.currentMember = null
+            ReggieUI.error('会员识别失败')
+          } finally {
+            this.memberLoading = false
+          }
+        },
+        async fetchAvailableCoupons() {
+          if (!this.currentMember || !this.selectedOrder) {
+            this.availableCoupons = []
+            return
+          }
+          this.couponLoading = true
+          try {
+            const res = await memberAvailableCoupons(this.currentMember.userId, this.selectedOrder.amount)
+            if (res.code === 1 && res.data) {
+              this.availableCoupons = res.data
+              this.selectedCouponId = null
+            } else {
+              this.availableCoupons = []
+            }
+          } catch (err) {
+            this.availableCoupons = []
+            ReggieUI.error('查询可用优惠券失败')
+          } finally {
+            this.couponLoading = false
+          }
+        },
+        selectCoupon(coupon) {
+          if (this.selectedCouponId === coupon.id) {
+            this.selectedCouponId = null
+          } else {
+            this.selectedCouponId = coupon.id
+          }
+          // 选券后现金实收默认回填为应付金额
+          this.actualAmount = this.payableAmount
+        },
+        clearCoupon() {
+          this.selectedCouponId = null
+          this.actualAmount = this.selectedOrder ? this.selectedOrder.amount : 0
+        },
+        couponConditionText(coupon) {
+          if (coupon.type === 'DISCOUNT' || coupon.type === 2) {
+            const rate = coupon.discountRate ? (Number(coupon.discountRate) * 10).toFixed(1) : '?'
+            return '折扣券 · ' + rate + '折'
+          }
+          const cond = coupon.conditionAmount && Number(coupon.conditionAmount) > 0
+            ? '满' + Number(coupon.conditionAmount) + '元'
+            : '无门槛'
+          return '满减券 · ' + cond
+        },
+        /* ── 收款与日结 ── */
+        async handlePayment() {
+          if (!this.selectedOrder) {
+            ReggieUI.warning('请先选择订单')
+            return
+          }
+          if (this.submitLoading) return
+
+          // C.1：现金大额（>200 元）收款二次确认
+          if (this.payType === 1 && this.actualAmount > 200) {
+            try {
+              await ReggieUI.confirm('实收金额较大（￥' + this.formatMoney(this.actualAmount) + '），请核对现金后确认收款？', '大额收款确认', { confirmButtonText: '确认收款', cancelButtonText: '取消', type: 'warning' })
+            } catch (e) { return }
+          }
+
+          this.submitLoading = true
+          try {
+            // 修改点(2026-09-18)：订单属于桌台时走「按桌台合并结账」——
+            // 扫码加菜会产生多张独立订单，单订单结账只能收最后一单的钱，
+            // 合并接口会一次性结清该桌所有待付款订单并在同一事务内释放桌台。
+            if (this.selectedOrder.tableId) {
+              const tableParams = {
+                tableId: this.selectedOrder.tableId,
+                actualAmount: this.payType === 1 ? this.actualAmount : this.payableAmount,
+                payType: this.payType,
+                usedCouponId: this.selectedCouponId,
+                memberUserId: this.currentMember ? this.currentMember.userId : null,
+                remark: this.remark,
+                voucherUrl: this.voucherImage
+              }
+              const tableRes = await tablePayment(tableParams)
+              if (tableRes.code === 1) {
+                ReggieUI.success('结账成功，桌台已释放')
+                if (window.parent !== window) {
+                  window.parent.postMessage({ type: 'cashier-success', orderId: this.selectedOrder ? this.selectedOrder.id : null }, '*')
+                }
+                this.resetPaymentSession()
+                this.fetchData()
+                // 修改点(2026-09-22)：桌台已释放，重新拉取桌台列表/金额并清空当前选中桌台，
+                // 避免已支付订单残留、「结账」按钮仍可点击而重复结账
+                this.selectedTable = null
+                this.loadTables()
+              } else {
+                ReggieUI.error(tableRes.msg || '结账失败')
+              }
+              return
+            }
+
+            const params = {
+              orderId: this.selectedOrder.id,
+              orderNumber: this.selectedOrder.number,
+              amount: this.selectedOrder.amount,
+              actualAmount: this.payType === 1 ? this.actualAmount : this.payableAmount,
+              payType: this.payType,
+              usedCouponId: this.selectedCouponId,
+              memberUserId: this.currentMember ? this.currentMember.userId : null,
+              remark: this.remark,
+              voucherUrl: this.voucherImage
+            }
+
+            const res = await cashPayment(params)
+            if (res.code === 1) {
+              ReggieUI.success('收款成功')
+              // 修改点(2026-09-16)：若收银台在弹窗 iframe 内，通知父页关闭弹窗
+              if (window.parent !== window) {
+                window.parent.postMessage({ type: 'cashier-success', orderId: this.selectedOrder ? this.selectedOrder.id : null }, '*')
+              }
+              this.resetPaymentSession()
+              this.fetchData()
+            } else {
+              ReggieUI.error(res.msg || '收款失败')
+            }
+          } catch (err) {
+            ReggieUI.error('收款失败')
+          } finally {
+            this.submitLoading = false
+          }
+        },
+        // C.1：页内一键日结（收敛 daily-settlement.html）
+        async handleSettlement() {
+          try {
+            await ReggieUI.confirm('确认执行今日日结？日结后当日账目将被锁定。', '日结确认', { confirmButtonText: '执行日结', cancelButtonText: '取消', type: 'warning' })
+          } catch (e) { return }
+          this.settleLoading = true
+          const now = new Date()
+          const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')
+          try {
+            const res = await executeDailySettlement({ settlementDate: today })
+            if (res.code === 1) { ReggieUI.success('日结完成'); this.fetchData() }
+            else { ReggieUI.error(res.msg || '日结失败') }
+          } catch (err) {
+            ReggieUI.error('日结失败，请稍后重试')
+          } finally {
+            this.settleLoading = false
+          }
+        },
+        // ====== 桌台相关方法 ======
+        async loadTables() {
+          try {
+            var res = await getTableList()
+            if (res.code === 1) {
+              this.tables = res.data || []
+              // 为占用桌台加载金额
+              this.loadTableAmounts()
+            }
+          } catch (e) {
+            console.warn('[cashier] 加载桌台列表失败:', e)
+          }
+        },
+        async loadTableAmounts() {
+          var self = this
+          var occupied = this.tables.filter(function(t) { return t.status === 'OCCUPIED' })
+          // 并行加载每个占用桌台的明细以获取金额
+          for (var i = 0; i < occupied.length; i++) {
+            try {
+              var res = await getTableDetail(occupied[i].id)
+              if (res.code === 1 && res.data && res.data.orders) {
+                // 只统计待付款订单，与合并结账口径一致（已下单/配送中的不计入待收）
+                var total = res.data.orders
+                  .filter(function(o) { return o.status === 1 })
+                  .reduce(function(sum, o) { return sum + (Number(o.amount) || 0) }, 0)
+                self.$set(self.tableAmountMap, occupied[i].id, total)
+              }
+            } catch (e) { /* 忽略单桌加载失败 */ }
+          }
+        },
+        async selectTable(table) {
+          this.detailLoading = true
+          this.selectedTable = null
+          try {
+            var res = await getTableDetail(table.id)
+            if (res.code === 1 && res.data) {
+              this.selectedTable = res.data
+              // 自动选中该桌「最早一笔待付款订单」（详情接口按时间倒序，待付款单在数组前部不保证；
+              // 后端合并结账以最早待付款单为主单，这里口径保持一致）
+              var pending = (this.selectedTable.orders || [])
+                .filter(function(o) { return o.status === 1 })
+                .sort(function(a, b) { return new Date(a.orderTime) - new Date(b.orderTime) })
+              if (pending.length > 0) {
+                var firstOrder = pending[0]
+                // 构造兼容 selectOrder 的对象；amount 取该桌全部待付款单合计（合并结账口径）
+                this.selectOrder({
+                  id: firstOrder.orderId,
+                  number: firstOrder.orderNumber,
+                  amount: this.tableTotalAmount,
+                  tableId: table.id,
+                  orderTime: firstOrder.orderTime
+                })
+              }
+            } else {
+              ReggieUI.error(res.msg || '加载桌台详情失败')
+            }
+          } catch (e) {
+            ReggieUI.error('加载桌台详情失败')
+          } finally {
+            this.detailLoading = false
+          }
+        },
+        clearTableSelection() {
+          this.selectedTable = null
+          this.selectedOrder = null
+          this.loadTables()
+        },
+        handleCheckout() {
+          // 仅待付款订单可结账；选中最早一笔作为主单，金额取该桌待付款合计（后端合并结账）
+          var pending = (this.pendingTableOrders || [])
+            .slice()
+            .sort(function(a, b) { return new Date(a.orderTime) - new Date(b.orderTime) })
+          if (pending.length === 0) {
+            ReggieUI.warning('该桌台没有待付款订单')
+            return
+          }
+          var firstOrder = pending[0]
+          this.selectOrder({
+            id: firstOrder.orderId,
+            number: firstOrder.orderNumber,
+            amount: this.tableTotalAmount,
+            tableId: this.selectedTable.tableId,
+            orderTime: firstOrder.orderTime
+          })
+        },
+        // ====== 加菜相关 ======
+        async openAddItemsDialog() {
+          this.addItemsVisible = true
+          this.addItemsSelection = {}
+          this.dishSearch = ''
+          if (this.allDishes.length === 0) {
+            this.addItemsLoading = true
+            try {
+              // 使用 /dish/list 端点加载在售菜品（返回 id/name/price/image 等）
+              var res = await $axios({ url: '/dish/list', method: 'get' })
+              if (res.code === 1 && res.data) {
+                this.allDishes = res.data
+              }
+            } catch (e) {
+              console.warn('[cashier] 加载菜品列表失败:', e)
+            } finally {
+              this.addItemsLoading = false
+            }
+          }
+        },
+        toggleDishSelect(dish) {
+          if (this.addItemsSelection[dish.id]) {
+            this.$delete(this.addItemsSelection, dish.id)
+          } else {
+            this.$set(this.addItemsSelection, dish.id, { dishId: dish.id, name: dish.name, price: dish.price, qty: 1 })
+          }
+        },
+        adjustDishQty(dishId, delta) {
+          var item = this.addItemsSelection[dishId]
+          if (!item) return
+          var newQty = item.qty + delta
+          if (newQty <= 0) {
+            this.$delete(this.addItemsSelection, dishId)
+          } else {
+            item.qty = newQty
+          }
+        },
+        async submitAddItems() {
+          if (!this.selectedTable || !this.selectedTable.orders || this.selectedTable.orders.length === 0) {
+            ReggieUI.warning('当前桌台无订单，请先开台')
+            return
+          }
+          if (this.addItemsSubmitting) return
+          var items = []
+          var self = this
+          Object.keys(this.addItemsSelection).forEach(function(id) {
+            var sel = self.addItemsSelection[id]
+            items.push({ dishId: sel.dishId, number: sel.qty })
+          })
+          if (items.length === 0) {
+            ReggieUI.warning('请至少选择一个菜品')
+            return
+          }
+          this.addItemsSubmitting = true
+          try {
+            // 为最早一笔待付款订单加菜（orders 为倒序且可能含非待付款单，不能直接取 [0]）
+            var pendingForAdd = (this.selectedTable.orders || [])
+              .filter(function(o) { return o.status === 1 })
+              .sort(function(a, b) { return new Date(a.orderTime) - new Date(b.orderTime) })
+            if (pendingForAdd.length === 0) {
+              ReggieUI.warning('该桌台没有待付款订单，无法加菜')
+              this.addItemsSubmitting = false
+              return
+            }
+            var orderId = pendingForAdd[0].orderId
+            var res = await addItemsToTable({ orderId: orderId, items: items })
+            if (res.code === 1) {
+              ReggieUI.success('加菜成功')
+              this.addItemsVisible = false
+              this.addItemsSelection = {}
+              // 刷新桌台详情
+              this.selectTable({ id: this.selectedTable.tableId })
+            } else {
+              ReggieUI.error(res.msg || '加菜失败')
+            }
+          } catch (e) {
+            ReggieUI.error('加菜失败')
+          } finally {
+            this.addItemsSubmitting = false
+          }
+        },
+        // ====== 转台 ======
+        async handleTransfer() {
+          if (!this.selectedTable || !this.transferToTableId) return
+          if (this.transferLoading) return
+          this.transferLoading = true
+          try {
+            var res = await transferTable({
+              fromTableId: this.selectedTable.tableId,
+              toTableId: this.transferToTableId
+            })
+            if (res.code === 1) {
+              ReggieUI.success('转台成功')
+              this.showTransferDialog = false
+              this.transferToTableId = null
+              this.clearTableSelection()
+            } else {
+              ReggieUI.error(res.msg || '转台失败')
+            }
+          } catch (e) {
+            ReggieUI.error('转台失败')
+          } finally {
+            this.transferLoading = false
+          }
+        },
+        // 收款成功后重置整个支付会话（订单/会员/券/支付方式/实收）
+        resetPaymentSession() {
+          this.selectedOrder = null
+          this.actualAmount = 0
+          this.actualAmountTouched = false
+          this.remark = ''
+          this.voucherImage = ''
+          this.payType = 1
+          this.memberPhone = ''
+          this.currentMember = null
+          this.availableCoupons = []
+          this.selectedCouponId = null
+          this.previewPayable = null
+          this.previewOrderAmount = null
+          this.previewCouponDiscount = 0
+          this.previewLevelDiscount = 0
+        },
+        // C.1：快捷键 Enter=收款（避开输入框/按钮聚焦）
+        onGlobalKeydown(e) {
+          if (e.key !== 'Enter') return
+          const tag = (e.target.tagName || '').toUpperCase()
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') return
+          if (this.selectedOrder && !this.submitLoading) {
+            e.preventDefault()
+            this.handlePayment()
+          }
+        }
+      }
+    })
+  </script>
+</body>
+</html>
+
+
+

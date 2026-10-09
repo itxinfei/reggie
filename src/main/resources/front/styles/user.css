@@ -1,0 +1,770 @@
+/* 修改点：统一样式，使用CSS变量，修复高度溢出，按钮状态反馈 */
+#user {
+  height: 100%;
+}
+
+/* ---- 头部：统一品牌渐变色 + 增大头像 + 优化布局 ---- */
+#user .divHead {
+  width: 100%;
+  height: 140rem;
+  background: var(--color-primary-gradient);
+  box-sizing: border-box;
+  padding: 0 var(--spacing-lg) var(--spacing-lg);
+}
+
+#user .divHead .divTitle {
+  height: 25rem;
+  font-size: var(--header-title-font-size);
+  font-family: var(--font-family-title);
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-text-primary);
+  line-height: 25rem;
+  /* 2026-09-21：48rem 过度下移 → 安全区 + 8，头高 164→140 */
+  padding-top: calc(env(safe-area-inset-top, 0px) + 8rem);
+  margin-bottom: 12rem;
+  position: relative;
+}
+
+#user .divHead .divTitle i {
+  position: absolute;
+  left: 0;
+  margin-top: 5rem;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+#user .divHead .divTitle i:active {
+  transform: scale(0.85);
+}
+
+#user .divHead .divUser {
+  display: flex;
+  align-items: center;
+}
+
+/* 头像样式已迁移至文件末尾 .avatar-wrap（2026-09-21，自 user.html 内联样式迁入） */
+
+#user .divHead .divUser .desc {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+#user .divHead .divUser .desc .divName {
+  font-size: 18rem;
+  font-family: var(--font-family-title);
+  font-weight: 600;
+  text-align: left;
+  color: var(--color-text-primary);
+  margin-bottom: 4rem;
+  display: flex;
+  align-items: center;
+  gap: 8rem;
+}
+
+/* 修改点：动态性别图标 */
+#user .divHead .divUser .desc .divName .gender-icon {
+  width: 18rem;
+  height: 18rem;
+  margin-left: 0;
+  opacity: 0.8;
+}
+
+/* 修改点：手机号脱敏显示 */
+#user .divHead .divUser .desc .divPhone {
+  font-size: 13rem;
+  font-family: var(--font-family-body);
+  font-weight: 400;
+  text-align: left;
+  color: rgba(51, 51, 51, 0.75);
+}
+
+/* 滚动交给外层 .user-scroll（cend-shell flex 布局），不再按旧固定头高 140rem 计算 */
+/* 底部留白必须 ≥ Tab 栏高度（50rem + 安全区），否则最后一条内容被 fixed 的 .app-tabbar 遮挡 */
+#user .divContent {
+  padding-bottom: calc(50rem + var(--spacing-xl) + env(safe-area-inset-bottom, 0px));
+}
+
+/* ---- 修改点：移除固定高度，防止菜单溢出 ---- */
+#user .divLinks {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  /* 修改点(2026-09-14)：左右内边距对称统一为 16rem（原 17/11 不对称） */
+  padding: 0 var(--spacing-lg);
+  /* 修改点(2026-09-14)：下边距节奏统一为 12rem */
+  margin: 0 var(--spacing-md) var(--spacing-md);
+  box-shadow: var(--shadow-card);
+}
+
+#user .divLinks .item {
+  height: 51rem;
+  line-height: 51rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+#user .divLinks .item:active {
+  background: var(--mask-light);
+}
+
+#user .divLinks .divSplit {
+  height: 1px;
+  /* 修改点(2026-09-17)：分割线统一用 --border-light，与全站一致 */
+  background-color: var(--border-light);
+  border: 0;
+}
+
+/* 修改点：菜单位图 png → ri-* 矢量图标，图标统一用品牌金色圆形背景衬底 */
+#user .divLinks .item .link-icon {
+  font-size: 18rem;
+  line-height: 1;
+  margin-right: 10rem;
+  color: var(--color-primary-text);
+  width: 36rem;
+  height: 36rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-tint);
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+}
+
+#user .divLinks .item:active .link-icon {
+  background: var(--color-primary-tint-strong);
+}
+
+#user .divLinks .item span {
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-body);
+  color: var(--color-text-primary);
+}
+
+/* 修改点(2026-09-14 修复图标错位)：原选择器命中行内所有 <i>，把左侧的 .link-icon 也绝对定位到了右边，
+   与箭头重叠，导致"菜单图标跑到右侧"。改为只作用于箭头（排除 .link-icon）。 */
+#user .divLinks .item > i:not(.link-icon) {
+  position: absolute;
+  /* 修改点(2026-09-17)：箭头 right:0 贴边与卡片内边距不对称 → right:4rem */
+  right: 4rem;
+  top: 50%;
+  transform: translate(0, -50%);
+  color: var(--color-text-hint);
+  font-size: 18rem;
+}
+
+/* ---- 最新订单卡片 ---- */
+#user .divOrders {
+  /* 修改点(2026-09-14)：上边距 8rem→0，统一由上一块的下边距提供 12rem 间距 */
+  margin: 0 var(--spacing-md) var(--spacing-md);
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
+  /* 2026-09-22：padding-bottom 17rem → 16rem，收入 4 倍数 */
+  padding-bottom: 16rem;
+  box-shadow: var(--shadow-card);
+}
+
+#user .divOrders .title {
+  height: 60rem;
+  line-height: 60rem;
+  font-size: var(--font-size-lg);
+  font-family: var(--font-family-title);
+  font-weight: 600;
+  text-align: left;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--bg-hover);
+}
+
+#user .divOrders .timeStatus {
+  height: 46rem;
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-body);
+  font-weight: 400;
+  text-align: left;
+  color: var(--color-text-secondary);
+  line-height: 20rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px dashed var(--bg-hover);
+}
+
+#user .divOrders .timeStatus span:first-child {
+  color: var(--color-text-primary);
+}
+
+#user .divOrders .dishList {
+  padding-top: var(--spacing-sm);
+  padding-bottom: 12rem;
+}
+
+#user .divOrders .dishList .item {
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 20rem;
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-body);
+  font-weight: 400;
+  text-align: left;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+#user .divOrders .dishList .item:active {
+  background: var(--bg-hover);
+}
+
+/* 修改点：美团式菜品行——小图(72rem圆角缩略图) + 菜名自适应 + x数量，点整行或小图可全屏预览 */
+#user .divOrders .dishList .item .dish-thumb {
+  width: 56rem;
+  height: 56rem;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
+  margin-right: 12rem;
+  background: var(--bg-hover);
+}
+
+#user .divOrders .dishList .item .dish-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 10rem;
+}
+
+#user .divOrders .dishList .item .dish-count {
+  color: var(--color-text-hint);
+  font-family: var(--font-family-number);
+  flex-shrink: 0;
+}
+
+#user .divOrders .result {
+  display: flex;
+  justify-content: flex-end;
+  height: 20rem;
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-body);
+  font-weight: 400;
+  text-align: left;
+  color: var(--color-text-secondary);
+  line-height: 20rem;
+}
+
+#user .divOrders .result .price {
+  color: var(--color-price);
+  font-weight: 600;
+  font-family: var(--font-family-number);
+  font-variant-numeric: tabular-nums;
+}
+
+#user .divOrders .btn {
+  margin-top: var(--spacing-xl);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ---- 修改点：按钮状态反馈全流程 ---- */
+#user .divOrders .btn .btnAgain {
+  width: 124rem;
+  height: 36rem;
+  border: 1px solid var(--color-text-disabled);
+  border-radius: var(--radius-xl);
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-body);
+  font-weight: 500;
+  text-align: center;
+  color: var(--color-text-primary);
+  line-height: 36rem;
+  position: relative;
+  cursor: pointer;
+  transition: background-color var(--transition-normal), border-color var(--transition-normal), color var(--transition-normal);
+  user-select: none;
+}
+
+/* hover */
+#user .divOrders .btn .btnAgain:active {
+  background: var(--bg-hover);
+  border-color: var(--color-primary);
+}
+
+/* loading态 */
+#user .divOrders .btn .btnAgain.is-loading {
+  color: var(--color-text-disabled);
+  border-color: var(--color-text-disabled);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* disabled态 */
+#user .divOrders .btn .btnAgain.is-disabled {
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ---- 退出登录 ---- */
+#user .quitLogin {
+  /* 修改点(2026-09-17)：加大触达区（纵向 12rem + 水平 48rem），降低误触率 */
+  margin: var(--spacing-xl) auto var(--spacing-lg);
+  padding: 12rem 48rem;
+  font-size: 13rem;
+  font-family: var(--font-family-body);
+  font-weight: 400;
+  text-align: center;
+  color: var(--color-text-hint);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  user-select: none;
+}
+
+#user .quitLogin:active {
+  color: var(--color-danger);
+}
+
+/* loading态 */
+#user .quitLogin.is-loading {
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ================================================================
+   新增：头部会员标签（紧跟用户名）
+   ================================================================ */
+#user .divHead .divUser .desc .divName .member-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3rem;
+  font-size: 10rem;
+  font-weight: 600;
+  padding: 2rem 8rem;
+  border-radius: var(--radius-sm);
+  /* 修改点(2026-09-17)：0.5 白透叠金底对比不足 → 0.9 近实底 + 微投影 */
+  background: var(--surface-white-95);
+  color: var(--color-text-primary);
+  letter-spacing: 0.5rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 0 1rem 3rem var(--mask-soft);
+}
+
+#user .divHead .divUser .desc .divName .member-tag i {
+  font-size: 12rem;
+}
+
+/* ================================================================
+   新增：订单快捷入口网格
+   ================================================================ */
+#user .order-quick-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  /* 修改点(2026-09-17)：新增区块标题行，改为 wrap 两行布局 */
+  flex-wrap: wrap;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  /* 修改点(2026-09-14)：统一为「下边距」节奏（原 margin-bottom:0，依赖下一块的 margin-top，
+     一旦下一块缺失就会贴底）。全站区块统一：左右 12rem、下方 12rem */
+  margin: 0 var(--spacing-md) var(--spacing-md);
+  padding: 0 0 var(--spacing-lg);
+  box-shadow: var(--shadow-card);
+}
+
+/* 修改点(2026-09-17)：区块标题行「我的订单 · 全部订单 >」 */
+#user .order-quick-grid .order-quick-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-md) var(--spacing-sm);
+  cursor: pointer;
+}
+#user .order-quick-grid .order-quick-header .oqh-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+#user .order-quick-grid .order-quick-header .oqh-more {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+  display: inline-flex;
+  align-items: center;
+}
+#user .order-quick-grid .order-quick-header .oqh-more i {
+  font-size: 14rem;
+  margin-left: 2rem;
+}
+#user .order-quick-grid .order-quick-header:active .oqh-more {
+  color: var(--color-primary-text);
+}
+
+/* 修改点(2026-09-17)：入口行占满剩余宽度（与标题行区分）；合并原重复规则 */
+#user .order-quick-item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rem;
+  cursor: pointer;
+  position: relative;
+  transition: transform var(--transition-fast);
+}
+
+#user .order-quick-item:active {
+  transform: scale(0.92);
+}
+
+#user .order-quick-item .oq-icon {
+  width: 40rem;
+  height: 40rem;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20rem;
+  background: var(--color-primary-tint);
+  color: var(--color-primary-text);
+  position: relative;
+}
+
+/* 2026-09-21：订单入口语义色（学美团克制多色，金色收敛）
+   待付款橙 / 待接单蓝 / 配送绿 / 评价星 / 退款红；容器统一 40 方 radius-md */
+#user .order-quick-item .oq-icon.oq-pending {
+  background: var(--icon-favorite-bg);
+  color: var(--icon-favorite);
+}
+#user .order-quick-item .oq-icon.oq-accepted {
+  background: var(--icon-order-bg);
+  color: var(--icon-order);
+}
+#user .order-quick-item .oq-icon.oq-delivering {
+  background: var(--icon-address-bg);
+  color: var(--icon-address);
+}
+#user .order-quick-item .oq-icon.oq-evaluate {
+  background: var(--color-star-tint);
+  color: var(--color-star);
+}
+#user .order-quick-item .oq-icon.oq-refund {
+  background: var(--color-danger-tint);
+  color: var(--color-danger);
+}
+
+#user .order-quick-item .oq-badge {
+  position: absolute;
+  top: -4rem;
+  right: -4rem;
+  min-width: 16rem;
+  height: 16rem;
+  border-radius: 8rem;
+  background: var(--color-danger);
+  color: var(--color-text-white);
+  font-size: 10rem;
+  font-family: var(--font-family-number);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4rem;
+  line-height: 1;
+}
+
+#user .order-quick-item .oq-label {
+  font-size: 12rem;
+  font-family: var(--font-family-body);
+  /* 修改点(2026-09-17)：#666 → #333 提升入口标签可读性 */
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+/* ================================================================
+   新增：菜单分组标题
+   ================================================================ */
+#user .menu-group-title {
+  font-size: 13rem;
+  font-family: var(--font-family-body);
+  font-weight: 600;
+  letter-spacing: 0.5rem;
+  /* 修改点(2026-09-14 可访问性)：#999 在白色上对比度约 2.9:1 不达 AA，改用 #666（约 5.7:1） */
+  color: var(--color-text-secondary);
+  padding: var(--spacing-lg) 0 var(--spacing-sm);
+  margin: 0;
+}
+
+/* ================================================================
+   新增：菜单项消息角标
+   ================================================================ */
+#user .divLinks .item .msg-badge {
+  position: absolute;
+  right: 24rem;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 16rem;
+  height: 16rem;
+  border-radius: 8rem;
+  background: var(--color-danger);
+  color: var(--color-text-white);
+  font-size: 10rem;
+  font-family: var(--font-family-number);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4rem;
+  line-height: 1;
+}
+
+/* 订单状态色：HTML 直接使用 index.css 共享层 .status-xxx 类，无需页面级重复定义 */
+
+/* ================================================================
+   以下自 user.html 内联 <style> 迁入（2026-09-21）：
+   服务图标语义色 / 会员卡 / 骨架屏 / 头像上传 / 编辑资料弹窗
+   ================================================================ */
+
+/* ---- 服务图标语义色（容器沿用上方统一 36 方 radius-md，仅换底色与字色） ----
+   会员金 / 编辑蓝 / 地址绿 / 历史蓝 / 消息橙 / 常购橙 / 评价星 / 发票紫 / 客服蓝绿 */
+/* 修改点(2026-09-27 文案/视觉统一)：常用服务/订单消息入口图标底色原为"五颜六色"
+   （order/address/message/favorite/star/invoice/service 各一种），收敛为统一品牌金，
+   与 .link-icon 基础态一致，消除杂乱配色。不同语义仅通过图标本身区分。 */
+#user .divLinks .item .link-icon.li-member {
+  background: var(--color-primary-tint);
+  color: var(--color-primary-text);
+}
+#user .divLinks .item .link-icon.li-edit {
+  background: var(--color-primary-tint);
+  color: var(--color-primary-text);
+}
+#user .divLinks .item .link-icon.li-address {
+  background: var(--color-primary-tint);
+  color: var(--color-primary-text);
+}
+#user .divLinks .item .link-icon.li-history {
+  background: var(--color-primary-tint);
+  color: var(--color-primary-text);
+}
+#user .divLinks .item .link-icon.li-message {
+  background: var(--color-primary-tint);
+  color: var(--color-primary-text);
+}
+#user .divLinks .item .link-icon.li-frequent {
+  background: var(--color-primary-tint);
+  color: var(--color-primary-text);
+}
+#user .divLinks .item .link-icon.li-favorite {
+  background: var(--color-primary-tint);
+  color: var(--color-primary-text);
+}
+#user .divLinks .item .link-icon.li-evaluate {
+  background: var(--color-primary-tint);
+  color: var(--color-primary-text);
+}
+#user .divLinks .item .link-icon.li-invoice {
+  background: var(--color-primary-tint);
+  color: var(--color-primary-text);
+}
+#user .divLinks .item .link-icon.li-service {
+  background: var(--color-primary-tint);
+  color: var(--color-primary-text);
+}
+
+/* ---- 会员卡片（品牌金卡，金色属品牌展示保留；投影中性化） ---- */
+#user .member-card {
+  margin: 12rem;
+  background: var(--color-primary-gradient-card);
+  border-radius: var(--radius-xl);
+  /* 2026-09-22：水平 padding 18rem → 16rem */
+  padding: 16rem 16rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+/* 修改点(2026-09-26)：会员卡恒为浅金底，暗色模式下浅色文字令牌会翻白（1.6:1 不可读），卡内钉回深字 */
+@media (prefers-color-scheme: dark) {
+  #user .member-card { --color-text-primary: #333333; }
+}
+#user .member-card::before {
+  content: ''; position: absolute; top: -30rem; right: -30rem;
+  width: 120rem; height: 120rem; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.35) 0%, transparent 70%);
+}
+#user .member-card .card-top {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rem;
+  position: relative; z-index: 1;
+}
+#user .member-card .card-level-badge {
+  background: var(--surface-white-50);
+  color: var(--color-text-primary); font-size: 11rem; font-weight: 700;
+  padding: 3rem 10rem; border-radius: var(--radius-round); letter-spacing: 0.5rem;
+}
+#user .member-card .card-level-badge.standard {
+  background: rgba(51, 51, 51, 0.12); color: var(--color-text-primary);
+}
+#user .member-card .card-arrow { color: var(--gold-text); font-size: 14rem; }
+#user .member-card .card-stats { display: flex; position: relative; z-index: 1; }
+#user .member-card .card-stat { flex: 1; text-align: center; position: relative; }
+#user .member-card .card-stat:not(:last-child)::after {
+  content: ''; position: absolute; right: 0; top: 15%;
+  width: 1px; height: 70%; background: rgba(51, 51, 51, 0.15);
+}
+#user .member-card .card-stat .val {
+  font-size: 20rem; font-weight: 700; color: var(--color-text-primary);
+  font-family: var(--font-family-number);
+}
+#user .member-card .card-stat .lbl {
+  font-size: 11rem; color: var(--gold-text); margin-top: 2rem;
+}
+#user .member-card .card-coupon-tag {
+  margin-top: 10rem; font-size: 12rem; color: var(--gold-text);
+  display: flex; align-items: center; gap: 6rem; position: relative; z-index: 1;
+}
+#user .member-card .card-coupon-tag .coupon-count {
+  background: var(--surface-white-50); border-radius: var(--radius-md);
+  padding: 3rem 8rem; color: var(--color-text-primary); font-weight: 600;
+}
+#user .member-card .non-member-tip {
+  text-align: center; color: var(--gold-text); font-size: 13rem;
+  padding: 6rem 0; position: relative; z-index: 1;
+}
+
+/* ---- 骨架屏（头部 / 金卡用品牌金，保留） ---- */
+#user .skeleton-container { padding: 12rem; }
+#user .skeleton-user { display: flex; align-items: center; padding: 20rem 12rem; background: var(--color-primary-gradient); border-radius: var(--radius-xl); margin-bottom: 12rem; }
+#user .skeleton-avatar { width: 60rem; height: 60rem; border-radius: 50%; background: linear-gradient(90deg, rgba(255,255,255,0.3) 25%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 75%); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
+#user .skeleton-user-info { flex: 1; margin-left: 12rem; }
+#user .skeleton-member-card { padding: 16rem 18rem; background: var(--color-primary-gradient); border-radius: var(--radius-xl); margin-bottom: 12rem; }
+#user .skeleton-stats { display: flex; gap: 16rem; margin-top: 12rem; }
+#user .skeleton-stat { flex: 1; height: 40rem; border-radius: var(--radius-md); background: linear-gradient(90deg, rgba(255,255,255,0.3) 25%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 75%); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; }
+#user .skeleton-links { background: var(--bg-card); border-radius: var(--radius-lg); overflow: hidden; }
+#user .skeleton-link-item { display: flex; align-items: center; padding: 16rem; border-bottom: 1px solid var(--border-light); }
+#user .skeleton-link-item:last-child { border-bottom: none; }
+#user .skeleton-icon { width: 24rem; height: 24rem; border-radius: var(--radius-sm); background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; margin-right: 12rem; }
+#user .skeleton-line { height: 14rem; border-radius: var(--radius-sm); background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; margin-bottom: 8rem; }
+#user .skeleton-line:last-child { margin-bottom: 0; }
+#user .skeleton-w30 { width: 30%; }
+#user .skeleton-w40 { width: 40%; }
+#user .skeleton-w50 { width: 50%; }
+#user .skeleton-w60 { width: 60%; }
+
+/* ---- 头像上传交互 ---- */
+#user .avatar-wrap {
+  position: relative;
+  width: 56rem; height: 56rem;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-right: var(--spacing-lg);
+  cursor: pointer;
+  border: 2rem solid var(--surface-white-95);
+  box-shadow: 0 2rem 6rem var(--mask-light-active);
+  transition: transform 0.15s ease;
+  background: var(--bg-hover);
+  -webkit-tap-highlight-color: transparent;
+}
+#user .avatar-wrap:active { transform: scale(0.97); }
+#user .avatar-wrap.dragging { border-color: var(--color-primary); border-style: dashed; }
+#user .avatar-wrap .avatar-img {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+  border-radius: 50%;
+}
+#user .avatar-mask {
+  position: absolute; inset: 0;
+  background: var(--mask-strong);
+  color: var(--color-text-white); font-size: 24rem;
+  display: flex; align-items: center; justify-content: center;
+}
+#user .rotating { animation: avatar-spin 0.9s linear infinite; }
+@keyframes avatar-spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+#user .avatar-input {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  opacity: 0; cursor: pointer; font-size: 0;
+}
+
+/* 窄屏（≤360px）：收窄头部与卡片侧距、用户名字号，保证 320px 不挤压 */
+@media (max-width: 360px) {
+  #user .divHead { padding-left: 14rem; padding-right: 14rem; }
+  #user .divLinks,
+  #user .divOrders { margin-left: 10rem; margin-right: 10rem; }
+  #user .divLinks { padding: 0 12rem; }
+  #user .divHead .divUser .desc .divName { font-size: 16rem; }
+}
+#user .edit-profile-icon {
+  margin-left: 8rem; font-size: 15rem; color: var(--gold-text);
+  cursor: pointer; vertical-align: middle;
+}
+
+/* ---- 编辑资料弹窗 ---- */
+#user .edit-profile-body { padding: 8rem 16rem 4rem; }
+#user .ep-field { display: flex; align-items: center; margin-bottom: 14rem; }
+#user .ep-label { width: 44rem; flex-shrink: 0; font-size: 14rem; color: var(--color-text-secondary); }
+#user .ep-input {
+  flex: 1; height: 36rem; padding: 0 10rem;
+  border: 1px solid var(--border-light); border-radius: var(--radius-md);
+  font-size: 14rem; outline: none; box-sizing: border-box;
+  background: var(--bg-card); color: var(--color-text-primary);
+}
+#user .ep-input:focus { border-color: var(--color-primary); }
+#user .ep-gender { display: flex; gap: 10rem; }
+#user .ep-gender-opt {
+  padding: 6rem 16rem; border: 1px solid var(--border-light); border-radius: var(--btn-radius);
+  font-size: 13rem; color: var(--color-text-secondary); cursor: pointer;
+}
+#user .ep-gender-opt.active {
+  background: var(--color-primary); color: var(--color-text-primary);
+  border-color: var(--color-primary); font-weight: 600;
+}
+
+/* ================================================================
+   用户信息 hero（2026-09-26 对标美团/饿了么一级页，由 .divHead 收敛而来）
+   —— 一级页无返回/无标题，头像昵称独立金色区，右上角编辑
+   ================================================================ */
+#user .user-hero {
+  position: relative;
+  box-sizing: border-box;
+  background: var(--color-primary-gradient);
+  display: flex;
+  align-items: center;
+  padding: calc(env(safe-area-inset-top, 0px) + 26rem) var(--spacing-lg) var(--spacing-lg);
+}
+#user .user-hero .hero-edit-icon {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 10rem);
+  right: var(--spacing-lg);
+  font-size: 18rem;
+  color: var(--gold-text);
+  cursor: pointer;
+}
+#user .user-hero .desc { display: flex; flex-direction: column; justify-content: center; }
+#user .user-hero .divName {
+  font-size: 18rem; font-family: var(--font-family-title); font-weight: 600;
+  color: var(--color-text-primary); margin-bottom: 4rem;
+  display: flex; align-items: center; gap: 8rem;
+}
+#user .user-hero .gender-icon { width: 18rem; height: 18rem; opacity: 0.85; }
+#user .user-hero .divPhone {
+  font-size: 13rem; font-family: var(--font-family-body); font-weight: 400;
+  text-align: left; color: rgba(51,51,51,0.75);
+}
+
+/* 内容滚动区：cend-shell flex 列内占满剩余高度（min-height:0 保证可滚动） */
+#user .user-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}

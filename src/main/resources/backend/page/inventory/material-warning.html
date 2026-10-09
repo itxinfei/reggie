@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>库存预警 - 瑞吉外卖管理端</title>
+
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260926" />
+  <style>
+    /* 阈值比例进度条 */
+    .ratio-cell { display: flex; align-items: center; gap: 8px; width: 160px }
+    .ratio-bar { flex: 1; height: 6px; background: var(--border-default); border-radius: var(--radius-sm); overflow: hidden }
+    .ratio-bar__fill { height: 100%; border-radius: var(--radius-sm); transition: width 0.3s }
+    .ratio-text { font-size: var(--font-size-xs); font-weight: 500; min-width: 42px; text-align: right; font-variant-numeric: tabular-nums }
+
+    /* 补货建议弹窗明细行 */
+    .suggest-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-default); gap: 12px }
+    .suggest-item:last-child { border-bottom: none }
+    .suggest-item__name { width: 100px; font-weight: 500; color: var(--text-primary); font-size: var(--font-size-base) }
+    .suggest-item__label { font-size: var(--font-size-xs); color: var(--text-muted); width: 70px }
+    .suggest-item__value { font-size: var(--font-size-base); color: var(--text-primary); width: 60px; text-align: right; font-variant-numeric: tabular-nums }
+    .suggest-item__qty { width: 90px }
+
+    /* 严重度标签样式微调 */
+    .severity-tag { font-weight: 500 }
+
+    /* C.4 双 Tab */
+    .warn-tabs { margin-bottom: var(--space-4) }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="dashboard-container" id="warn-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">库存预警与智能补货</h1>
+
+      <!-- 统计卡片（固定 4 个） -->
+      <stat-cards :cards="statsCards" :loading="statsLoading"></stat-cards>
+
+      <!-- C.4：库存预警 / 智能补货 双 Tab（原 smart-replenish 收敛至此） -->
+      <el-tabs v-model="activeTab" class="warn-tabs" @tab-click="onTabChange">
+        <el-tab-pane label="库存预警" name="warning">
+      <!-- 工具栏：分类/严重度/统计天数筛选 + 批量补货/补货建议/刷新 -->
+      <table-bar
+        :search-items="warningSearchItems"
+        :actions="warningActions"
+        :show-refresh="true"
+        @refresh="loadTable()"
+        @search="onWarningSearch"
+        @reset="onWarningReset"
+        @action="onWarningAction">
+      </table-bar>
+
+      <!-- 明细表格（空态交 crud-table 内置 empty-hint） -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="tableLoading"
+        :page="page"
+        :page-size="pageSize"
+        :page-sizes="[10,20,30,40]"
+        :total="counts"
+        :selection="true"
+        :show-actions="true"
+        :viewable="true"
+        :actions-width="120"
+        empty-hint="所有食材库存充足，暂无预警"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+        @selection-change="onSelectionChange"
+      >
+        <template #col-severity="{ row }">
+          <el-tag :type="row.severity === 'CRITICAL' ? 'danger' : row.severity === 'WARNING' ? 'warning' : 'success'" size="small" class="severity-tag">
+            {{ row.severity === 'CRITICAL' ? '严重' : row.severity === 'WARNING' ? '警告' : '低危' }}
+          </el-tag>
+        </template>
+        <template #col-warningRatio="{ row }">
+          <div class="ratio-cell">
+            <div class="ratio-bar">
+              <div class="ratio-bar__fill" :style="{ width: (row.warningRatio || 0) + '%', background: severityColor(row.severity) }"></div>
+            </div>
+            <span class="ratio-text" :style="{ color: severityColor(row.severity) }">
+              {{ row.warningRatio | toPercent }}
+            </span>
+          </div>
+        </template>
+        <template #col-stockQty="{ row }">
+          <span class="ds-num-medium">{{ row.stockQty }} <span class="ds-text-muted ds-text-xs">{{ row.unit }}</span></span>
+        </template>
+        <template #col-minStock="{ row }">
+          <span class="ds-num-muted">{{ row.minStock }} {{ row.unit }}</span>
+        </template>
+        <template #col-unitPrice="{ row }">
+          <span class="ds-num">¥{{ row.unitPrice | toDecimal }}</span>
+        </template>
+      </crud-table>
+        </el-tab-pane>
+        <!-- C.4：智能补货 Tab -->
+        <el-tab-pane label="智能补货" name="replenish">
+          <!-- 仅操作按钮的工具栏（无筛选，隐藏查询/重置） -->
+          <table-bar
+            :show-search-btns="false"
+            :actions="smartActions"
+            :show-refresh="true"
+            @refresh="loadSmartTable()"
+            @action="onSmartAction">
+          </table-bar>
+          <crud-table
+            ref="smartTable"
+            :data="smartTableData"
+            :columns="smartColumns"
+            :loading="smartLoading"
+            :page="page"
+            :page-size="pageSize"
+            :page-sizes="[10,20,30,40]"
+            :total="smartTotal"
+            :selection="true"
+            empty-hint="暂无智能补货建议"
+            :show-actions="true"
+            :actions-width="90"
+            @page-change="onPageChange"
+            @size-change="onSizeChange"
+            @selection-change="onSmartSelectionChange"
+          >
+            <template #col-dailyUsage="{ row }">{{ (row.dailyUsage || 0).toFixed(2) }} {{ row.unit }}</template>
+            <template #col-urgency="{ row }">
+              <el-tag :type="String(row.urgency) === '3' ? 'danger' : String(row.urgency) === '2' ? 'warning' : 'info'" size="small">
+                {{ String(row.urgency) === '3' ? '高危' : String(row.urgency) === '2' ? '预警' : '平稳' }}
+              </el-tag>
+            </template>
+            <template #col-estimatedCost="{ row }">¥{{ (row.estimatedCost || row.cost || 0) | toDecimal }}</template>
+            <template #actions="{ row }">
+              <el-button type="text" size="small" class="btn-view" @click="openSmartRestock([row])">补货</el-button>
+            </template>
+          </crud-table>
+        </el-tab-pane>
+      </el-tabs>
+    </main>
+
+    <!-- 批量补货弹窗 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :title="restockForm.title"
+      :visible.sync="restockForm.dialogVisible"
+      :submit-loading="restockLoading"
+      size="md"
+      @submit="submitRestock"
+      @close="handleRestockClose"
+    >
+      <el-form :model="restockForm" :rules="restockRules" ref="restockFormRef" label-width="100px">
+        <el-form-item label="已选食材">
+          <el-input-number v-model="restockForm.selectedCount" :min="0" :max="9999" disabled></el-input-number>
+          <span class="ds-form-hint">条预警食材</span>
+        </el-form-item>
+        <el-divider></el-divider>
+        <div style="margin-bottom: var(--space-3)">
+          <div class="ds-text-muted ds-text-xs" style="margin-bottom: var(--space-2)">补货数量（系统已按建议填充，可手动调整）：</div>
+          <div v-for="(item, idx) in restockForm.items" :key="item.materialId" class="suggest-item">
+            <span class="suggest-item__name">{{ item.materialName || ('食材'+idx) }}</span>
+            <span class="suggest-item__label">建议:</span>
+            <span class="suggest-item__value ds-text-muted">{{ item.suggestQty || 0 }}</span>
+            <span class="suggest-item__label">补货:</span>
+            <el-input-number
+              v-model="item.qty"
+              :min="1"
+              :max="99999"
+              :precision="2"
+              class="suggest-item__qty"
+              @change="onRestockQtyChange(idx)"
+            ></el-input-number>
+            <span class="ds-form-hint" style="margin-left: 4px">{{ item.unit || '' }}</span>
+          </div>
+        </div>
+        <el-form-item label="备注">
+          <el-input v-model="restockForm.remark" type="textarea" :rows="2" placeholder="补货备注（可选）"></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- 补货建议弹窗（只读，仅有关闭按钮） -->
+    <crud-dialog
+      title="补货建议"
+      :visible.sync="suggestDialogVisible"
+      size="lg"
+      :show-submit="false"
+      :show-cancel="true"
+      cancel-text="关 闭"
+    >
+      <div class="ds-info-box">
+        基于近 <strong class="ds-text-primary">{{ suggestDays }}</strong> 天出库量计算日均消耗，补货周期默认 14 天。<br>
+        建议采购量 = 日均消耗 × 14 + 最低库存 - 当前库存
+      </div>
+      <div v-loading="suggestLoading" class="ds-scroll-area">
+        <div v-for="(item, idx) in suggestList" :key="idx" class="suggest-item">
+          <span class="suggest-item__name">{{ item.materialName }}</span>
+          <span class="suggest-item__label">日均消耗:</span>
+          <span class="suggest-item__value ds-text-muted">{{ (item.dailyUsage || 0).toFixed(2) }}</span>
+          <span class="suggest-item__label">库存:</span>
+          <span class="suggest-item__value ds-text-muted">{{ item.stockQty }}</span>
+          <span class="suggest-item__label">最低:</span>
+          <span class="suggest-item__value ds-text-muted">{{ item.minStock }}</span>
+          <span class="suggest-item__label ds-text-medium ds-text-primary">建议:</span>
+          <span class="suggest-item__value" :style="{ color: item.suggestQty > 0 ? 'var(--color-danger)' : 'var(--color-success)', fontWeight: 600 }">{{ (item.suggestQty || 0).toFixed(2) }} {{ item.unit || '' }}</span>
+        </div>
+        <div v-if="suggestList.length === 0 && !suggestLoading" class="ds-empty-inline">
+          暂无预警食材，无需补货建议
+        </div>
+      </div>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/components.js?v=20261002"></script>
+  <script src="../../api/inventory.js?v=20260926"></script>
+  <script>
+    new Vue({
+      el: '#warn-app',
+      data() {
+        return {
+          // 筛选
+          categoryId: null,
+          severity: null,
+          suggestDays: 30,
+          categoryOptions: [],
+          // 统计
+          statsLoading: false,
+          statsData: {
+            totalCount: 0,
+            bySeverity: { CRITICAL: 0, WARNING: 0, LOW: 0 },
+            byCategory: []
+          },
+          // 表格
+          tableLoading: false,
+          page: 1,
+          pageSize: 10,
+          counts: 0,
+          tableData: [],
+          selectedRows: [],
+          supplierOptions: [],
+          // 补货弹窗
+          restockLoading: false,
+          restockForm: {
+            title: '批量补货',
+            dialogVisible: false,
+            selectedCount: 0,
+            items: [],
+            remark: ''
+          },
+          restockRules: {},
+          // 建议弹窗
+          suggestLoading: false,
+          suggestDialogVisible: false,
+          suggestList: [],
+          // C.4：智能补货 Tab
+          activeTab: 'warning',
+          smartLoading: false,
+          smartTotal: 0,
+          smartTableData: [],
+          smartSelectedRows: [],
+          smartColumns: [
+            { prop: 'materialName', label: '食材', minWidth: 120 },
+            { prop: 'dailyUsage', label: '日均消耗', width: 110, align: 'center', slot: true },
+            { prop: 'estimatedDays', label: '预计天数', width: 90, align: 'center', type: 'number' },
+            { prop: 'urgency', label: '紧急度', width: 80, align: 'center', slot: true },
+            { prop: 'stockQty', label: '当前库存', width: 90, align: 'center', type: 'number' },
+            { prop: 'minStock', label: '最低库存', width: 90, align: 'center', type: 'number' },
+            { prop: 'suggestQty', label: '建议补货', width: 90, align: 'center', type: 'number' },
+            { prop: 'estimatedCost', label: '预估费用', width: 100, align: 'center', slot: true },
+            { prop: 'unit', label: '单位', width: 70, align: 'center' }
+          ]
+        }
+      },
+      computed: {
+        // 统计卡片（固定 4 个）
+        statsCards() {
+          const sev = (this.statsData && this.statsData.bySeverity) || {}
+          const cat = (this.statsData && this.statsData.byCategory) || []
+          return [
+            { key: 'critical', icon: 'ri-error-warning-line', label: '严重（<30%阈值）', value: sev.CRITICAL || 0, color: 'danger', subText: '急需补货' },
+            { key: 'warning', icon: 'ri-error-warning-line', label: '警告（30-80%）', value: sev.WARNING || 0, color: 'warning', subText: '建议关注' },
+            { key: 'low', icon: 'ri-lightbulb-flash-line', label: '低危（80-100%）', value: sev.LOW || 0, color: 'success', subText: '接近阈值' },
+            { key: 'total', icon: 'ri-box-3-line', label: '预警食材总数', value: this.statsData.totalCount || 0, color: 'primary', subText: '涉及分类 ' + cat.length + ' 个' }
+          ]
+        },
+          // 修改点：列配置改为 computed，关联分类/供应商名称通过已加载的 options 映射，
+          // 避免列表接口仅返回 categoryId/supplierId 导致“分类/供应商”列空白（编辑弹窗因下拉回填故有值）
+          columns: function () {
+            var self = this
+            function mapName(options, id) {
+              if (id == null) return ''
+              var sid = String(id)
+              for (var i = 0; i < options.length; i++) {
+                if (String(options[i].value) === sid) return options[i].label
+              }
+              return ''
+            }
+            return [
+              { prop: 'name', label: '食材名称', width: 130 },
+              { prop: 'categoryName', label: '分类', width: 110, formatter: function (v, row) { return mapName(self.categoryOptions, row.categoryId) || v || '-' } },
+              { prop: 'supplierName', label: '供应商', width: 120, formatter: function (v, row) { return mapName(self.supplierOptions, row.supplierId) || v || '-' } },
+              { prop: 'severity', label: '严重度', slot: true, width: 90, align: 'center' },
+              { prop: 'warningRatio', label: '阈值比例', slot: true, width: 170 },
+              { prop: 'stockQty', label: '当前库存', slot: true, width: 90, align: 'center' },
+              { prop: 'minStock', label: '最低库存', slot: true, width: 90, align: 'center' },
+              { prop: 'unitPrice', label: '单价', slot: true, width: 90, align: 'center', type: 'money' }
+            ]
+          },
+          // 库存预警 Tab 工具栏筛选项（分类异步选项；table-bar 内部状态经 @search 桥接回 data）
+          warningSearchItems: function () {
+            return [
+              { type: 'select', field: 'categoryId', placeholder: '食材分类', width: '200px', options: this.categoryOptions },
+              { type: 'select', field: 'severity', placeholder: '严重度', width: '150px', options: [
+                { label: '严重', value: 'CRITICAL' },
+                { label: '警告', value: 'WARNING' },
+                { label: '低危', value: 'LOW' }
+              ] },
+              { type: 'select', field: 'suggestDays', placeholder: '统计天数', width: '120px', options: [
+                { label: '7天', value: 7 },
+                { label: '30天', value: 30 },
+                { label: '60天', value: 60 }
+              ] }
+            ]
+          },
+          // 批量补货随勾选启停；补货建议/刷新始终可用
+          warningActions: function () {
+            return [
+              { key: 'restock', text: '批量补货', type: 'primary', icon: 'ri-add-line', disabled: this.selectedRows.length === 0 },
+              { key: 'suggest', text: '补货建议', icon: 'ri-lightbulb-line' },
+              { key: 'refresh', text: '刷新全部', icon: 'ri-refresh-line' }
+            ]
+          },
+          smartActions: function () {
+            return [
+              { key: 'restock', text: '批量补货', type: 'primary', icon: 'ri-add-line', disabled: this.smartSelectedRows.length === 0 }
+            ]
+          }
+      },
+      created() {
+        this.loadCategories()
+        this.loadSuppliers()
+        this.loadStats()
+        this.loadTable()
+        this.loadSuggest()
+      },
+      filters: {
+        toPercent(val) {
+          if (val == null) return '0%'
+          return Number(val).toFixed(1) + '%'
+        },
+        toDecimal(val) {
+          if (val == null) return '0.00'
+          return Number(val).toFixed(2)
+        }
+      },
+      methods: {
+        severityColor(severity) {
+          if (severity === 'CRITICAL') return 'var(--color-danger)'
+          if (severity === 'WARNING') return 'var(--color-warning)'
+          return 'var(--color-success)'
+        },
+        // ===== table-bar 桥接（组件内部 searchValues 不与 data 双向绑定，事件中回写） =====
+        onWarningSearch(params) {
+          this.categoryId = params.categoryId || null
+          this.severity = params.severity || null
+          if (params.suggestDays) this.suggestDays = Number(params.suggestDays)
+          this.page = 1
+          this.tableData = []
+          this.counts = 0
+          this.selectedRows = []
+          this.loadTable()
+          this.loadSuggest()
+        },
+        onWarningReset() {
+          this.categoryId = null
+          this.severity = null
+          this.suggestDays = 30
+          this.page = 1
+          this.selectedRows = []
+          this.loadTable()
+          this.loadSuggest()
+        },
+        onWarningAction(payload) {
+          if (payload.key === 'restock') this.openRestockDialog()
+          else if (payload.key === 'suggest') this.openSuggestDialog()
+          else if (payload.key === 'refresh') this.refreshAll()
+        },
+        onSmartAction(payload) {
+          if (payload.key === 'restock') this.openSmartRestock(this.smartSelectedRows)
+        },
+        refreshAll() {
+          this.loadCategories()
+          this.loadStats()
+          this.loadTable()
+          this.loadSuggest()
+        },
+        onPageChange(payload) {
+          this.page = payload.page
+          if (this.activeTab === 'warning') { this.loadTable() } else { this.loadSmartTable() }
+        },
+        onSizeChange(payload) {
+          this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
+          this.page = 1
+          if (this.activeTab === 'warning') { this.loadTable() } else { this.loadSmartTable() }
+        },
+        onSelectionChange(payload) {
+          this.selectedRows = (payload && payload.rows) || payload || []
+        },
+        async loadCategories() {
+          try {
+            var res = await matCategoryList()
+            if (String(res.code) === '1') {
+              var records = res.data || (res.data && res.data.records) || []
+              if (res.data && res.data.records) records = res.data.records
+              this.categoryOptions = records.map(function(c) {
+                return { value: c.id, label: c.name }
+              })
+            }
+          } catch (e) {
+            console.warn('加载分类列表失败:', e)
+          }
+        },
+        async loadSuppliers() {
+          try {
+            var res = await supplierList()
+            if (String(res.code) === '1') {
+              var records = res.data || (res.data && res.data.records) || []
+              if (res.data && res.data.records) records = res.data.records
+              this.supplierOptions = records.map(function(c) {
+                return { value: c.id, label: c.name }
+              })
+            }
+          } catch (e) {
+            console.warn('加载供应商列表失败:', e)
+          }
+        },
+        async loadStats() {
+          this.statsLoading = true
+          try {
+            var res = await materialWarningStats()
+            if (String(res.code) === '1' && res.data) {
+              var d = res.data
+              var bySev = d.bySeverity || {}
+              this.statsData = {
+                totalCount: d.totalCount || 0,
+                bySeverity: {
+                  CRITICAL: bySev.CRITICAL || 0,
+                  WARNING: bySev.WARNING || 0,
+                  LOW: bySev.LOW || 0
+                },
+                byCategory: d.byCategory || []
+              }
+            }
+          } catch (e) {
+            console.warn('加载预警统计失败:', e)
+          } finally {
+            this.statsLoading = false
+          }
+        },
+        async loadTable() {
+          this.tableLoading = true
+          try {
+            var params = {
+              page: this.page,
+              pageSize: this.pageSize
+            }
+            if (this.categoryId) params.categoryId = this.categoryId
+            if (this.severity) params.severity = this.severity
+            var res = await materialWarningPage(params)
+            if (String(res.code) === '1') {
+              var data = res.data || {}
+              this.tableData = data.records || []
+              this.counts = data.total || 0
+            } else {
+              this.tableData = []
+              this.counts = 0
+              ReggieUI.error(res.msg || '加载失败')
+            }
+          } catch (e) {
+            console.warn('加载预警明细失败:', e)
+            this.tableData = []
+            this.counts = 0
+          } finally {
+            this.tableLoading = false
+          }
+        },
+        async loadSuggest() {
+          this.suggestLoading = true
+          try {
+            var res = await materialReplenishSuggest({ days: this.suggestDays })
+            if (String(res.code) === '1') {
+              this.suggestList = res.data || []
+            } else {
+              this.suggestList = []
+            }
+          } catch (e) {
+            console.warn('加载补货建议失败:', e)
+            this.suggestList = []
+          } finally {
+            this.suggestLoading = false
+          }
+        },
+        openSuggestDialog() {
+          this.suggestDialogVisible = true
+        },
+        openRestockDialog() {
+          if (this.selectedRows.length === 0) {
+            ReggieUI.warning('未勾选任何食材')
+            return
+          }
+          // 匹配补货建议，填充建议采购量
+          var self = this
+          var items = []
+          for (var i = 0; i < this.selectedRows.length; i++) {
+            var row = this.selectedRows[i]
+            var suggestItem = this.findSuggestItem(row.id)
+            var qty = suggestItem && Number(suggestItem.suggestQty) > 0
+              ? Number(suggestItem.suggestQty)
+              : Number((Number(row.minStock) - Number(row.stockQty)).toFixed(2))
+            if (Number(qty) < 1) qty = 1
+            items.push({
+              materialId: row.id,
+              materialName: row.name,
+              unit: row.unit,
+              suggestQty: suggestItem ? (Number(suggestItem.suggestQty) || 0).toFixed(2) : '0.00',
+              qty: qty
+            })
+          }
+          this.restockForm.items = items
+          this.restockForm.selectedCount = this.selectedRows.length
+          this.restockForm.remark = ''
+          this.restockForm.dialogVisible = true
+        },
+        findSuggestItem(materialId) {
+          for (var i = 0; i < this.suggestList.length; i++) {
+            if (this.suggestList[i].materialId === materialId) {
+              return this.suggestList[i]
+            }
+          }
+          return null
+        },
+        onRestockQtyChange(idx) {
+          var item = this.restockForm.items[idx]
+          if (item && item.qty != null && Number(item.qty) < 1) {
+            item.qty = '1.00'
+          }
+        },
+        async submitRestock() {
+          if (this.restockLoading) { return } // 提交防重：请求期间锁定，防止连点重复提交
+          if (this.restockForm.items.length === 0) {
+            ReggieUI.warning('无补货明细')
+            return
+          }
+          var self = this
+          var items = []
+          for (var i = 0; i < this.restockForm.items.length; i++) {
+            var it = this.restockForm.items[i]
+            items.push({
+              materialId: it.materialId,
+              qty: String(it.qty)
+            })
+          }
+          this.restockLoading = true
+          try {
+            // C.4：materialIds 从补货明细提取，兼容智能补货 Tab 勾选的数据
+            var res = await materialBatchRestock({
+              materialIds: this.restockForm.items.map(function(it) { return it.materialId }),
+              items: items,
+              remark: this.restockForm.remark
+            })
+            if (String(res.code) === '1') {
+              var orderNos = Array.isArray(res.data) ? res.data : []
+              ReggieUI.success('补货成功：已按供应商生成 ' + orderNos.length + ' 张采购单（待收货），请在采购管理中确认收货')
+              this.restockForm.dialogVisible = false
+              this.selectedRows = []
+              this.smartSelectedRows = []
+              this.loadTable()
+              this.loadStats()
+              this.loadSuggest()
+              // 同步刷新智能补货 Tab：否则已补食材仍留在建议列表，停留该 Tab 可重复补货
+              this.loadSmartTable()
+            } else {
+              ReggieUI.error(res.msg || '补货失败')
+            }
+          } catch (e) {
+            console.warn('批量补货失败:', e)
+            ReggieUI.error('操作失败，请重试')
+          } finally {
+            this.restockLoading = false
+          }
+        },
+        // ========== C.4：智能补货 Tab ==========
+        onTabChange() {
+          // 切换 Tab 重置到第 1 页，避免停在超界页码显示空表
+          this.page = 1
+          if (this.activeTab === 'replenish') { this.loadSmartTable() } else { this.loadTable() }
+        },
+        async loadSmartTable() {
+          this.smartLoading = true
+          try {
+            var res = await smartReplenishSuggest({})
+            if (String(res.code) !== '1') {
+              // 降级：使用预警补货建议接口（同 suggestDays 统计口径）
+              res = await materialReplenishSuggest({ days: this.suggestDays })
+            }
+            if (String(res.code) === '1') {
+              var all = res.data || []
+              this.smartTotal = all.length
+              var start = (this.page - 1) * this.pageSize
+              this.smartTableData = all.slice(start, start + this.pageSize)
+            } else {
+              this.smartTableData = []
+              this.smartTotal = 0
+              ReggieUI.error(res.msg || '加载智能补货建议失败')
+            }
+          } catch (e) {
+            console.warn('加载智能补货建议失败:', e)
+            this.smartTableData = []
+            this.smartTotal = 0
+          } finally {
+            this.smartLoading = false
+          }
+        },
+        onSmartSelectionChange(payload) {
+          this.smartSelectedRows = (payload && payload.rows) || payload || []
+        },
+        openSmartRestock(rows) {
+          if (!rows || rows.length === 0) {
+            ReggieUI.warning('未勾选任何食材')
+            return
+          }
+          var items = rows.map(function(r) {
+            var qty = Number(r.suggestQty) > 0 ? Number(r.suggestQty) : 1
+            return {
+              materialId: r.materialId != null ? r.materialId : r.id,
+              materialName: r.materialName || r.name,
+              unit: r.unit,
+              suggestQty: (Number(r.suggestQty) || 0).toFixed(2),
+              qty: qty
+            }
+          })
+          this.restockForm.items = items
+          this.restockForm.selectedCount = rows.length
+          this.restockForm.remark = ''
+          this.restockForm.dialogVisible = true
+        },
+        handleRestockClose() {
+          this.restockForm.items = []
+          this.restockForm.selectedCount = 0
+          this.restockForm.remark = ''
+        }
+      }
+    })
+  </script>
+</body>
+</html>

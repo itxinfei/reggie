@@ -1,0 +1,78 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    druid:
+      url: jdbc:mysql://localhost:3306/reggie?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      username: root
+      password: 123456
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      min-evictable-idle-time-millis: 1800000
+      max-evictable-idle-time-millis: 3600000
+      time-between-eviction-runs-millis: 300000
+      keep-alive-between-time-millis: 600000
+      phyTimeoutMillis: 1800000
+      keep-alive: true
+      stat-view-servlet:
+        enabled: false
+        url-pattern: /druid/*
+        login-username: ${DRUID_USERNAME:admin}
+        login-password: ${DRUID_PASSWORD:Ch4nge-Me-N0w!}
+        allow: 127.0.0.1
+      filter:
+        stat:
+          enabled: true
+          slow-sql-millis: 1000
+          log-slow-sql: true
+        wall:
+          enabled: true
+          config:
+            delete-allow: true
+            drop-table-allow: false
+            truncate-allow: false
+            alter-allow: false
+  redis:
+    host: localhost
+    port: 6379
+    password:
+    database: 0
+    timeout: 5000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 2          # 至少保持2个预热连接，避免冷启动延迟
+        max-wait: 3000ms     # 修改点：从-1ms(无限等待)改为3秒超时，防止线程饥饿
+      # 修改点：添加连接超时配置
+      cluster:
+        refresh:
+          adaptive: true
+          period: 30s
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+# 地图服务（高德地理编码/逆地理编码）
+reggie:
+  geo:
+    amap:
+      key: 6b61d9cad654dd646073c4c580c90444
+      # 地理编码接口（地址→经纬度）
+      geocode-url: https://restapi.amap.com/v3/geocode/geo
+      # 逆地理编码接口（经纬度→地址）
+      regeocode-url: https://restapi.amap.com/v3/geocode/regeo
+      # 请求超时（毫秒）
+      timeout-ms: 3000
+  image:
+    download-real-images: false
+
